@@ -5,23 +5,60 @@
   const Engine = window.GarmentRuleEngine;
   const $ = (selector, root = document) => root.querySelector(selector);
 
-  const overviewColumns = [
-    { id: "conditions", name: "穿着条件" },
-    { id: "style", name: "服装样式" },
-    { id: "color", name: "颜色搭配" },
-    { id: "candidate", name: "候选处理" }
+  const overviewGroups = [
+    {
+      id: "wear",
+      name: "穿着框架",
+      fields: [
+        { id: "layerCount", name: "层数" },
+        { id: "sleeve", name: "袖长" },
+        { id: "outer", name: "外层" },
+        { id: "coverage", name: "覆盖" },
+        { id: "material", name: "厚薄" },
+        { id: "formality", name: "正式完成度" },
+        { id: "movement", name: "行动便利" }
+      ]
+    },
+    {
+      id: "style",
+      name: "服装样式",
+      fields: [
+        { id: "silhouette", name: "外轮廓" },
+        { id: "length", name: "上下长度" },
+        { id: "waist", name: "腰位" },
+        { id: "volume", name: "服装量感" },
+        { id: "neckline", name: "领口" },
+        { id: "details", name: "款式细节" }
+      ]
+    },
+    {
+      id: "color",
+      name: "颜色搭配",
+      fields: [
+        { id: "temperature", name: "色温" },
+        { id: "contrast", name: "明度对比" },
+        { id: "chroma", name: "彩度" },
+        { id: "palette", name: "配色方案" },
+        { id: "placement", name: "颜色位置" }
+      ]
+    }
   ];
+  const overviewImpactLabels = {
+    strong: "直接影响",
+    medium: "间接影响",
+    light: "条件影响"
+  };
   const businessDefinitions = [
-    { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期温度"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { conditions: ["层数", "袖长", "外层", "覆盖", "材质厚薄"] }, hard: true },
-    { id: "occasion", name: "场合要求", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式程度", "行动便利"], overview: { conditions: ["正式程度", "行动便利"] } },
-    { id: "color", name: "整体色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装色温", "明度对比", "彩度", "配色方案"], overview: { color: ["色温", "明度对比", "彩度", "具体配色"] } },
-    { id: "body", name: "身材与比例", topics: ["身材与比例"], inputs: ["身高表现", "腿身比例", "腰线", "肩胯关系"], outputs: ["服装路线", "长度比例", "腰位", "轮廓"], overview: { style: ["服装路线", "长度比例", "腰位", "轮廓"], candidate: ["候选优先"] } },
-    { id: "face", name: "脸型与领口", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: ["领口方向"] } },
-    { id: "style", name: "风格方向", topics: ["风格方向"], inputs: ["风格方向"], outputs: ["服装路线", "轮廓", "款式细节", "图案纹理"], overview: { style: ["服装路线", "轮廓", "款式细节", "图案纹理"] } },
-    { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { style: ["结构完成度", "材质表面"] } },
-    { id: "trend", name: "潮流方向", topics: ["潮流方向"], inputs: ["潮流方向", "表达强度"], outputs: ["服装路线", "廓形比例", "材质表面", "款式细节"], overview: { style: ["服装路线", "廓形比例", "材质", "细节"], candidate: ["候选优先"] } },
-    { id: "goal", name: "本次偏好", topics: ["本次偏好"], inputs: ["想调整什么", "希望如何调整"], outputs: ["候选顺序", "腰线", "线条", "配色对比"], overview: { style: ["腰位", "线条"], color: ["配色对比"], candidate: ["候选顺序"] } },
-    { id: "boundaries", name: "拒绝与边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["排除候选", "覆盖", "活动便利", "贴肤触感"], overview: { conditions: ["覆盖", "活动", "触感"], style: ["排除款式"], color: ["排除配色"], candidate: ["硬性淘汰"] }, hard: true }
+    { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期温度"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
+    { id: "occasion", name: "场合要求", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
+    { id: "color", name: "整体色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装色温", "明度对比", "彩度", "配色方案"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
+    { id: "body", name: "身材与比例", topics: ["身材与比例"], inputs: ["身高表现", "腿身比例", "腰线", "肩胯关系"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
+    { id: "face", name: "脸型与领口", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: { neckline: "strong" } } },
+    { id: "style", name: "风格方向", topics: ["风格方向"], inputs: ["风格方向"], outputs: ["外轮廓", "服装量感", "款式细节", "表面纹理"], overview: { style: { silhouette: "strong", volume: "strong", details: "strong" } } },
+    { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { wear: { formality: "strong" }, style: { silhouette: "medium", details: "medium" } } },
+    { id: "trend", name: "潮流方向", topics: ["潮流方向"], inputs: ["潮流方向", "表达强度"], outputs: ["外轮廓", "服装量感", "表面纹理", "款式细节"], overview: { style: { silhouette: "medium", volume: "medium", details: "strong" } } },
+    { id: "goal", name: "本次偏好", topics: ["本次偏好"], inputs: ["想调整什么", "希望如何调整"], outputs: ["腰位", "线条方向", "配色对比"], overview: { style: { length: "medium", waist: "strong" }, color: { contrast: "medium" } } },
+    { id: "boundaries", name: "拒绝与边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖程度", "行动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
   ];
   const resourceTabs = [
     { id: "inputs", label: "输入选项" },
@@ -288,16 +325,38 @@
     $("#configureView").hidden = state.mode !== "configure";
   }
 
+  function overviewImpact(group, domainId, fieldId) {
+    return group.overview?.[domainId]?.[fieldId] || null;
+  }
+
+  function renderOverviewImpact(group, domain, field) {
+    const level = overviewImpact(group, domain.id, field.id);
+    if (!level) {
+      return `<td class="overview-impact-cell is-empty"><span aria-label="${escapeHtml(group.name)}不影响${escapeHtml(field.name)}">—</span></td>`;
+    }
+    const label = overviewImpactLabels[level] || "有关联";
+    return `<td class="overview-impact-cell is-${escapeHtml(level)}">
+      <button type="button" data-overview-target="${escapeHtml(group.id)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(group.name)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(label)}，点击查看关系">
+        <span class="impact-dot" aria-hidden="true"></span><span class="impact-status">${escapeHtml(label)}</span>
+      </button>
+    </td>`;
+  }
+
   function renderOverview() {
     const groups = businessRelations();
     $("#overviewMatrix").innerHTML = `
-      <thead><tr><th>输入关系</th>${overviewColumns.map((column) => `<th>${escapeHtml(column.name)}</th>`).join("")}</tr></thead>
+      <thead>
+        <tr>
+          <th class="overview-row-heading" rowspan="2">输入主题</th>
+          ${overviewGroups.map((group) => `<th class="overview-group-heading overview-group-${escapeHtml(group.id)}" colspan="${group.fields.length}">${escapeHtml(group.name)}</th>`).join("")}
+        </tr>
+        <tr>
+          ${overviewGroups.flatMap((group) => group.fields.map((field) => `<th class="overview-field-heading overview-group-${escapeHtml(group.id)}">${escapeHtml(field.name)}</th>`)).join("")}
+        </tr>
+      </thead>
       <tbody>${groups.map((group) => `<tr class="${group.hard ? "is-hard" : ""}">
-        <th><span>${escapeHtml(group.name)}</span>${group.hard ? `<em>必须</em>` : ""}<small>${escapeHtml(group.inputs.join("、"))}</small></th>
-        ${overviewColumns.map((column) => {
-          const values = group.overview?.[column.id] || [];
-          return `<td>${values.length ? `<button type="button" data-overview-target="${escapeHtml(group.id)}" aria-label="配置${escapeHtml(group.name)}"><span>${values.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span><small>编辑关系</small></button>` : `<i>—</i>`}</td>`;
-        }).join("")}
+        <th class="overview-row-label"><span>${escapeHtml(group.name)}</span>${group.hard ? `<em>边界</em>` : ""}<small>${escapeHtml(group.inputs.join("、"))}</small></th>
+        ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(group, domain, field))).join("")}
       </tr>`).join("")}</tbody>`;
   }
 
