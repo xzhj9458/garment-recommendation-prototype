@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>穿搭推荐规则管理</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="rules-data.js"></script>
+  <script defer src="rule-engine.js"></script>
+  <script defer src="rules-app.js"></script>
+</head>
+<body class="rules-page">
+  <header class="app-header">
+    <a class="brand" href="index.html" aria-label="穿搭推荐首页">
+      <span class="brand-mark" aria-hidden="true">衣</span>
+      <span><strong>穿搭推荐</strong><small>规则管理</small></span>
+    </a>
+    <nav class="page-nav" aria-label="页面导航">
+      <a href="index.html">案例运行</a>
+      <a class="is-active" href="rules.html">规则管理</a>
+    </nav>
+    <div class="header-actions rules-header-actions">
+      <span class="save-state" id="saveState">草稿已保存</span>
+      <button class="secondary-button" id="saveButton" type="button">保存草稿</button>
+      <button class="primary-button" id="publishButton" type="button">发布规则</button>
+    </div>
+  </header>
+
+  <main class="rules-main">
+    <nav class="rules-mode-bar" aria-label="规则管理工作模式">
+      <div class="rules-mode-tabs" id="rulesModeTabs">
+        <button class="is-active" type="button" data-rules-mode="overview">规则总览</button>
+        <button type="button" data-rules-mode="configure">规则配置</button>
+      </div>
+      <div class="rules-mode-actions">
+        <span id="ruleSetVersion">发布版 0.9.0</span>
+        <button class="secondary-button" id="resourceButton" type="button">基础资料</button>
+        <button class="text-button" id="resetRulesButton" type="button">恢复默认</button>
+      </div>
+    </nav>
+
+    <section class="rules-mode-view overview-view" id="overviewView">
+      <div class="overview-heading">
+        <div><p class="section-kicker">整体关系</p><h1>输入会改变哪些穿搭结果</h1></div>
+        <div class="overview-legend"><span><i></i>软性影响</span><span class="is-hard"><i></i>必须满足</span></div>
+      </div>
+      <div class="overview-matrix-wrap">
+        <table class="overview-matrix" id="overviewMatrix"></table>
+      </div>
+    </section>
+
+    <section class="rules-mode-view configure-view" id="configureView" hidden>
+      <div class="rules-toolbar">
+        <div class="rule-filter-bar">
+          <label class="search-box"><span aria-hidden="true">⌕</span><input id="ruleSearch" type="search" placeholder="搜索关系、条件或结果"></label>
+          <select id="topicFilter" aria-label="主题筛选"><option value="all">全部主题</option></select>
+          <select id="statusFilter" aria-label="状态筛选"><option value="all">全部状态</option><option value="enabled">已启用</option><option value="disabled">已停用</option></select>
+        </div>
+      </div>
+
+      <div class="relationship-workspace">
+        <section class="relationship-main">
+          <section class="decision-panel" aria-labelledby="ruleListTitle">
+            <div class="panel-heading panel-heading--compact">
+              <div><p class="section-kicker">业务关系</p><h1 id="ruleListTitle">选择需要配置的关系</h1></div>
+              <span id="ruleCount">0 组</span>
+            </div>
+            <div class="decision-table-wrap">
+              <table class="decision-table">
+                <thead><tr><th>关系主题</th><th>输入内容</th><th>影响结果</th><th>分支</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="ruleTableBody"></tbody>
+              </table>
+            </div>
+            <div class="table-empty" id="ruleTableEmpty" hidden>没有符合条件的关系</div>
+          </section>
+        </section>
+
+        <aside class="relationship-editor" id="relationshipEditor">
+          <div class="editor-toolbar">
+            <div><p class="section-kicker" id="editorKicker">具体对应关系</p><h2 id="editorTitle">选择一条关系</h2></div>
+            <div class="editor-actions" id="editorActions" hidden>
+              <button class="icon-button" id="duplicateButton" type="button" title="复制分支" aria-label="复制分支">⧉</button>
+              <button class="icon-button is-danger" id="deleteButton" type="button" title="删除分支" aria-label="删除分支">×</button>
+            </div>
+          </div>
+          <div class="editor-content" id="editorContent"><div class="editor-empty"><strong>从左侧选择一条关系</strong></div></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="resource-dialog" id="resourceDialog">
+    <div class="dialog-header">
+      <div><p class="section-kicker">基础资料</p><h2>输入、服装、配色与潮流方向</h2></div>
+      <button class="icon-button" type="button" data-close-resource title="关闭" aria-label="关闭">×</button>
+    </div>
+    <nav class="resource-tabs" id="resourceTabs" aria-label="基础资料分类"></nav>
+    <div class="resource-content" id="resourceContent"></div>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="confirmDialog">
+    <h2 id="confirmTitle">确认操作</h2>
+    <p id="confirmMessage"></p>
+    <div class="dialog-actions">
+      <button class="secondary-button" type="button" data-confirm-cancel>取消</button>
+      <button class="primary-button" type="button" data-confirm-ok>确认</button>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
