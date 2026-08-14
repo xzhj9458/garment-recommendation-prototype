@@ -76,9 +76,6 @@
   const state = {
     ruleSet: Engine.Store.loadDraft(),
     selectedId: null,
-    search: "",
-    topic: "all",
-    status: "all",
     resourceTab: "inputs",
     memberSelection: {},
     branchSelection: {},
@@ -107,27 +104,19 @@
       if (!target) return;
       state.selectedId = target.dataset.overviewTarget;
       state.mode = "configure";
-      state.topic = "all";
       renderAll();
     });
-    $("#ruleSearch").addEventListener("input", (event) => { state.search = event.target.value; renderRules(); });
-    $("#topicFilter").addEventListener("change", (event) => { state.topic = event.target.value; renderRules(); });
-    $("#statusFilter").addEventListener("change", (event) => { state.status = event.target.value; renderRules(); });
-    $("#ruleTableBody").addEventListener("click", (event) => {
-      const toggle = event.target.closest("input[data-rule-toggle]");
-      if (toggle) {
-        const relation = businessRelationById(toggle.dataset.ruleToggle);
-        businessRules(relation).forEach((rule) => { rule.enabled = toggle.checked; });
-        markDirty();
-        renderAll();
-        return;
-      }
-      const row = event.target.closest("tr[data-rule-id]");
-      if (!row) return;
-      state.selectedId = row.dataset.ruleId;
-      renderRules();
+    $("#backToOverview").addEventListener("click", () => {
+      state.mode = "overview";
+      renderMode();
+    });
+    $("#relationSelect").addEventListener("change", (event) => {
+      state.selectedId = event.target.value;
+      renderRelationPicker();
       renderEditor();
     });
+    $("#previousRelationButton").addEventListener("click", () => stepRelation(-1));
+    $("#nextRelationButton").addEventListener("click", () => stepRelation(1));
     $("#editorContent").addEventListener("change", handleEditorChange);
     $("#editorContent").addEventListener("click", handleEditorClick);
     $("#duplicateButton").addEventListener("click", duplicateRule);
@@ -287,7 +276,6 @@
   }
 
   function businessRelationById(id) { return businessRelations().find((item) => item.id === id); }
-  function businessRules(relation) { return relation?.rules || []; }
 
   function activeAtomicRelation(business) {
     const mappings = business?.mappingMembers || [];
@@ -295,24 +283,11 @@
     return mappings.find((relation) => relation.id === selected) || mappings[0] || null;
   }
 
-  function filteredRelations() {
-    const query = state.search.trim().toLowerCase();
-    return businessRelations().filter((relation) => {
-      const branchText = relation.rules.flatMap((rule) => [rule.name, rule.reason]).join(" ");
-      const haystack = [relation.name, relation.inputs.join(" "), relation.outputs.join(" "), branchText].join(" ").toLowerCase();
-      const statusMatch = state.status === "all" || (state.status === "enabled" ? relation.enabled : !relation.enabled);
-      return (!query || haystack.includes(query))
-        && (state.topic === "all" || relation.id === state.topic)
-        && statusMatch;
-    });
-  }
-
   function renderAll() {
     state.validation = Engine.validateRuleSet(state.ruleSet);
     renderMode();
     renderOverview();
-    renderFilters();
-    renderRules();
+    renderRelationPicker();
     renderEditor();
     renderMeta();
   }
@@ -360,25 +335,32 @@
       </tr>`).join("")}</tbody>`;
   }
 
-  function renderFilters() {
+  function renderRelationPicker() {
     const groups = businessRelations();
-    $("#topicFilter").innerHTML = `<option value="all">全部主题</option>${groups.map((group) => `<option value="${escapeHtml(group.id)}" ${state.topic === group.id ? "selected" : ""}>${escapeHtml(group.name)}</option>`).join("")}`;
+    if (!groups.length) {
+      $("#relationSelect").innerHTML = "<option value=\"\">暂无可配置关系</option>";
+      $("#relationStatus").textContent = "暂无关系";
+      $("#previousRelationButton").disabled = true;
+      $("#nextRelationButton").disabled = true;
+      return;
+    }
+    if (!groups.some((group) => group.id === state.selectedId)) state.selectedId = groups[0].id;
+    const index = groups.findIndex((group) => group.id === state.selectedId);
+    const selected = groups[index];
+    $("#relationSelect").innerHTML = groups.map((group) => `<option value="${escapeHtml(group.id)}" ${group.id === selected.id ? "selected" : ""}>${escapeHtml(group.name)}</option>`).join("");
+    $("#relationStatus").textContent = `${index + 1} / ${groups.length} · ${selected.enabled ? "已启用" : "已停用"} · ${selected.branchCount || 0} 个分支`;
+    $("#previousRelationButton").disabled = index <= 0;
+    $("#nextRelationButton").disabled = index >= groups.length - 1;
   }
 
-  function renderRules() {
-    const items = filteredRelations();
-    $("#ruleCount").textContent = `${items.length} 组`;
-    $("#ruleTableEmpty").hidden = Boolean(items.length);
-    $("#ruleTableBody").innerHTML = items.map((relation) => `
-      <tr data-rule-id="${escapeHtml(relation.id)}" class="${state.selectedId === relation.id ? "is-selected" : ""}">
-        <td><span class="rule-name-cell"><i class="relation-state ${relation.enabled ? "" : "is-disabled"}"></i><strong>${escapeHtml(relation.name)}</strong></span></td>
-        <td><span class="mapping-capsules">${relation.inputs.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span></td>
-        <td><span class="mapping-capsules is-output">${relation.outputs.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span></td>
-        <td><strong class="branch-count">${relation.branchCount || "—"}</strong></td>
-        <td><span class="relation-kind ${relation.id === "boundaries" ? "is-hard" : "is-soft"}">${relation.enabled ? "已启用" : "已停用"}</span></td>
-        <td><label class="table-switch" title="${relation.enabled ? "停用" : "启用"}"><input type="checkbox" data-rule-toggle="${escapeHtml(relation.id)}" ${relation.enabled ? "checked" : ""}><span></span></label></td>
-      </tr>
-    `).join("");
+  function stepRelation(direction) {
+    const groups = businessRelations();
+    const index = groups.findIndex((group) => group.id === state.selectedId);
+    const nextIndex = Math.max(0, Math.min(groups.length - 1, index + direction));
+    if (nextIndex === index || !groups[nextIndex]) return;
+    state.selectedId = groups[nextIndex].id;
+    renderRelationPicker();
+    renderEditor();
   }
 
   function conditionSummary(relation) {
@@ -422,10 +404,11 @@
   function renderEditor() {
     const business = businessRelationById(state.selectedId);
     $("#editorTitle").textContent = business?.name || "选择一组关系";
-    $("#editorKicker").textContent = business ? "关系配置" : "业务关系";
+    $("#editorKicker").textContent = business ? "关系配置" : "当前关系";
+    $("#editorSummary").textContent = business ? `${business.inputs.join("、")} → ${business.outputs.join("、")}` : "选择一条关系开始配置。";
     $("#editorActions").hidden = !business?.mappingMembers.length;
     if (!business) {
-      $("#editorContent").innerHTML = `<div class="editor-empty"><strong>从关系表选择一项</strong></div>`;
+      $("#editorContent").innerHTML = `<div class="editor-empty"><strong>选择一条关系开始配置</strong></div>`;
       return;
     }
     const relation = activeAtomicRelation(business);
@@ -635,7 +618,7 @@
     if (!relation || !business) return;
     const editable = activeRule(relation);
     const related = event.target.closest("button[data-open-related]");
-    if (related) { state.selectedId = related.dataset.openRelated; renderRules(); renderEditor(); return; }
+    if (related) { state.selectedId = related.dataset.openRelated; renderRelationPicker(); renderEditor(); return; }
     const family = event.target.closest("input[data-family-option]");
     if (family && ["outfit", "trend"].includes(relation.type)) {
       editable.result.families ||= [];
