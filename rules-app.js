@@ -4,6 +4,7 @@
   const DATA = window.GarmentPrototypeData;
   const Engine = window.GarmentRuleEngine;
   const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   const overviewGroups = [
     {
@@ -43,11 +44,13 @@
       ]
     }
   ];
+
   const overviewImpactLabels = {
     strong: "直接影响",
     medium: "间接影响",
     light: "条件影响"
   };
+
   const businessDefinitions = [
     { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期温度"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
     { id: "occasion", name: "场合要求", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
@@ -60,23 +63,28 @@
     { id: "goal", name: "本次偏好", topics: ["本次偏好"], inputs: ["想调整什么", "希望如何调整"], outputs: ["腰位", "线条方向", "配色对比"], overview: { style: { length: "medium", waist: "strong" }, color: { contrast: "medium" } } },
     { id: "boundaries", name: "拒绝与边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖程度", "行动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
   ];
+
   const resourceTabs = [
     { id: "inputs", label: "输入选项" },
     { id: "garments", label: "服装库" },
     { id: "palettes", label: "颜色搭配" },
     { id: "trends", label: "潮流方向" }
   ];
+
   const outfitLabels = {
     family: "服装路线", families: "候选路线", silhouette: "服装轮廓", detail: "款式细节",
     pattern: "图案纹理", formality: "正式程度", finish: "材质表面", trend: "潮流表达",
     proportion: "版型比例", detailIntensity: "细节强度", note: "穿着表达", seasonVersion: "款式时效"
   };
+
   const familyOptions = [["straight", "简洁直线"], ["tailored", "利落结构"], ["soft", "柔和收放"], ["relaxed", "自然留量"], ["street", "街头箱型"], ["retro", "复古收放"]];
 
   const state = {
     ruleSet: Engine.Store.loadDraft(),
     selectedId: null,
     resourceTab: "inputs",
+    resourceGarmentFilter: "all",
+    resourceGarmentSearch: "",
     memberSelection: {},
     branchSelection: {},
     mode: "overview",
@@ -99,6 +107,7 @@
       state.mode = button.dataset.rulesMode;
       renderMode();
     });
+
     $("#overviewMatrix").addEventListener("click", (event) => {
       const target = event.target.closest("button[data-overview-target]");
       if (!target) return;
@@ -106,35 +115,63 @@
       state.mode = "configure";
       renderAll();
     });
+
     $("#backToOverview").addEventListener("click", () => {
       state.mode = "overview";
       renderMode();
     });
+
     $("#relationSelect").addEventListener("change", (event) => {
       state.selectedId = event.target.value;
       renderRelationPicker();
       renderEditor();
     });
+
     $("#previousRelationButton").addEventListener("click", () => stepRelation(-1));
     $("#nextRelationButton").addEventListener("click", () => stepRelation(1));
+
     $("#editorContent").addEventListener("change", handleEditorChange);
     $("#editorContent").addEventListener("click", handleEditorClick);
+
     $("#duplicateButton").addEventListener("click", duplicateRule);
     $("#deleteButton").addEventListener("click", deleteRule);
+
     $("#saveButton").addEventListener("click", saveDraft);
     $("#publishButton").addEventListener("click", publishRules);
     $("#resetRulesButton").addEventListener("click", resetRules);
+
     $("#resourceButton").addEventListener("click", openResources);
     $("[data-close-resource]").addEventListener("click", () => $("#resourceDialog").close());
     $("#resourceDialog").addEventListener("click", (event) => { if (event.target === $("#resourceDialog")) $("#resourceDialog").close(); });
+
+    const closeValBtn = $$("[data-close-validation]");
+    closeValBtn.forEach((btn) => btn.addEventListener("click", () => $("#validationDialog")?.close()));
+
+    const valContent = $("#validationContent");
+    if (valContent) {
+      valContent.addEventListener("click", (event) => {
+        const jumpBtn = event.target.closest("button[data-jump-relation]");
+        if (!jumpBtn) return;
+        state.selectedId = jumpBtn.dataset.jumpRelation;
+        if (jumpBtn.dataset.jumpBranch) {
+          state.branchSelection[state.selectedId] = jumpBtn.dataset.jumpBranch;
+        }
+        state.mode = "configure";
+        $("#validationDialog").close();
+        renderAll();
+      });
+    }
+
     $("#resourceTabs").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-resource-tab]");
       if (!button) return;
       state.resourceTab = button.dataset.resourceTab;
       renderResources();
     });
+
     $("#resourceContent").addEventListener("change", handleResourceChange);
     $("#resourceContent").addEventListener("click", handleResourceClick);
+
     window.addEventListener("beforeunload", (event) => {
       if (!state.dirty) return;
       event.preventDefault();
@@ -252,8 +289,6 @@
     return null;
   }
 
-  function atomicRelationById(id) { return relations().find((item) => item.id === id); }
-
   function businessRelations() {
     const atomic = relations();
     return businessDefinitions.map((definition, order) => {
@@ -311,7 +346,7 @@
     }
     const label = overviewImpactLabels[level] || "有关联";
     return `<td class="overview-impact-cell is-${escapeHtml(level)}">
-      <button type="button" data-overview-target="${escapeHtml(group.id)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(group.name)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(label)}，点击查看关系">
+      <button type="button" data-overview-target="${escapeHtml(group.id)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(group.name)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(group.name)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
         <span class="impact-dot" aria-hidden="true"></span><span class="impact-status">${escapeHtml(label)}</span>
       </button>
     </td>`;
@@ -330,7 +365,7 @@
         </tr>
       </thead>
       <tbody>${groups.map((group) => `<tr class="${group.hard ? "is-hard" : ""}">
-        <th class="overview-row-label"><span>${escapeHtml(group.name)}</span>${group.hard ? `<em>边界</em>` : ""}<small>${escapeHtml(group.inputs.join("、"))}</small></th>
+        <th class="overview-row-label"><span>${escapeHtml(group.name)}</span>${group.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}<small>${escapeHtml(group.inputs.join("、"))}</small></th>
         ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(group, domain, field))).join("")}
       </tr>`).join("")}</tbody>`;
   }
@@ -363,48 +398,10 @@
     renderEditor();
   }
 
-  function conditionSummary(relation) {
-    if (relation.rules?.length) {
-      const fields = [...new Set(relation.rules.flatMap((rule) => (rule.conditions || []).map((condition) => conditionDefinition(condition.field)?.name || "当前条件")))];
-      return `${fields.join("＋")}的 ${relation.rules.length} 种情况`;
-    }
-    if (relation.type === "analysis") {
-      return relation.rule.inputs.map((input) => parameterName(input.field)).join("＋") || "基础事实";
-    }
-    const conditions = relation.rule.conditions || [];
-    if (!conditions.length) return "始终适用";
-    return conditions.map(conditionText).join(relation.rule.conditionMode === "any" ? " 或 " : " 且 ");
-  }
-
-  function analysisSummary(relation) {
-    if (relation.rules?.length) return relation.rule.name;
-    if (relation.type === "analysis") return relation.rule.reason || relation.rule.name;
-    return relation.rule.analysis?.conclusion || relation.rule.name;
-  }
-
-  function impactSummary(relation) {
-    if (relation.rules?.length) {
-      const labels = relation.rules.flatMap((rule) => {
-        if (relation.type === "outfit") return Object.keys(rule.result || {}).map((field) => outfitLabels[field]).filter(Boolean);
-        return (rule.actions || []).map((action) => resultDefinition(action.field)?.name).filter(Boolean);
-      });
-      return [...new Set(labels)].join("、");
-    }
-    if (relation.type === "analysis") return derivedOutputName(relation.rule.output);
-    if (relation.type === "outfit") return Object.keys(relation.rule.result || {}).map((field) => outfitLabels[field]).filter(Boolean).join("、") || "服装组合";
-    return (relation.rule.actions || []).map((action) => resultDefinition(action.field)?.name).filter(Boolean).join("、") || "候选顺序";
-  }
-
-  function directionSummary(relation) {
-    if (relation.rules?.length) return `${relation.rules.length} 个分支分别匹配对应处理`;
-    if (relation.type === "analysis") return `形成${derivedOutputName(relation.rule.output)}`;
-    return relation.rule.analysis?.direction || relation.rule.reason || "按当前关系生成候选";
-  }
-
   function renderEditor() {
     const business = businessRelationById(state.selectedId);
     $("#editorTitle").textContent = business?.name || "选择一组关系";
-    $("#editorKicker").textContent = business ? "关系配置" : "当前关系";
+    $("#editorKicker").textContent = business?.hard ? "硬性边界配置" : "关系配置";
     $("#editorSummary").textContent = business ? `${business.inputs.join("、")} → ${business.outputs.join("、")}` : "选择一条关系开始配置。";
     $("#editorActions").hidden = !business?.mappingMembers.length;
     if (!business) {
@@ -419,83 +416,124 @@
     const editable = activeRule(relation);
     editable.analysis ||= { conclusion: editable.name, direction: editable.reason || "" };
     const memberSelector = business.mappingMembers.length > 1 ? renderMemberSelector(business, relation) : "";
-    const branchSelector = relation.rules?.length ? renderBranchSelector(relation, editable) : "";
+    const branchBar = relation.rules?.length ? renderBranchBar(relation, editable) : "";
     const editableRelation = { ...relation, rule: editable };
-    $("#editorContent").innerHTML = memberSelector + branchSelector + renderMappingEditor(editableRelation, business) + renderCalculationDetails(business);
+    $("#editorContent").innerHTML = memberSelector + branchBar + renderMappingEditor(editableRelation, business) + renderCalculationDetails(business);
   }
 
   function renderMemberSelector(business, relation) {
     return `<section class="member-selector"><label><span>配置内容</span><select data-member-select>${business.mappingMembers.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === relation.id ? "selected" : ""}>${escapeHtml(item.rule.name)}</option>`).join("")}</select></label></section>`;
   }
 
-  function renderBranchSelector(relation, editable) {
-    return `<section class="branch-selector"><label><span>当前编辑分支</span><select data-branch-select>${relation.rules.map((rule) => `<option value="${escapeHtml(rule.id)}" ${rule.id === editable.id ? "selected" : ""}>${escapeHtml(rule.name)}</option>`).join("")}</select></label><strong>${relation.rules.length} 个匹配分支</strong></section>`;
+  function renderBranchBar(relation, editable) {
+    const branches = relation.rules || [];
+    return `
+      <section class="branch-bar-section">
+        <div class="branch-bar-header">
+          <div class="branch-bar-label">
+            <span>匹配分支概览</span>
+            <strong>共 ${branches.length} 个分支</strong>
+          </div>
+          <button type="button" class="text-button" id="addBranchBtn" title="新增匹配分支">＋ 新增分支</button>
+        </div>
+        <div class="branch-segmented-bar" role="tablist" aria-label="分支切换">
+          ${branches.map((rule) => {
+            const isActive = rule.id === editable.id;
+            const isEnabled = rule.enabled !== false;
+            const summary = ruleBranchSummary(rule, relation.type);
+            return `
+              <button type="button" role="tab" aria-selected="${isActive}" class="branch-chip ${isActive ? "is-active" : ""} ${isEnabled ? "is-enabled" : "is-disabled"}" data-branch-chip="${escapeHtml(rule.id)}" title="${escapeHtml(rule.name)}">
+                <span class="chip-status-dot ${isEnabled ? "is-active" : ""}"></span>
+                <strong class="chip-name">${escapeHtml(rule.name)}</strong>
+                <small class="chip-summary">${escapeHtml(summary)}</small>
+              </button>
+            `;
+          }).join("")}
+        </div>
+        <select data-branch-select hidden>
+          ${branches.map((rule) => `<option value="${escapeHtml(rule.id)}" ${rule.id === editable.id ? "selected" : ""}>${escapeHtml(rule.name)}</option>`).join("")}
+        </select>
+      </section>
+    `;
+  }
+
+  function ruleBranchSummary(rule, type) {
+    if (type === "trend") return rule.coreIdea?.slice(0, 16) || "潮流表达";
+    if (type === "outfit") return rule.result?.silhouette || "款式组合";
+    const actions = rule.actions || [];
+    if (!actions.length) return "默认处理";
+    return actions.slice(0, 2).map((a) => `${resultDefinition(a.field)?.name || a.field}: ${a.value}`).join(" · ");
   }
 
   function renderEditorBase(relation) {
     return `<section class="editor-section editor-section--base">
-      <div class="editor-section-title"><h3>当前分支</h3><label class="switch-control"><input type="checkbox" data-edit="enabled" ${relation.rule.enabled === false ? "" : "checked"}><span></span>启用</label></div>
-      ${field("分支名称", "name", relation.rule.name)}
-      <details class="advanced-details"><summary>高级信息</summary>${field("系统编号", "id", relation.rule.id)}</details>
-    </section>`;
-  }
-
-  function renderAnalysisEditor(relation) {
-    const rule = relation.rule;
-    const operationOptions = [["weightedAverage", "综合多个事实"], ["range", "比较最大差异"], ["passthrough", "直接采用确认结果"], ["bodyShape", "归纳身材轮廓"]];
-    return `${renderEditorBase(relation)}
-      <section class="relationship-chain">
-        <div class="chain-heading"><span>第一段关系</span><strong>输入事实如何形成分析</strong></div>
-        <div class="chain-flow">
-          <div class="chain-node"><small>输入事实</small><strong>${rule.inputs.map((input) => parameterName(input.field)).join("＋")}</strong></div>
-          <span class="chain-arrow" aria-hidden="true">→</span>
-          <div class="chain-node is-analysis"><small>分析结果</small><strong>${escapeHtml(derivedOutputName(rule.output))}</strong></div>
+      <div class="editor-section-title">
+        <div class="branch-title-wrap">
+          <span class="rule-kind-chip is-${relation.kind}">${relation.kind === "hard" ? "硬性边界" : "搭配偏好"}</span>
+          <h3>${escapeHtml(relation.rule.name)}</h3>
         </div>
-        <div class="form-grid">${selectField("形成方式", "operation", rule.operation, operationOptions)}${field("分析结果", "__derivedOutput", derivedOutputName(rule.output), "text", true)}</div>
-        <div class="input-source-list">${rule.inputs.map((input, index) => `<div class="input-source-row">${selectField("参与判断", `inputs.${index}.field`, input.field, state.ruleSet.parameters.map((item) => [item.id, item.name]))}<span>${index === 0 ? "主要事实" : "共同参考"}</span></div>`).join("")}</div>
-        ${textareaField("为什么形成这个分析", "reason", rule.reason || "")}
-      </section>
-      <section class="editor-section">
-        <div class="editor-section-title"><h3>分析结果分段</h3></div>
-        <div class="band-list">${(rule.bands || []).map((band, index) => `<div class="band-row">${field("结果名称", `bands.${index}.label`, band.label)}${field("分段上限", `bands.${index}.max`, band.max, "number")}</div>`).join("")}</div>
-      </section>
-      <section class="relationship-note"><strong>作用范围</strong><p>这条规则只形成分析结果，不直接改变服装方案；搭配关系会继续引用该结果。</p></section>`;
+        <label class="switch-control"><input type="checkbox" data-edit="enabled" ${relation.rule.enabled === false ? "" : "checked"}><span></span>启用分支</label>
+      </div>
+      <div class="form-grid">
+        ${field("分支显示名称", "name", relation.rule.name)}
+      </div>
+      <details class="advanced-details"><summary>高级系统编号</summary>${field("规则 ID", "id", relation.rule.id)}</details>
+    </section>`;
   }
 
   function renderMappingEditor(relation, business) {
     const rule = relation.rule;
     const conditionOptions = state.ruleSet.conditionFields.map((item) => [item.id, item.name]);
     const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule);
-    return `${renderEditorBase(relation)}
-      <section class="relationship-chain">
-        <div class="chain-heading"><span>输入</span><strong>当出现什么情况</strong></div>
-        <div class="condition-mode-row">${selectField("条件关系", "conditionMode", rule.conditionMode || "all", [["all", "全部满足"], ["any", "任一满足"]])}<button type="button" class="text-button" data-add-condition>＋ 添加条件</button></div>
-        <div class="condition-list">${(rule.conditions || []).map((condition, index) => renderConditionRow(condition, index, conditionOptions)).join("") || `<p class="muted-copy">没有条件时始终适用。</p>`}</div>
-      </section>
-      <section class="relationship-chain">
-        <div class="chain-heading"><span>结果</span><strong>会改变哪些穿搭内容</strong></div>
-        <div class="chain-flow chain-flow--summary">
-          <div class="chain-node"><small>输入内容</small><strong>${business.inputs.map((item) => escapeHtml(item)).join("、")}</strong></div>
-          <span class="chain-arrow" aria-hidden="true">→</span>
-          <div class="chain-node is-output"><small>影响结果</small><strong>${business.outputs.map((item) => escapeHtml(item)).join("、")}</strong></div>
-        </div>
-        ${stepTwo}
-        ${textareaField("补充说明", "reason", rule.reason || "")}
-      </section>
-      ${renderSharedInfluence(business)}`;
+
+    return `
+      ${renderEditorBase(relation)}
+      <article class="natural-rule-card">
+        <section class="rule-clause rule-clause--when">
+          <div class="clause-heading">
+            <span class="clause-prefix">WHEN</span>
+            <strong>当满足以下输入条件时</strong>
+            <div class="condition-mode-inline">
+              ${selectField("条件关系", "conditionMode", rule.conditionMode || "all", [["all", "全部满足 (AND)"], ["any", "任一满足 (OR)"]])}
+              <button type="button" class="text-button" data-add-condition>＋ 添加条件</button>
+            </div>
+          </div>
+          <div class="condition-list">
+            ${(rule.conditions || []).map((condition, index) => renderConditionRow(condition, index, conditionOptions)).join("") || `<p class="muted-copy">没有条件限制时，该规则默认始终适用。</p>`}
+          </div>
+        </section>
+
+        <section class="rule-clause rule-clause--then">
+          <div class="clause-heading">
+            <span class="clause-prefix">THEN</span>
+            <strong>执行穿搭结果处理 · 会改变哪些穿搭内容</strong>
+          </div>
+          ${stepTwo}
+        </section>
+
+        <section class="rule-clause rule-clause--why">
+          <div class="clause-heading">
+            <span class="clause-prefix">WHY</span>
+            <strong>规则制定理由与业务依据</strong>
+          </div>
+          ${textareaField("补充说明与设计原理", "reason", rule.reason || "")}
+        </section>
+      </article>
+      ${renderSharedInfluence(business)}
+    `;
   }
 
   function renderCalculationDetails(business, open = false) {
     if (!business.derivations.length) return "";
-    const operationOptions = [["weightedAverage", "综合多个事实"], ["range", "比较最大差异"], ["passthrough", "直接采用确认结果"], ["bodyShape", "归纳身材轮廓"]];
+    const operationOptions = [["weightedAverage", "综合多个事实 (加权平均)"], ["range", "比较最大差异 (极差)"], ["passthrough", "直接采用确认结果"], ["bodyShape", "归纳身材轮廓"]];
     return `<details class="calculation-details" ${open ? "open" : ""}>
-      <summary>计算方式 <span>${business.derivations.length} 项</span></summary>
+      <summary>特征归纳与计算方式 <span>${business.derivations.length} 项</span></summary>
       <div class="calculation-list">${business.derivations.map((relation) => {
         const rule = relation.rule;
         return `<section class="calculation-item">
-          <div><strong>${escapeHtml(derivedOutputName(rule.output))}</strong><small>${rule.inputs.map((input) => escapeHtml(parameterName(input.field))).join("＋")}</small></div>
+          <div><strong>${escapeHtml(derivedOutputName(rule.output))}</strong><small>${rule.inputs.map((input) => escapeHtml(parameterName(input.field))).join(" ＋ ")}</small></div>
           <label class="editor-field"><span>归纳方式</span><select data-derived-id="${escapeHtml(rule.id)}" data-derived-edit="operation">${operationOptions.map(([value, label]) => `<option value="${value}" ${rule.operation === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
-          <label class="editor-field editor-field--wide"><span>说明</span><textarea rows="2" data-derived-id="${escapeHtml(rule.id)}" data-derived-edit="reason">${escapeHtml(rule.reason || "")}</textarea></label>
+          <label class="editor-field editor-field--wide"><span>计算原理说明</span><textarea rows="2" data-derived-id="${escapeHtml(rule.id)}" data-derived-edit="reason">${escapeHtml(rule.reason || "")}</textarea></label>
         </section>`;
       }).join("")}</div>
     </details>`;
@@ -504,72 +542,89 @@
   function renderSharedInfluence(business) {
     const related = businessRelations().filter((item) => item.id !== business.id && item.domains.some((domain) => business.domains.includes(domain))).slice(0, 5);
     if (!related.length) return "";
-    return `<section class="related-rules"><div class="editor-section-title"><h3>共同影响这些结果</h3></div>${related.map((item) => `<button type="button" data-open-related="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><small>${escapeHtml(item.domains.filter((domain) => business.domains.includes(domain)).join("、"))}</small></button>`).join("")}</section>`;
+    return `<section class="related-rules"><div class="editor-section-title"><h3>协同影响规则</h3></div><div class="related-chips">${related.map((item) => `<button type="button" class="related-chip" data-open-related="${escapeHtml(item.id)}"><span>${escapeHtml(item.name)}</span><small>${escapeHtml(item.domains.filter((domain) => business.domains.includes(domain)).join("、"))}</small></button>`).join("")}</div></section>`;
   }
 
   function renderConditionRow(condition, index, definitions) {
     const definition = conditionDefinition(condition.field);
     return `<div class="condition-row">
-      ${groupedSelect("输入或分析", `conditions.${index}.field`, condition.field, state.ruleSet.conditionFields)}
-      ${selectField("判断", `conditions.${index}.operator`, condition.operator, [["eq", "等于"], ["neq", "不等于"], ["gt", "高于"], ["gte", "不低于"], ["lt", "低于"], ["lte", "不高于"]])}
-      ${typedValueField("选择值", `conditions.${index}.value`, condition.value, definition)}
+      <span class="clause-sub-tag">IF</span>
+      ${groupedSelect("输入或分析项", `conditions.${index}.field`, condition.field, state.ruleSet.conditionFields)}
+      ${selectField("判断逻辑", `conditions.${index}.operator`, condition.operator, [["eq", "等于 (eq)"], ["neq", "不等于 (neq)"], ["gt", "高于 (gt)"], ["gte", "不低于 (gte)"], ["lt", "低于 (lt)"], ["lte", "不高于 (lte)"]])}
+      ${typedValueField("设定值", `conditions.${index}.value`, condition.value, definition)}
       <button class="icon-button is-danger" type="button" data-remove-condition="${index}" title="删除条件" aria-label="删除条件">×</button>
     </div>`;
   }
 
   function renderDecisionActions(rule) {
-    return `<div class="action-heading"><strong>具体处理</strong><button type="button" class="text-button" data-add-action>＋ 添加处理</button></div>
-      <div class="action-list">${(rule.actions || []).map((action, index) => {
-        const definition = resultDefinition(action.field);
-        return `<div class="action-row">
-          ${selectField("作用方式", `actions.${index}.type`, action.type, [["SET", "调整为"], ["REQUIRE", "必须满足"], ["FORBID", "排除"], ["FILTER", "过滤"], ["BOOST", "优先"], ["ADD", "增加候选"]])}
-          ${groupedSelect("影响内容", `actions.${index}.field`, action.field, state.ruleSet.resultFields)}
-          ${typedValueField("具体结果", `actions.${index}.value`, action.value, definition)}
-          <button class="icon-button is-danger" type="button" data-remove-action="${index}" title="删除处理" aria-label="删除处理">×</button>
-        </div>`;
-      }).join("")}</div>`;
+    return `
+      <div class="action-heading">
+        <strong>结果动作列表</strong>
+        <button type="button" class="text-button" data-add-action>＋ 添加动作处理</button>
+      </div>
+      <div class="action-list">
+        ${(rule.actions || []).map((action, index) => {
+          const definition = resultDefinition(action.field);
+          return `<div class="action-row">
+            <span class="clause-sub-tag is-then">SET</span>
+            ${selectField("作用方式", `actions.${index}.type`, action.type, [["SET", "强制设定为 (SET)"], ["REQUIRE", "必须满足 (REQUIRE)"], ["FORBID", "排除该值 (FORBID)"], ["FILTER", "过滤该项 (FILTER)"], ["BOOST", "提升优先级 (BOOST)"], ["ADD", "增加候选 (ADD)"]])}
+            ${groupedSelect("影响内容", `actions.${index}.field`, action.field, state.ruleSet.resultFields)}
+            ${typedValueField("设定具体值", `actions.${index}.value`, action.value, definition)}
+            <button class="icon-button is-danger" type="button" data-remove-action="${index}" title="删除处理" aria-label="删除处理">×</button>
+          </div>`;
+        }).join("") || `<p class="muted-copy">暂无动作，点击上方添加处理动作。</p>`}
+      </div>
+    `;
   }
 
   function renderOutfitResults(rule) {
     const result = rule.result || {};
-    return `<div class="outfit-result-grid">
-      ${selectField("服装路线", "result.family", result.family || "straight", familyOptions)}
-      ${field("服装轮廓", "result.silhouette", result.silhouette || "")}
-      ${field("款式细节", "result.detail", result.detail || "")}
-      ${field("图案纹理", "result.pattern", result.pattern || "")}
-      ${result.formality !== undefined ? selectField("正式程度", "result.formality", result.formality, [[1, "随性"], [2, "整洁"], [3, "偏正式"], [4, "正式"]]) : ""}
-      ${result.finish !== undefined ? field("材质表面", "result.finish", result.finish || "") : ""}
-      ${result.trend !== undefined ? selectField("潮流表达", "result.trend", result.trend, [["classic", "经典稳妥"], ["current", "适度当下"], ["statement", "明显潮流"]]) : ""}
-      ${result.proportion !== undefined ? field("版型比例", "result.proportion", result.proportion || "") : ""}
-      ${result.detailIntensity !== undefined ? field("细节强度", "result.detailIntensity", result.detailIntensity || "") : ""}
-      ${result.note !== undefined ? field("穿着表达", "result.note", result.note || "") : ""}
-      ${result.seasonVersion !== undefined ? field("款式时效", "result.seasonVersion", result.seasonVersion || "") : ""}
-    </div>
-    <div class="family-choice"><span>可生成的候选路线</span>${familyOptions.map(([value, label]) => `<label><input type="checkbox" data-family-option="${value}" ${(result.families || []).includes(value) ? "checked" : ""}>${label}</label>`).join("")}</div>`;
+    return `
+      <div class="outfit-result-grid">
+        ${selectField("服装路线", "result.family", result.family || "straight", familyOptions)}
+        ${field("服装轮廓", "result.silhouette", result.silhouette || "")}
+        ${field("款式细节", "result.detail", result.detail || "")}
+        ${field("图案纹理", "result.pattern", result.pattern || "")}
+        ${result.formality !== undefined ? selectField("正式程度", "result.formality", result.formality, [[1, "随性"], [2, "整洁"], [3, "偏正式"], [4, "正式"]]) : ""}
+        ${result.finish !== undefined ? field("材质表面", "result.finish", result.finish || "") : ""}
+        ${result.trend !== undefined ? selectField("潮流表达", "result.trend", result.trend, [["classic", "经典稳妥"], ["current", "适度当下"], ["statement", "明显潮流"]]) : ""}
+        ${result.proportion !== undefined ? field("版型比例", "result.proportion", result.proportion || "") : ""}
+        ${result.detailIntensity !== undefined ? field("细节强度", "result.detailIntensity", result.detailIntensity || "") : ""}
+        ${result.note !== undefined ? field("穿着表达", "result.note", result.note || "") : ""}
+        ${result.seasonVersion !== undefined ? field("款式时效", "result.seasonVersion", result.seasonVersion || "") : ""}
+      </div>
+      <div class="family-choice">
+        <span>可生成的候选路线</span>
+        <div class="family-choice-boxes">
+          ${familyOptions.map(([value, label]) => `<label class="family-check"><input type="checkbox" data-family-option="${value}" ${(result.families || []).includes(value) ? "checked" : ""}><span>${label}</span></label>`).join("")}
+        </div>
+      </div>
+    `;
   }
 
   function renderTrendResults(rule) {
     const result = rule.result || {};
-    return `<div class="trend-rule-meta">
-      ${field("理念来源", "reference", rule.reference || "")}
-      ${field("适用时间", "season", rule.season || "")}
-      ${textareaField("核心理念", "coreIdea", rule.coreIdea || "")}
-    </div>
-    <div class="outfit-result-grid">
-      ${field("服装廓形", "result.silhouette", result.silhouette || "")}
-      ${field("版型比例", "result.proportion", result.proportion || "")}
-      ${field("款式细节", "result.detail", result.detail || "")}
-      ${field("图案纹理", "result.pattern", result.pattern || "")}
-      ${field("材质表面", "result.finish", result.finish || "")}
-      ${field("细节重点", "result.detailIntensity", result.detailIntensity || "")}
-    </div>
-    <div class="family-choice"><span>会优先使用的服装路线</span>${familyOptions.map(([value, label]) => `<label><input type="checkbox" data-family-option="${value}" ${(result.families || []).includes(value) ? "checked" : ""}>${label}</label>`).join("")}</div>`;
-  }
-
-  function renderRelatedRules(relation) {
-    const related = relations().filter((item) => item.id !== relation.id && item.domains.some((domain) => relation.domains.includes(domain))).slice(0, 5);
-    if (!related.length) return "";
-    return `<section class="related-rules"><div class="editor-section-title"><h3>同一结果还受这些规则影响</h3></div>${related.map((item) => `<button type="button" data-open-related="${escapeHtml(item.id)}"><span>${escapeHtml(item.rule.name)}</span><small>${escapeHtml(item.domains.filter((domain) => relation.domains.includes(domain)).join("、"))}</small><em class="relation-kind is-${item.kind}">${kindLabel(item.kind)}</em></button>`).join("")}</section>`;
+    return `
+      <div class="trend-rule-meta">
+        ${field("理念来源", "reference", rule.reference || "")}
+        ${field("适用时间", "season", rule.season || "")}
+        ${textareaField("核心理念阐述", "coreIdea", rule.coreIdea || "")}
+      </div>
+      <div class="outfit-result-grid">
+        ${field("服装廓形", "result.silhouette", result.silhouette || "")}
+        ${field("版型比例", "result.proportion", result.proportion || "")}
+        ${field("款式细节", "result.detail", result.detail || "")}
+        ${field("图案纹理", "result.pattern", result.pattern || "")}
+        ${field("材质表面", "result.finish", result.finish || "")}
+        ${field("细节重点", "result.detailIntensity", result.detailIntensity || "")}
+      </div>
+      <div class="family-choice">
+        <span>会优先使用的服装路线</span>
+        <div class="family-choice-boxes">
+          ${familyOptions.map(([value, label]) => `<label class="family-check"><input type="checkbox" data-family-option="${value}" ${(result.families || []).includes(value) ? "checked" : ""}><span>${label}</span></label>`).join("")}
+        </div>
+      </div>
+    `;
   }
 
   function handleEditorChange(event) {
@@ -580,6 +635,7 @@
       renderEditor();
       return;
     }
+
     const derivedControl = event.target.closest("[data-derived-id][data-derived-edit]");
     if (derivedControl) {
       const derivedRule = state.ruleSet.derivedRules.find((rule) => rule.id === derivedControl.dataset.derivedId);
@@ -587,8 +643,11 @@
       const path = derivedControl.dataset.derivedEdit;
       const previous = Engine.getByPath(derivedRule, path);
       Engine.setByPath(derivedRule, path, parseByPrevious(derivedControl.value, previous));
-      markDirty(); renderAll(); return;
+      markDirty();
+      renderAll();
+      return;
     }
+
     const relation = activeAtomicRelation(business);
     const branch = event.target.closest("select[data-branch-select]");
     if (branch && relation?.rules?.length) {
@@ -596,6 +655,7 @@
       renderEditor();
       return;
     }
+
     const control = event.target.closest("[data-edit]");
     if (!control || !relation || control.disabled || control.dataset.edit === "__derivedOutput") return;
     const editable = activeRule(relation);
@@ -617,30 +677,68 @@
     const relation = activeAtomicRelation(business);
     if (!relation || !business) return;
     const editable = activeRule(relation);
+
+    const branchChip = event.target.closest("button[data-branch-chip]");
+    if (branchChip && relation.rules?.length) {
+      state.branchSelection[relation.id] = branchChip.dataset.branchChip;
+      renderEditor();
+      return;
+    }
+
+    if (event.target.closest("#addBranchBtn")) {
+      duplicateRule();
+      return;
+    }
+
     const related = event.target.closest("button[data-open-related]");
-    if (related) { state.selectedId = related.dataset.openRelated; renderRelationPicker(); renderEditor(); return; }
+    if (related) {
+      state.selectedId = related.dataset.openRelated;
+      renderRelationPicker();
+      renderEditor();
+      return;
+    }
+
     const family = event.target.closest("input[data-family-option]");
     if (family && ["outfit", "trend"].includes(relation.type)) {
       editable.result.families ||= [];
       editable.result.families = family.checked
         ? [...new Set([...editable.result.families, family.dataset.familyOption])]
         : editable.result.families.filter((item) => item !== family.dataset.familyOption);
-      markDirty(); renderEditor(); return;
+      markDirty();
+      renderEditor();
+      return;
     }
+
     if (event.target.closest("[data-add-condition]")) {
       editable.conditions ||= [];
       editable.conditions.push({ field: "input.context.temperatureRange", operator: "eq", value: "18_24" });
-      markDirty(); renderEditor(); return;
+      markDirty();
+      renderEditor();
+      return;
     }
+
     const removeCondition = event.target.closest("[data-remove-condition]");
-    if (removeCondition) { editable.conditions.splice(Number(removeCondition.dataset.removeCondition), 1); markDirty(); renderEditor(); return; }
+    if (removeCondition) {
+      editable.conditions.splice(Number(removeCondition.dataset.removeCondition), 1);
+      markDirty();
+      renderEditor();
+      return;
+    }
+
     if (event.target.closest("[data-add-action]") && relation.type === "decision") {
       editable.actions ||= [];
       editable.actions.push({ type: "SET", field: "requirements.material", value: "轻薄" });
-      markDirty(); renderEditor(); return;
+      markDirty();
+      renderEditor();
+      return;
     }
+
     const removeAction = event.target.closest("[data-remove-action]");
-    if (removeAction && relation.type === "decision") { editable.actions.splice(Number(removeAction.dataset.removeAction), 1); markDirty(); renderEditor(); }
+    if (removeAction && relation.type === "decision") {
+      editable.actions.splice(Number(removeAction.dataset.removeAction), 1);
+      markDirty();
+      renderEditor();
+    }
   }
 
   function resetConditionValue(rule, path, fieldId) {
@@ -671,20 +769,24 @@
     collectionFor(relation.type).push(copy);
     if (relation.type === "trend") refreshTrendReferences();
     if (relation.rules?.length) state.branchSelection[relation.id] = copy.id;
-    markDirty(); renderAll();
+    markDirty();
+    renderAll();
+    toast(`已创建分支副本: ${copy.name}`);
   }
 
   async function deleteRule() {
     const business = businessRelationById(state.selectedId);
     const relation = activeAtomicRelation(business);
     const editable = activeRule(relation);
-    if (!relation || !editable || !await confirmAction("删除规则", `确定删除“${editable.name}”吗？`)) return;
+    if (!relation || !editable || !await confirmAction("删除规则分支", `确定删除分支“${editable.name}”吗？`)) return;
     const collection = collectionFor(relation.type);
     collection.splice(collection.findIndex((item) => item.id === editable.id), 1);
     if (relation.type === "trend") refreshTrendReferences();
     if (relation.rules?.length > 2) delete state.branchSelection[relation.id];
     else state.selectedId = businessRelations()[0]?.id || null;
-    markDirty(); renderAll();
+    markDirty();
+    renderAll();
+    toast("分支已删除");
   }
 
   function collectionFor(type) {
@@ -701,21 +803,64 @@
   async function publishRules() {
     const validation = Engine.validateRuleSet(state.ruleSet);
     const tests = Engine.runTests(state.ruleSet);
-    if (!validation.valid || tests.some((test) => !test.pass)) {
-      const messages = [...validation.errors.map((item) => item.message), ...tests.filter((test) => !test.pass).map((test) => `${test.name}未通过`)];
-      toast(`暂时不能发布：${messages.slice(0, 2).join("；")}`);
+    const hasError = !validation.valid || tests.some((t) => !t.pass);
+
+    if (hasError) {
+      showValidationDiagnostics(validation, tests);
       return;
     }
-    if (!await confirmAction("发布规则", "发布后，案例运行页将使用这组规则关系。")) return;
+
+    if (!await confirmAction("发布规则确认", "发布后，案例运行页与模拟器将立即同步使用这组规则关系。")) return;
     const result = Engine.Store.publish(state.ruleSet);
     state.ruleSet = result.ruleSet;
     state.dirty = false;
     renderAll();
-    toast(`规则 ${state.ruleSet.meta.version} 已发布`);
+    toast(`规则 ${state.ruleSet.meta.version} 已成功发布`);
+  }
+
+  function showValidationDiagnostics(validation, tests) {
+    const valDialog = $("#validationDialog");
+    const valContent = $("#validationContent");
+    if (!valDialog || !valContent) {
+      toast("规则校验未通过，请检查配置");
+      return;
+    }
+
+    const failedTests = tests.filter((t) => !t.pass);
+    const errors = validation.errors || [];
+
+    valContent.innerHTML = `
+      <div class="diagnostic-summary">
+        <strong>发现 ${errors.length + failedTests.length} 处阻断发布的校验问题</strong>
+        <p>必须修复以下问题后才能发布至案例运行环境：</p>
+      </div>
+      <div class="diagnostic-list">
+        ${errors.map((err) => `
+          <div class="diagnostic-card is-error">
+            <div class="diagnostic-head">
+              <span class="diagnostic-badge">语法结构错误</span>
+              <strong>${escapeHtml(err.field || "规则配置")}</strong>
+            </div>
+            <p>${escapeHtml(err.message)}</p>
+            ${err.ruleId ? `<button type="button" class="text-button" data-jump-relation="${escapeHtml(err.relationId || 'temperature')}" data-jump-branch="${escapeHtml(err.ruleId)}">立即前往修复 →</button>` : ""}
+          </div>
+        `).join("")}
+        ${failedTests.map((t) => `
+          <div class="diagnostic-card is-test-failure">
+            <div class="diagnostic-head">
+              <span class="diagnostic-badge is-test">场景回归测试未通过</span>
+              <strong>${escapeHtml(t.name)}</strong>
+            </div>
+            <p>${escapeHtml(t.reason || "用例预期未能满足")}</p>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    valDialog.showModal();
   }
 
   async function resetRules() {
-    if (!await confirmAction("恢复默认规则", "当前草稿和本地发布版将恢复为默认值。")) return;
+    if (!await confirmAction("恢复默认规则", "当前草稿和本地发布版将恢复为默认出厂设置，此操作不可撤销。")) return;
     state.ruleSet = Engine.Store.reset();
     state.selectedId = businessRelations()[0]?.id || null;
     state.dirty = false;
@@ -758,12 +903,42 @@
   }
 
   function renderGarmentResources() {
-    return `<div class="resource-table-wrap"><table class="resource-table"><thead><tr><th>服装名称</th><th>位置</th><th>款式路线</th><th>正式程度</th><th>启用</th></tr></thead><tbody>${state.ruleSet.components.map((item, index) => `<tr>
-      <td>${resourceField("components", index, "name", item.name)}</td>
-      <td>${resourceSelect("components", index, "category", item.category, [["top", "上装"], ["outer", "外层"], ["bottom", "下装"]])}</td>
-      <td>${resourceSelect("components", index, "attributes.family", item.attributes?.family, familyOptions)}</td>
-      <td>${resourceSelect("components", index, "attributes.formality", item.attributes?.formality, [[1, "随性"], [2, "整洁"], [3, "偏正式"], [4, "正式"]])}</td>
-      <td>${resourceCheck("components", index, "enabled", item.enabled !== false)}</td></tr>`).join("")}</tbody></table></div>`;
+    const filter = state.resourceGarmentFilter || "all";
+    const search = (state.resourceGarmentSearch || "").trim().toLowerCase();
+
+    const filtered = state.ruleSet.components.map((item, index) => ({ item, index })).filter(({ item }) => {
+      if (filter !== "all" && item.category !== filter) return false;
+      if (search && !item.name.toLowerCase().includes(search)) return false;
+      return true;
+    });
+
+    return `
+      <div class="garment-resource-toolbar">
+        <div class="garment-filter-chips">
+          <button type="button" class="chip ${filter === "all" ? "is-active" : ""}" data-garment-filter="all">全部 (${state.ruleSet.components.length})</button>
+          <button type="button" class="chip ${filter === "top" ? "is-active" : ""}" data-garment-filter="top">上装</button>
+          <button type="button" class="chip ${filter === "outer" ? "is-active" : ""}" data-garment-filter="outer">外层</button>
+          <button type="button" class="chip ${filter === "bottom" ? "is-active" : ""}" data-garment-filter="bottom">下装</button>
+        </div>
+        <input type="search" class="search-input" placeholder="搜索服装名称..." value="${escapeHtml(state.resourceGarmentSearch || "")}" data-garment-search />
+      </div>
+      <div class="resource-table-wrap">
+        <table class="resource-table">
+          <thead>
+            <tr><th>服装名称</th><th>部位</th><th>款式路线</th><th>正式程度</th><th>启用</th></tr>
+          </thead>
+          <tbody>
+            ${filtered.map(({ item, index }) => `<tr>
+              <td>${resourceField("components", index, "name", item.name)}</td>
+              <td>${resourceSelect("components", index, "category", item.category, [["top", "上装"], ["outer", "外层"], ["bottom", "下装"]])}</td>
+              <td>${resourceSelect("components", index, "attributes.family", item.attributes?.family, familyOptions)}</td>
+              <td>${resourceSelect("components", index, "attributes.formality", item.attributes?.formality, [[1, "随性"], [2, "整洁"], [3, "偏正式"], [4, "正式"]])}</td>
+              <td>${resourceCheck("components", index, "enabled", item.enabled !== false)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
   }
 
   function renderPaletteResources() {
@@ -777,16 +952,30 @@
   }
 
   function renderTrendResources() {
-    return `<div class="resource-list-heading"><strong>${state.ruleSet.trendDirections.length} 个潮流方向</strong><button type="button" class="secondary-button" data-add-trend>新增方向</button></div>
+    return `<div class="resource-list-heading"><strong>${state.ruleSet.trendDirections.length} 个潮流方向</strong><button type="button" class="secondary-button" data-add-trend>＋ 新增方向</button></div>
       <div class="trend-resource-list">${state.ruleSet.trendDirections.map((trend, index) => `<section class="trend-resource-card">
         <div class="trend-resource-head">${resourceField("trendDirections", index, "name", trend.name)}${resourceCheck("trendDirections", index, "enabled", trend.enabled !== false)}<button type="button" class="icon-button is-danger" data-remove-trend="${index}" title="删除潮流方向" aria-label="删除潮流方向">×</button></div>
         <div class="trend-resource-meta">${resourceField("trendDirections", index, "reference", trend.reference || "")}${resourceField("trendDirections", index, "season", trend.season || "")}</div>
-        <label class="resource-textarea"><span>核心理念</span><textarea rows="2" data-resource-collection="trendDirections" data-resource-index="${index}" data-resource-path="coreIdea">${escapeHtml(trend.coreIdea || "")}</textarea></label>
-        <div class="trend-resource-tags"><span>影响内容</span>${(trend.influences || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</div>
+        <label class="resource-textarea"><span>核心理念阐述</span><textarea rows="2" data-resource-collection="trendDirections" data-resource-index="${index}" data-resource-path="coreIdea">${escapeHtml(trend.coreIdea || "")}</textarea></label>
+        <div class="trend-resource-tags"><span>影响穿搭维度</span>${(trend.influences || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</div>
       </section>`).join("")}</div>`;
   }
 
   function handleResourceChange(event) {
+    const garmentFilter = event.target.closest("[data-garment-filter]");
+    if (garmentFilter) {
+      state.resourceGarmentFilter = garmentFilter.dataset.garmentFilter;
+      renderResources();
+      return;
+    }
+
+    const garmentSearch = event.target.closest("[data-garment-search]");
+    if (garmentSearch) {
+      state.resourceGarmentSearch = garmentSearch.value;
+      renderResources();
+      return;
+    }
+
     const control = event.target.closest("[data-resource-collection]");
     if (!control) return;
     const collection = state.ruleSet[control.dataset.resourceCollection];
@@ -804,6 +993,13 @@
   }
 
   function handleResourceClick(event) {
+    const garmentFilter = event.target.closest("[data-garment-filter]");
+    if (garmentFilter) {
+      state.resourceGarmentFilter = garmentFilter.dataset.garmentFilter;
+      renderResources();
+      return;
+    }
+
     if (event.target.closest("[data-add-trend]")) {
       const suffix = Date.now().toString().slice(-5);
       const value = `customTrend${suffix}`;
@@ -812,22 +1008,27 @@
         value,
         name: "新潮流方向",
         enabled: true,
-        reference: "待补充",
-        season: "待确认",
-        coreIdea: "说明这一方向通过哪些服装元素形成。",
+        reference: "现代设计理念",
+        season: "长期方向",
+        coreIdea: "说明这一潮流方向通过哪些服装路线、廓形和细节形成。",
         influences: ["服装路线", "廓形比例", "款式细节"],
         conditions: [{ field: "input.preference.trendDirection", operator: "eq", value }],
-        result: { families: ["straight", "relaxed"], silhouette: "待配置", detail: "待配置", pattern: "待配置", finish: "待配置", proportion: "待配置", detailIntensity: "待配置", note: "待配置", seasonVersion: "待确认" },
+        result: { families: ["straight", "relaxed"], silhouette: "松量适度", detail: "结构细节", pattern: "纯色", finish: "质感平整", proportion: "常规比例", detailIntensity: "细节适中", note: "适度融入潮流", seasonVersion: "持续更新" },
         reason: "新增潮流方向，具体服装映射需继续配置。"
       });
       refreshTrendReferences();
-      markDirty(); renderResources(); renderAll(); return;
+      markDirty();
+      renderResources();
+      renderAll();
+      return;
     }
     const remove = event.target.closest("[data-remove-trend]");
     if (!remove) return;
     state.ruleSet.trendDirections.splice(Number(remove.dataset.removeTrend), 1);
     refreshTrendReferences();
-    markDirty(); renderResources(); renderAll();
+    markDirty();
+    renderResources();
+    renderAll();
   }
 
   function refreshTrendReferences() {
@@ -861,18 +1062,10 @@
     return `<label class="table-switch"><input type="checkbox" data-resource-collection="${collection}" data-resource-index="${index}" data-resource-path="${path}" ${value ? "checked" : ""}><span></span></label>`;
   }
 
-  function conditionText(condition) {
-    const definition = conditionDefinition(condition.field);
-    const operator = { eq: "为", neq: "不为", gt: "高于", gte: "不低于", lt: "低于", lte: "不高于" }[condition.operator] || "为";
-    return `${definition?.name || "当前条件"}${operator}${optionName(definition?.options, condition.value)}`;
-  }
-
   function conditionDefinition(id) { return state.ruleSet.conditionFields.find((item) => item.id === id); }
   function resultDefinition(id) { return state.ruleSet.resultFields.find((item) => item.id === id); }
   function parameterName(id) { return state.ruleSet.parameters.find((item) => item.id === id)?.name || id; }
   function derivedOutputName(output) { return conditionDefinition(`derived.${output}.label`)?.name || state.ruleSet.derivedRules.find((item) => item.output === output)?.name || "分析结果"; }
-  function kindLabel(kind) { return ({ analysis: "分析判断", hard: "硬性限制", soft: "搭配关系" })[kind] || "搭配关系"; }
-  function optionName(options, value) { return options?.find(([option]) => String(option) === String(value))?.[1] || String(value ?? "未设置"); }
 
   function field(label, path, value, type = "text", disabled = false) {
     return `<label class="editor-field"><span>${label}</span><input type="${type}" data-edit="${path}" value="${escapeHtml(value)}" ${disabled ? "disabled" : ""}></label>`;

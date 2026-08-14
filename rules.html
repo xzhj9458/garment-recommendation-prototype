@@ -97,6 +97,20 @@
     <div class="resource-content" id="resourceContent"></div>
   </dialog>
 
+  <dialog class="validation-dialog" id="validationDialog">
+    <div class="dialog-header">
+      <div>
+        <p class="section-kicker">规则校验诊断</p>
+        <h2 id="validationTitle">规则存在未满足项</h2>
+      </div>
+      <button class="icon-button" type="button" data-close-validation title="关闭" aria-label="关闭">×</button>
+    </div>
+    <div class="validation-content" id="validationContent"></div>
+    <div class="dialog-actions">
+      <button class="primary-button" type="button" data-close-validation>返回修改</button>
+    </div>
+  </dialog>
+
   <dialog class="confirm-dialog" id="confirmDialog">
     <h2 id="confirmTitle">确认操作</h2>
     <p id="confirmMessage"></p>

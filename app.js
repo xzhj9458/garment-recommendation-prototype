@@ -20,6 +20,7 @@
     ruleSet: Engine.Store.loadPublished(),
     input: Engine.Store.loadInput(),
     activeGroup: "context",
+    viewMode: "cards",
     result: null,
     previousResult: null,
     lastInputChange: null,
@@ -33,6 +34,7 @@
   function init() {
     bindStaticEvents();
     renderTabs();
+    renderConditionSnapshot();
     renderInputGroup();
     calculate(false);
   }
@@ -42,6 +44,7 @@
       state.input = Engine.clone(DATA.defaultInput);
       state.lastInputChange = { name: "输入", before: "当前设置", after: "默认设置" };
       Engine.Store.saveInput(state.input);
+      renderConditionSnapshot();
       renderInputGroup();
       calculate(true);
       toast("已恢复默认输入");
@@ -54,6 +57,33 @@
       renderTabs();
       renderInputGroup();
     });
+
+    const snapshot = $("#conditionSnapshot");
+    if (snapshot) {
+      snapshot.addEventListener("click", (event) => {
+        const badge = event.target.closest("button[data-jump-group]");
+        if (!badge) return;
+        state.activeGroup = badge.dataset.jumpGroup;
+        renderTabs();
+        renderInputGroup();
+      });
+    }
+
+    const viewModeBar = $("#viewModeBar");
+    if (viewModeBar) {
+      viewModeBar.addEventListener("click", (event) => {
+        const btn = event.target.closest("button[data-view-mode]");
+        if (!btn) return;
+        state.viewMode = btn.dataset.viewMode;
+        $$(".view-mode-button", viewModeBar).forEach((b) => b.classList.toggle("is-active", b.dataset.viewMode === state.viewMode));
+        const grid = $("#candidateGrid");
+        const tableWrap = $("#candidateTableView");
+        if (grid && tableWrap) {
+          grid.hidden = state.viewMode !== "cards";
+          tableWrap.hidden = state.viewMode !== "table";
+        }
+      });
+    }
 
     $("#inputContent").addEventListener("change", handleInputChange);
     $("#inputContent").addEventListener("click", (event) => {
@@ -69,11 +99,11 @@
       renderInputGroup();
     });
 
-    $("#candidateGrid").addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-candidate-id]");
-      if (!button) return;
-      openCandidate(button.dataset.candidateId);
-    });
+    $("#candidateGrid").addEventListener("click", handleCandidateAction);
+    const tableWrap = $("#candidateTableView");
+    if (tableWrap) {
+      tableWrap.addEventListener("click", handleCandidateAction);
+    }
 
     $("#analysisTrace").addEventListener("click", (event) => {
       const card = event.target.closest("button[data-insight-id]");
@@ -92,11 +122,18 @@
       if (event.key === Engine.Store.keys.published) {
         state.ruleSet = Engine.Store.loadPublished();
         renderTabs();
+        renderConditionSnapshot();
         renderInputGroup();
         calculate(true);
         toast("已载入新发布的规则");
       }
     });
+  }
+
+  function handleCandidateAction(event) {
+    const button = event.target.closest("button[data-candidate-id]");
+    if (!button) return;
+    openCandidate(button.dataset.candidateId);
   }
 
   function renderTabs() {
@@ -108,7 +145,33 @@
     $("#ruleVersion").textContent = `规则 ${state.ruleSet.meta.version || "草稿"}`;
   }
 
+  function renderConditionSnapshot() {
+    const snapshotEl = $("#conditionSnapshot");
+    if (!snapshotEl) return;
+    const tempOpt = state.ruleSet.parameters.find((p) => p.id === "context.temperatureRange")?.options?.find((o) => o.value === state.input.context?.temperatureRange)?.label || "温度未设";
+    const occOpt = state.ruleSet.parameters.find((p) => p.id === "context.occasion")?.options?.find((o) => o.value === state.input.context?.occasion)?.label || "日常";
+    const styleOpt = state.ruleSet.parameters.find((p) => p.id === "preference.style")?.options?.find((o) => o.value === state.input.preference?.style)?.label || "极简";
+    const faceOpt = state.ruleSet.parameters.find((p) => p.id === "face.shape")?.options?.find((o) => o.value === state.input.face?.shape)?.label || "长脸";
+    const trendValue = state.input.preference?.trendDirection || "none";
+    const trendOpt = trendValue === "none" ? "不限潮流" : (state.ruleSet.trendDirections?.find((t) => t.value === trendValue)?.name || "指定潮流");
+    const boundaries = state.ruleSet.parameters.filter((p) => p.group === "明确拒绝与身体边界" && Engine.getByPath(state.input, p.id));
+    const boundaryText = boundaries.length ? `${boundaries.length} 项禁忌` : "无边界禁忌";
+
+    snapshotEl.innerHTML = `
+      <div class="snapshot-inner">
+        <span class="snapshot-label">已选条件快照</span>
+        <div class="snapshot-badges">
+          <button type="button" class="snapshot-chip" data-jump-group="context" title="点击切换至穿着条件">${escapeHtml(tempOpt)} · ${escapeHtml(occOpt)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击切换至穿着偏好">${escapeHtml(styleOpt)} · ${escapeHtml(trendOpt)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="face" title="点击切换至脸型">${escapeHtml(faceOpt)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="boundaries" title="点击切换至拒绝与边界">${escapeHtml(boundaryText)}</button>
+        </div>
+      </div>
+    `;
+  }
+
   function renderInputGroup() {
+    renderConditionSnapshot();
     const group = groups.find((item) => item.id === state.activeGroup);
     const trendSelected = Engine.getByPath(state.input, "preference.trendDirection") !== "none";
     const parameters = state.ruleSet.parameters.filter((item) => (
@@ -128,25 +191,25 @@
     if (state.activeGroup === "boundaries") {
       content.innerHTML = `
         <div class="input-group-heading">
-          <div><strong>明确拒绝与身体边界</strong><p>勾选项会直接过滤或改写候选。</p></div>
+          <div><strong>明确拒绝与身体边界</strong><p>个人穿着禁忌与身体边界。勾选项会作为硬性条件，直接过滤或改写候选。</p></div>
         </div>
         <div class="checkbox-grid">
           ${parameters.map(renderBooleanParameter).join("")}
         </div>
-        <div class="source-line"><span>来源</span><strong>客户明确陈述</strong></div>
+        <div class="source-line"><span>来源</span><strong>客户明确陈述 · 硬性边界</strong></div>
       `;
       return;
     }
 
     const intro = state.activeGroup === "context"
-      ? "近期温度使用范围选择；不推测湿度、室内外和活动强度。"
+      ? "近期温度使用范围选择，决定基础层数与保暖厚度；不推测湿度、室内外和活动强度。"
       : state.activeGroup === "preference"
-        ? "风格、正式程度和潮流方向分别参与穿搭；潮流可以不限定。"
+        ? "风格定义款式语言，正式程度定义完成度，潮流方向动态维护；三者独立输入，协同约束。"
         : state.activeGroup === "goal"
-        ? "暂不确定也可以继续，系统不会自动制造需要纠正的问题。"
+        ? "本次主观修饰意图（修长感、腰线、色彩对比）；暂不确定也可以继续。"
       : state.activeGroup === "face"
-        ? "脸型只用于领口和脸部周边细节参考，不影响身材判断。"
-        : "这些是已确认的当前关系，只描述起点，不判断好坏。";
+        ? "脸型是独立输入，只用于领口和脸部周边细节修饰参考，不影响身材比例判断。"
+        : "身材比例与轮廓用于判断上下长度、腰位和服装量感，只描述客观起点。";
 
     const parameterContent = state.activeGroup === "body"
       ? group.parameterGroups.map((parameterGroup) => {
@@ -187,20 +250,24 @@
       { key: "eye", label: "眼睛" }
     ];
     const find = (id) => parameters.find((item) => item.id === id);
-    const active = rows.find((row) => row.key === state.appearancePart) || rows[0];
+
     return `
       <div class="input-group-heading">
-        <div><strong>外观色彩</strong><p>分别确认肤色、发色和眼睛颜色，再计算整体结果。</p></div>
+        <div><strong>整体色彩特征录入</strong><p>分别确认肤色、发色和眼睛的冷暖、明度与彩度，系统自动推演全局服装配色策略。</p></div>
       </div>
-      <div class="appearance-part-tabs" role="tablist" aria-label="外观部位">
-        ${rows.map((row) => `<button type="button" role="tab" aria-selected="${row.key === active.key}" class="${row.key === active.key ? "is-active" : ""}" data-appearance-part="${row.key}">${row.label}</button>`).join("")}
+      <div class="appearance-matrix-wrap">
+        ${rows.map((row) => `
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>${row.label}</strong><span>冷暖 · 明度 · 彩度</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleParameter(find(`appearance.${row.key}Temperature`))}
+              ${renderScaleParameter(find(`appearance.${row.key}Value`))}
+              ${renderScaleParameter(find(`appearance.${row.key}Chroma`))}
+            </div>
+          </div>
+        `).join("")}
       </div>
-      <div class="appearance-scales">
-        ${renderScaleParameter(find(`appearance.${active.key}Temperature`))}
-        ${renderScaleParameter(find(`appearance.${active.key}Value`))}
-        ${renderScaleParameter(find(`appearance.${active.key}Chroma`))}
-      </div>
-      <div class="source-line"><span>来源</span><strong>客户确认 · 后续可由图片写入待确认值</strong></div>
+      <div class="source-line"><span>来源</span><strong>客户确认 · 3项特征共同推演色温与对比度</strong></div>
     `;
   }
 
@@ -260,6 +327,7 @@
   }
 
   function renderScaleParameter(parameter) {
+    if (!parameter) return "";
     const value = Engine.getByPath(state.input, parameter.id);
     return `
       <div class="scale-control">
@@ -312,31 +380,65 @@
 
   function calculate(showChange) {
     const calculationState = $("#calculationState");
-    calculationState.textContent = "计算中";
-    calculationState.classList.add("is-working");
+    if (calculationState) {
+      calculationState.textContent = "计算中";
+      calculationState.classList.add("is-working");
+    }
     state.previousResult = state.result;
     state.result = Engine.run(state.input, state.ruleSet);
+    renderConditionSnapshot();
     renderAnalysis(showChange);
     renderCandidates();
     requestAnimationFrame(() => {
-      calculationState.textContent = "已更新";
-      calculationState.classList.remove("is-working");
+      if (calculationState) {
+        calculationState.textContent = "已更新";
+        calculationState.classList.remove("is-working");
+      }
     });
   }
 
   function renderAnalysis(showChange) {
     const groups = groupInsights(state.result.insights || []);
-    $("#analysisTrace").innerHTML = groups.length ? groups.map((insight) => {
-      const active = state.activeInsightId === insight.id;
-      const changed = insightMatchesInput(insight, state.lastInputChange?.path);
-      return `
-        <button type="button" class="impact-link-row ${active ? "is-active" : ""} ${showChange && changed ? "is-changed" : ""}" data-insight-id="${escapeHtml(insight.id)}">
-          <span class="impact-capsules is-input">${insight.inputs.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
-          <span class="impact-arrow" aria-hidden="true">→</span>
-          <span class="impact-capsules is-output">${insight.outputResults.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
-          ${insight.kind === "hard" ? `<em class="impact-required">必须</em>` : ""}
-        </button>`;
-    }).join("") : `<div class="analysis-empty"><strong>当前没有额外处理方向</strong><p>服装方案将按基础组合生成。</p></div>`;
+    const traceEl = $("#analysisTrace");
+    if (!traceEl) return;
+
+    if (!groups.length) {
+      traceEl.innerHTML = `<div class="analysis-empty"><strong>当前没有额外处理方向</strong><p>服装方案将按基础组合生成。</p></div>`;
+      return;
+    }
+
+    const wearGroups = groups.filter((g) => g.domain === "wear" || g.kind === "hard");
+    const styleGroups = groups.filter((g) => g.domain === "style" && g.kind !== "hard");
+    const colorGroups = groups.filter((g) => g.domain === "color" && g.kind !== "hard");
+
+    traceEl.innerHTML = `
+      <div class="analysis-categorized-list">
+        ${renderInsightSection("穿着框架 · 硬性边界", wearGroups, showChange, true)}
+        ${renderInsightSection("服装样式 · 轮廓细节", styleGroups, showChange, false)}
+        ${renderInsightSection("颜色搭配 · 色温明度", colorGroups, showChange, false)}
+      </div>
+    `;
+  }
+
+  function renderInsightSection(title, list, showChange, isHardSection) {
+    if (!list.length) return "";
+    return `
+      <div class="analysis-sub-group ${isHardSection ? "is-hard-section" : ""}">
+        <div class="analysis-sub-title"><span>${title}</span></div>
+        ${list.map((insight) => {
+          const active = state.activeInsightId === insight.id;
+          const changed = insightMatchesInput(insight, state.lastInputChange?.path);
+          return `
+            <button type="button" class="impact-link-row ${active ? "is-active" : ""} ${showChange && changed ? "is-changed" : ""}" data-insight-id="${escapeHtml(insight.id)}" title="点击在下方高亮关联方案">
+              <span class="impact-capsules is-input">${insight.inputs.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
+              <span class="impact-arrow" aria-hidden="true">→</span>
+              <span class="impact-capsules is-output">${insight.outputResults.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
+              ${insight.kind === "hard" ? `<em class="impact-required">硬性边界</em>` : `<span class="impact-tag-soft">搭配偏好</span>`}
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
   }
 
   function groupInsights(insights) {
@@ -347,11 +449,18 @@
         场合: "场合要求",
         色彩: "整体色彩",
         身材比例: "身材与比例",
-        身材与脸型适配: "脸型与领口"
+        身材与脸型适配: "脸型与领口",
+        风格: "风格方向",
+        潮流: "潮流方向",
+        明确拒绝与身体边界: "拒绝与边界"
       })[insight.group] || insight.group || "其他";
+
+      const domain = /温度|层数|厚薄|边界|覆盖|袖长/.test(key) ? "wear" : /色彩|色温|配色|明度|彩度/.test(key) ? "color" : "style";
+
       const current = grouped.get(key) || {
         id: `GROUP-${key}`,
         group: key,
+        domain,
         kind: insight.kind,
         priority: insight.priority,
         findings: [],
@@ -401,13 +510,16 @@
   function renderCandidates() {
     const result = state.result;
     const grid = $("#candidateGrid");
+    const tableWrap = $("#candidateTableView");
     const empty = $("#emptyResult");
+
     $("#candidateSummary").textContent = result.candidates.length >= 2
       ? `根据当前规则生成 ${result.candidates.length} 个不同方向 · ${result.version}`
       : `当前只有 ${result.candidates.length} 个可行方案 · ${result.version}`;
 
     if (!result.candidates.length) {
-      grid.innerHTML = "";
+      if (grid) grid.innerHTML = "";
+      if (tableWrap) tableWrap.innerHTML = "";
       empty.hidden = false;
       empty.innerHTML = result.conflicts.length
         ? `<strong>规则存在冲突，暂时无法生成方案</strong><p>${result.conflicts.map((item) => `${item.field}：${item.rules.join(" / ")}`).join("；")}</p><a href="rules.html">前往规则配置</a>`
@@ -416,7 +528,12 @@
     }
 
     empty.hidden = true;
-    grid.innerHTML = result.candidates.map((candidate, index) => renderCandidateCard(candidate, index)).join("");
+    if (grid) {
+      grid.innerHTML = result.candidates.map((candidate, index) => renderCandidateCard(candidate, index)).join("");
+    }
+    if (tableWrap) {
+      tableWrap.innerHTML = renderCandidateTable(result.candidates);
+    }
   }
 
   function renderCandidateCard(candidate, index) {
@@ -424,17 +541,21 @@
     const comparedWithFirst = index === 0 ? [] : Engine.meaningfulDifference(state.result.candidates[0], candidate);
     const activeInsight = groupInsights(state.result.insights || []).find((item) => item.id === state.activeInsightId);
     const related = !activeInsight || activeInsight.candidateIds.includes(candidate.id);
+    const featureTag = index === 0 ? "基准推荐" : index === 1 ? "层次丰富" : "极简修长";
+
     return `
       <article class="candidate-card ${state.activeInsightId ? (related ? "is-related" : "is-dimmed") : ""}" data-family="${escapeHtml(candidate.family)}">
         <div class="candidate-card-head">
-          <div>
+          <div class="candidate-card-meta">
             <span class="candidate-number">方案 ${index + 1}</span>
-            <h3>${escapeHtml(candidate.name)}</h3>
+            <span class="candidate-feature-chip is-${index === 0 ? "primary" : "alt"}">${featureTag}</span>
           </div>
           <div class="palette-strip" aria-label="${escapeHtml(candidate.palette?.name || "配色待确认")}" title="${escapeHtml(candidate.palette?.name || "配色待确认")}">
             ${palette.map((item) => `<span style="background:${escapeHtml(item.color?.hex || "#d9ddda")};flex-grow:${Number(item.ratio || 1)}"></span>`).join("")}
           </div>
         </div>
+
+        <h3 class="candidate-title">${escapeHtml(candidate.name)}</h3>
 
         <div class="garment-stack">
           <div><span>上装</span><strong>${escapeHtml(candidate.garments.top)}</strong></div>
@@ -446,7 +567,7 @@
           <span><small>层次</small><strong>${candidate.layerCount} 层</strong></span>
           <span><small>风格</small><strong>${escapeHtml(candidate.styleName)}</strong></span>
           <span><small>轮廓</small><strong>${escapeHtml(candidate.silhouette)}</strong></span>
-          <span><small>潮流方向</small><strong>${escapeHtml(candidate.trendName || "未指定")}</strong></span>
+          <span><small>潮流方向</small><strong>${escapeHtml(candidate.trendName || "不限定")}</strong></span>
         </div>
 
         <div class="outfit-detail-summary">
@@ -457,8 +578,10 @@
         </div>
 
         <div class="palette-summary">
-          <span>配色</span>
-          <strong>${escapeHtml(candidate.palette?.name || "需验证")}</strong>
+          <div class="palette-name-line">
+            <span>配色</span>
+            <strong>${escapeHtml(candidate.palette?.name || "需验证")}</strong>
+          </div>
           <small>${palette.map((item) => `${escapeHtml(item.garment)}：${escapeHtml(item.color?.name || "未设置")} ${item.ratio}%`).join(" · ")}</small>
         </div>
 
@@ -469,11 +592,45 @@
           <p>${(candidate.implementationTags || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "按基础组合生成"}</p>
         </div>
         <div class="difference-line">
-          <span>${index === 0 ? "主要方向" : "与方案 1 的差异"}</span>
+          <span>${index === 0 ? "核心策略" : "与方案 1 差异"}</span>
           <strong>${escapeHtml(index === 0 ? `${candidate.line} · ${candidate.colorContrast}对比` : comparedWithFirst.slice(0, 3).join("、") || "细节处理")}</strong>
         </div>
         <button class="detail-button" type="button" data-candidate-id="${escapeHtml(candidate.id)}">查看方案详情</button>
       </article>
+    `;
+  }
+
+  function renderCandidateTable(candidates) {
+    if (!candidates.length) return "";
+    const rows = [
+      { key: "name", label: "方案名称", format: (c) => `<strong>${escapeHtml(c.name)}</strong>` },
+      { key: "top", label: "上装款式", format: (c) => escapeHtml(c.garments.top) },
+      { key: "outer", label: "外层款式", format: (c) => escapeHtml(c.garments.outer) },
+      { key: "bottom", label: "下装款式", format: (c) => escapeHtml(c.garments.bottom) },
+      { key: "layer", label: "推荐层数", format: (c) => `${c.layerCount} 层 · ${escapeHtml(c.material)}` },
+      { key: "style", label: "风格与轮廓", format: (c) => `${escapeHtml(c.styleName)} · ${escapeHtml(c.silhouette)}` },
+      { key: "palette", label: "配色方案", format: (c) => `<span>${escapeHtml(c.palette?.name || "需验证")}</span>` },
+      { key: "diff", label: "核心差异", format: (c, i) => i === 0 ? `基准推荐 (${escapeHtml(c.line)})` : escapeHtml(Engine.meaningfulDifference(candidates[0], c).slice(0, 2).join("、") || "细节差异") },
+      { key: "action", label: "查看详情", format: (c) => `<button class="text-button" type="button" data-candidate-id="${escapeHtml(c.id)}">查看详情 →</button>` }
+    ];
+
+    return `
+      <table class="candidate-compare-table">
+        <thead>
+          <tr>
+            <th class="table-dim-col">属性维度</th>
+            ${candidates.map((c, i) => `<th><span class="table-cand-badge">方案 ${i + 1}</span></th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <th class="table-row-label">${row.label}</th>
+              ${candidates.map((c, i) => `<td>${row.format(c, i)}</td>`).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
     `;
   }
 
@@ -483,14 +640,14 @@
     $("#dialogTitle").textContent = candidate.name;
     $("#dialogContent").innerHTML = `
       <section class="dialog-section">
-        <h3>完整方案</h3>
+        <h3>完整穿着方案</h3>
         <div class="dialog-garments">
           <span><small>上装</small><strong>${escapeHtml(candidate.garments.top)}</strong></span>
           <span><small>外层</small><strong>${escapeHtml(candidate.garments.outer)}</strong></span>
           <span><small>下装</small><strong>${escapeHtml(candidate.garments.bottom)}</strong></span>
         </div>
-        <p>${candidate.layerCount} 层 · ${escapeHtml(Engine.labels.sleeveLabel(candidate.sleeve))} · ${escapeHtml(Engine.labels.coverageLabel(candidate.coverage))} · ${escapeHtml(candidate.material)} · ${escapeHtml(candidate.line)} · ${escapeHtml(Engine.labels.waistLabel(candidate.waist))}</p>
-        <p>${escapeHtml(candidate.styleName)} · ${escapeHtml(candidate.silhouette)} · ${escapeHtml(candidate.detail)} · ${escapeHtml(candidate.pattern)} · ${escapeHtml(candidate.trendName || "未指定潮流")}</p>
+        <p class="dialog-spec-line">${candidate.layerCount} 层 · ${escapeHtml(Engine.labels.sleeveLabel(candidate.sleeve))} · ${escapeHtml(Engine.labels.coverageLabel(candidate.coverage))} · ${escapeHtml(candidate.material)} · ${escapeHtml(candidate.line)} · ${escapeHtml(Engine.labels.waistLabel(candidate.waist))}</p>
+        <p class="dialog-spec-line">${escapeHtml(candidate.styleName)} · ${escapeHtml(candidate.silhouette)} · ${escapeHtml(candidate.detail)} · ${escapeHtml(candidate.pattern)} · ${escapeHtml(candidate.trendName || "未指定潮流")}</p>
       </section>
       <section class="dialog-section">
         <h3>配色方案</h3>
@@ -498,12 +655,12 @@
           <div class="dialog-palette">
             ${(candidate.palette.roles || []).map((item) => `<span><i style="background:${escapeHtml(item.color?.hex || "#d9ddda")}"></i><small>${escapeHtml(item.garment)}</small><strong>${escapeHtml(item.color?.name || "未设置")} ${item.ratio}%</strong></span>`).join("")}
           </div>
-          <p>${escapeHtml(candidate.palette.reason || "")}</p>
+          <p class="dialog-palette-reason">${escapeHtml(candidate.palette.reason || "")}</p>
         ` : `<p class="muted-copy">当前没有可用的配色方案。</p>`}
       </section>
       <section class="dialog-section">
         <h3>预计上身效果</h3>
-        <p>${escapeHtml(candidate.expectedEffect)}</p>
+        <p class="dialog-effect-text">${escapeHtml(candidate.expectedEffect)}</p>
       </section>
       <section class="dialog-section">
         <h3>满足的硬性条件</h3>
@@ -514,11 +671,11 @@
         ${renderImplementation(candidate)}
       </section>
       <section class="dialog-section">
-        <h3>需验证</h3>
+        <h3>需验证项与失败条件</h3>
         <div class="verification-list">
           ${candidate.unverified.map((item) => `
-            <article>
-              <div><strong>${escapeHtml(item.item)}</strong><span class="impact-badge ${item.affectsPlan ? "is-impact" : ""}">${item.affectsPlan ? "影响方案" : "不改变路线"}</span></div>
+            <article class="verification-card">
+              <div class="verification-head"><strong>${escapeHtml(item.item)}</strong><span class="impact-badge ${item.affectsPlan ? "is-impact" : ""}">${item.affectsPlan ? "影响方案" : "不改变路线"}</span></div>
               <p><b>怎么验证：</b>${escapeHtml(item.validation)}</p>
               <p><b>失败条件：</b>${escapeHtml(item.failure)}</p>
             </article>
@@ -526,7 +683,7 @@
         </div>
       </section>
       <section class="dialog-section trace-id-line">
-        <details class="advanced-details"><summary>高级信息</summary><p>${candidate.traceRuleIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p></details>
+        <details class="advanced-details"><summary>高级规则追踪</summary><p>${candidate.traceRuleIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p></details>
       </section>
     `;
     $("#candidateDialog").showModal();
