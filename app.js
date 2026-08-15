@@ -126,20 +126,6 @@
       }
     });
 
-    const analysisTrace = $("#analysisTrace");
-    if (analysisTrace) {
-      analysisTrace.addEventListener("click", (event) => {
-        const row = event.target.closest(".impact-link-row");
-        if (!row) return;
-        const ruleId = row.dataset.ruleId;
-        state.highlightRuleId = state.highlightRuleId === ruleId ? null : ruleId;
-        renderAnalysisHighlights();
-        renderCandidateHighlights();
-      });
-      analysisTrace.addEventListener("mouseenter", handleTraceHover, true);
-      analysisTrace.addEventListener("mouseleave", handleTraceLeave, true);
-    }
-
     $("[data-close-dialog]").addEventListener("click", () => $("#candidateDialog").close());
     $("#candidateDialog").addEventListener("click", (event) => {
       if (event.target === $("#candidateDialog")) $("#candidateDialog").close();
@@ -176,7 +162,6 @@
       $("#candidateGrid"),
       $("#candidateTableView"),
       $(".candidate-mobile-compare"),
-      $(".analysis-content"),
       $("#conditionSnapshot")
     ];
     targets.forEach((el) => {
@@ -411,160 +396,11 @@
     }
   }
 
-  function renderAnalysis(result) {
-    const trace = result.trace || [];
-    const traceContainer = $("#analysisTrace");
-    if (!traceContainer) return;
-
-    if (!trace.length) {
-      traceContainer.innerHTML = `<div class="analysis-empty"><p>暂无影响计算结果</p></div>`;
-      return;
-    }
-
-    const hardRows = trace.filter((r) => r.kind === "hard" || r.group === "温度" || r.group === "明确拒绝与身体边界");
-    const styleRows = trace.filter((r) => !hardRows.includes(r) && (r.group?.includes("风格") || r.group?.includes("身材") || r.group?.includes("场合") || r.group?.includes("潮流") || r.group?.includes("偏好") || r.group?.includes("面部")));
-    const colorRows = trace.filter((r) => !hardRows.includes(r) && !styleRows.includes(r));
-
-    traceContainer.innerHTML = `
-      <div class="analysis-categorized-list">
-        ${hardRows.length ? `
-          <div class="analysis-sub-group is-hard-section">
-            <div class="analysis-sub-title">穿着框架 · 硬性边界</div>
-            ${hardRows.map(renderImpactLinkRow).join("")}
-          </div>
-        ` : ""}
-        ${styleRows.length ? `
-          <div class="analysis-sub-group">
-            <div class="analysis-sub-title">服装样式 · 轮廓细节</div>
-            ${styleRows.map(renderImpactLinkRow).join("")}
-          </div>
-        ` : ""}
-        ${colorRows.length ? `
-          <div class="analysis-sub-group">
-            <div class="analysis-sub-title">颜色搭配 · 色温明度</div>
-            ${colorRows.map(renderImpactLinkRow).join("")}
-          </div>
-        ` : ""}
-      </div>
-    `;
-  }
-
-  function renderImpactLinkRow(row) {
-    const isHard = row.kind === "hard" || row.group === "温度" || row.group === "明确拒绝与身体边界";
-    const statusLabel = row.status === "skipped" ? "未改变" : row.status === "partial" ? "部分应用" : row.status === "conflict" ? "冲突" : row.status === "needs_verification" ? "待确认" : "已应用";
-    const inputsStr = formatTraceInput(row);
-    const outputsFormatted = formatTraceOutput(row);
-
-    return `
-      <button type="button" class="impact-link-row ${isHard ? "is-hard-row" : ""} is-${escapeHtml(row.status || "matched")}" data-rule-id="${escapeHtml(row.ruleId || "")}" title="点击高亮与此规则关联的方案">
-        <span class="impact-input-text" title="${escapeHtml(inputsStr)}">${escapeHtml(inputsStr)}</span>
-        <span class="impact-arrow" aria-hidden="true">→</span>
-        <span class="impact-output-text" title="${escapeHtml(outputsFormatted)}">${escapeHtml(outputsFormatted)}</span>
-        ${isHard ? `<em class="impact-required">硬性边界</em>` : ""}
-        <em class="impact-status">${statusLabel}</em>
-      </button>
-    `;
-  }
-
-  function formatTraceInput(item) {
-    if (item.conditions && item.conditions.length) {
-      return item.conditions.map((c) => {
-        const condDef = state.ruleSet.conditionFields?.find((f) => f.id === c.field) ||
-                        state.ruleSet.parameters?.find((p) => `input.${p.id}` === c.field);
-        const fieldName = condDef?.name || (c.field.includes("temperature") ? "近期温度" : c.field.includes("occasion") ? "使用场合" : c.field.includes("style") ? "风格方向" : c.field.includes("trend") ? "潮流方向" : c.field.includes("shape") ? "脸型" : c.field.split(".").pop());
-        
-        let valName = c.value;
-        if (condDef?.options) {
-          const opt = condDef.options.find((o) => (Array.isArray(o) ? o[0] : o.value) === c.value);
-          if (opt) valName = Array.isArray(opt) ? opt[1] : opt.label;
-        }
-        valName = translateValue(valName);
-        return `${fieldName}为${valName}`;
-      }).join(" · ");
-    }
-    if (item.inputs?.length) return item.inputs.map((path) => path.split(".").pop()).join("、");
-    return item.name || "输入条件";
-  }
-
-  function formatTraceOutput(item) {
-    if (item.actions && item.actions.length) {
-      return item.actions.map((a) => {
-        const fieldDef = state.ruleSet.resultFields?.find((f) => f.id === a.field);
-        const name = fieldDef?.name?.replace(/^推荐/, "").replace(/表现$/, "") || (a.field.includes("layer") ? "层数" : a.field.includes("sleeve") ? "袖长" : a.field.includes("outer") ? "外层" : a.field.includes("neckline") ? "领口" : a.field.includes("formality") ? "正式程度" : a.field.split(".").pop());
-        
-        let valName = a.value;
-        if (fieldDef?.options) {
-          const opt = fieldDef.options.find((o) => (Array.isArray(o) ? o[0] : o.value) === a.value);
-          if (opt) valName = Array.isArray(opt) ? opt[1] : opt.label;
-        }
-        valName = translateValue(valName);
-        return `${name}: ${valName}`;
-      }).join(" · ");
-    }
-    if (item.outputResult) {
-      const parts = [];
-      if (item.name) parts.push(item.name);
-      if (item.outputResult.silhouette) parts.push(`廓形: ${item.outputResult.silhouette}`);
-      if (item.outputResult.detail) parts.push(`细节: ${item.outputResult.detail}`);
-      return parts.join(" · ");
-    }
-    return item.reason || item.name || "已生效处理";
-  }
-
-  function handleTraceHover(event) {
-    const row = event.target.closest(".impact-link-row");
-    if (!row) return;
-    const ruleId = row.dataset.ruleId;
-    highlightCandidatesByRule(ruleId);
-  }
-
-  function handleTraceLeave() {
-    if (!state.highlightRuleId) {
-      clearCandidateHighlights();
-    }
-  }
-
-  function highlightCandidatesByRule(ruleId) {
-    const relatedIds = new Set((state.lastResult?.insights || [])
-      .filter((insight) => insight.ruleId === ruleId)
-      .flatMap((insight) => insight.candidateIds || []));
-    const trace = state.lastResult?.trace?.find((item) => item.ruleId === ruleId);
-    const global = !relatedIds.size && trace?.stage === "derive";
-    $$(".candidate-card").forEach((card) => {
-      const candidate = state.lastResult?.candidates?.[Number(card.dataset.index)];
-      const related = Boolean(candidate && (global || relatedIds.has(candidate.id) || candidate.traceRuleIds?.includes(ruleId)));
-      card.classList.toggle("is-related", related);
-      card.classList.toggle("is-dimmed", !related);
-    });
-  }
-
-  function clearCandidateHighlights() {
-    const cards = $$(".candidate-card");
-    cards.forEach((card) => {
-      card.classList.remove("is-related", "is-dimmed");
-    });
-  }
-
-  function renderAnalysisHighlights() {
-    const rows = $$(".impact-link-row");
-    rows.forEach((row) => {
-      row.classList.toggle("is-active", row.dataset.ruleId === state.highlightRuleId);
-    });
-  }
-
   function renderCandidateHighlights() {
     const cards = $$(".candidate-card");
     cards.forEach((card, index) => {
       const isSelected = state.selectedCandidateIndex === index;
       card.classList.toggle("is-active-selection", isSelected);
-      if (state.highlightRuleId) {
-        const candidate = state.lastResult?.candidates?.[index];
-        const related = Boolean(candidate && candidate.traceRuleIds?.includes(state.highlightRuleId));
-        card.classList.toggle("is-related", related);
-        card.classList.toggle("is-dimmed", !related);
-      } else {
-        card.classList.remove("is-related", "is-dimmed");
-      }
     });
   }
 

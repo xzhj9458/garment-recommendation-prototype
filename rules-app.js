@@ -315,7 +315,6 @@
   function renderAll() {
     state.validation = Engine.validateRuleSet(state.ruleSet);
     renderMode();
-    renderSchemaSummary();
     renderOverview();
     renderRelationPicker();
     renderEditor();
@@ -336,39 +335,6 @@
 
   function schemaGroupName(id) {
     return state.ruleSet.inputGroups?.find((group) => group.id === id)?.name || id || "其他";
-  }
-
-  function renderSchemaSummary() {
-    const container = $("#schemaSummary");
-    if (!container) return;
-    const groups = [...(state.ruleSet.inputGroups || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-    const resultByGroup = (state.ruleSet.resultFields || []).reduce((map, field) => {
-      const key = field.groupId || "personal";
-      (map[key] ||= []).push(field);
-      return map;
-    }, {});
-    const illustrationByGroup = (state.ruleSet.fieldMappings || []).reduce((map, mapping) => {
-      const key = mapping.inputId === "goal-boundaries" ? "goal-boundaries" : String(mapping.inputId || "").split(".")[0];
-      (map[key] ||= new Set());
-      (mapping.illustrationFields || []).forEach((field) => map[key].add(field));
-      return map;
-    }, {});
-    container.innerHTML = groups.map((group) => `
-      <article class="schema-summary-group">
-        <div class="schema-summary-head"><strong>${escapeHtml(group.name)}</strong><span>${escapeHtml(group.description || "")}</span></div>
-        <div class="schema-summary-fields">
-          ${(group.fields || []).map((field) => `<code>${escapeHtml(field)}</code>`).join("")}
-        </div>
-        <div class="schema-summary-results">
-          <small>对应结果字段</small>
-          ${(resultByGroup[group.id] || []).slice(0, 6).map((field) => `<span>${escapeHtml(field.name)}</span>`).join("") || "<span>由规则关系间接生成</span>"}
-        </div>
-        <div class="schema-summary-results schema-summary-illustration">
-          <small>对应效果图字段</small>
-          ${[...(illustrationByGroup[group.id] || new Set())].map((field) => `<code>${escapeHtml(field)}</code>`).join("") || "<span>无直接图示变化</span>"}
-        </div>
-      </article>
-    `).join("");
   }
 
   function renderOverviewImpact(group, domain, field) {

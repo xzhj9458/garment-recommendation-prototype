@@ -52,6 +52,16 @@ async function choose(page, pathName, value) {
       await demo.page.locator(`button[data-group="${group}"]`).click();
       assert(await demo.page.locator("#inputContent").innerText(), `${group} 输入组没有内容`);
     }
+    // Verify layout stability when switching input tabs on Case Runner page
+    const initialRecTop = await demo.page.locator(".recommendation-section").evaluate((el) => el.getBoundingClientRect().top);
+    for (const group of ["personal", "preference", "goal-boundaries", "context"]) {
+      await demo.page.locator(`button[data-group="${group}"]`).click();
+      const currentRecTop = await demo.page.locator(".recommendation-section").evaluate((el) => el.getBoundingClientRect().top);
+      assert(Math.abs(initialRecTop - currentRecTop) <= 1, `切换到 ${group} 时方案模块发生垂直跳动 (${initialRecTop} -> ${currentRecTop})`);
+    }
+
+    assert((await demo.page.locator(".recommendation-heading .section-kicker").innerText()).includes("02"), "案例页方案模块应标记为02完整方案");
+
     await demo.page.locator('button[data-group="personal"]').click();
     await choose(demo.page, "appearance.skinValue", "4");
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().appearance.skinValue === 4), "颜色输入没有写入规范化字段");
@@ -132,9 +142,7 @@ async function choose(page, pathName, value) {
     await rules.page.evaluate(() => localStorage.clear());
     await rules.page.reload({ waitUntil: "networkidle" });
     assert(await rules.page.locator("#overviewView").isVisible(), "规则管理没有默认显示规则总览");
-    assert(await rules.page.locator("#schemaSummary .schema-summary-group").count() === 4, "规则管理没有展示与案例页一致的四组字段架构");
-    const schemaText = await rules.page.locator("#schemaSummary").innerText();
-    assert(schemaText.includes("body.legRatio") && schemaText.includes("推荐层数"), "规则管理共享字段映射不完整");
+    assert(await rules.page.locator("#schemaSummary").count() === 0, "规则管理不应包含多余的字段架构展示区");
     const ruleChecks = await rules.page.evaluate(() => {
       const engine = window.GarmentRuleEngine;
       const data = window.GarmentPrototypeData.defaultRuleSet;
@@ -166,8 +174,16 @@ async function choose(page, pathName, value) {
     });
     assert(Math.abs(demoNavCenter - rulesNavCenter) <= 1, "两个页面的顶部导航没有对齐");
 
+    const overviewWidth = await rules.page.locator("#overviewView").evaluate((el) => el.getBoundingClientRect().width);
+    const overviewLeft = await rules.page.locator("#overviewView").evaluate((el) => el.getBoundingClientRect().left);
+
     await rules.page.locator('button[data-overview-target="trend"]').first().click();
     assert(await rules.page.locator("#configureView").isVisible(), "总览关系不能跳转到规则配置");
+
+    const configWidth = await rules.page.locator(".relationship-workspace").evaluate((el) => el.getBoundingClientRect().width);
+    const configLeft = await rules.page.locator(".relationship-workspace").evaluate((el) => el.getBoundingClientRect().left);
+    assert(Math.abs(overviewWidth - configWidth) <= 1, `总览与配置视图宽度不一致 (${overviewWidth} vs ${configWidth})`);
+    assert(Math.abs(overviewLeft - configLeft) <= 1, `总览与配置视图左对齐不一致 (${overviewLeft} vs ${configLeft})`);
     assert((await rules.page.locator("#editorTitle").innerText()) === "潮流方向", "总览没有定位到对应的潮流配置");
     assert(await rules.page.locator("#relationSelect").inputValue() === "trend", "关系配置没有同步当前关系选择器");
     assert(await rules.page.locator("#relationSelect option").count() === 10, "关系配置缺少完整的关系导航");
