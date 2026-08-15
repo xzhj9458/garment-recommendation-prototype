@@ -269,6 +269,10 @@ async function choose(page, pathName, value) {
     assert(await rules.page.locator('.natural-condition-row:first-child [data-edit="conditions.0.value"]:disabled').count() === 1, "分支入口条件值仍可编辑");
     assert(await rules.page.locator("#editorContent").innerText().then((text) => !text.includes("配置内容")), "编辑区仍保留重复的配置内容切换器");
     assert(await rules.page.locator(".rule-summary-module").count() === 1 && await rules.page.locator(".rule-config-module").count() === 1, "规则页没有拆分关系结果与配置模块");
+    assert(await rules.page.locator(".rule-summary-submodule").count() === 2, "关系结果没有形成两个清晰的主模块");
+    assert(await rules.page.locator("#editorKicker, #editorSummary").count() === 0, "规则配置页仍保留重复的关系说明文案");
+    assert(await rules.page.locator(".advanced-details").count() === 0 && !(await rules.page.locator("#editorContent").innerText()).includes("高级系统编号"), "规则配置页仍展示高级系统编号");
+    assert(await rules.page.locator(".natural-rule-card").count() === 1, "WHEN / THEN / WHY 没有形成统一配置工作台");
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="context"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();

@@ -670,8 +670,7 @@
   function renderEditor() {
     const business = businessRelationById(state.selectedId);
     $("#editorTitle").textContent = business?.name || "选择一组关系";
-    $("#editorKicker").textContent = business ? "二级关系" : "二级关系";
-    $("#editorSummary").textContent = business ? "从具体分支入口进入规则配置" : "选择一条关系开始配置。";
+    $(".editor-toolbar").hidden = !business;
     $("#editorActions").hidden = !business?.mappingMembers.length;
     if (!business) {
       $("#editorContent").innerHTML = `<div class="editor-empty"><strong>选择一条关系开始配置</strong></div>`;
@@ -797,20 +796,11 @@
   }
 
   function renderEditorBase(relation) {
-    const entryName = branchEntryName(relation.rule, relation);
-    return `<section class="editor-section editor-section--base">
-      <div class="editor-section-title">
-        <div class="branch-title-wrap">
-          <span class="rule-kind-chip is-${relation.kind}">${relation.kind === "hard" ? "硬性边界" : "搭配偏好"}</span>
-          <h3>${escapeHtml(entryName)}</h3>
-        </div>
-        <label class="switch-control"><input type="checkbox" data-edit="enabled" ${relation.rule.enabled === false ? "" : "checked"}><span></span>启用分支</label>
-      </div>
-      <div class="form-grid">
-        ${field("分支内部名称", "name", relation.rule.name)}
-      </div>
-      <details class="advanced-details"><summary>高级系统编号</summary>${field("规则 ID", "id", relation.rule.id)}</details>
-    </section>`;
+    return `<div class="rule-config-meta">
+      <div class="rule-meta-kind"><span class="rule-kind-chip is-${relation.kind}">${relation.kind === "hard" ? "硬性边界" : "搭配偏好"}</span><span>当前分支</span></div>
+      <div class="rule-meta-name">${field("分支名称", "name", relation.rule.name)}</div>
+      <label class="switch-control"><input type="checkbox" data-edit="enabled" ${relation.rule.enabled === false ? "" : "checked"}><span></span>启用</label>
+    </div>`;
   }
 
   function renderMappingEditor(relation, business) {
@@ -826,7 +816,7 @@
         <div class="rule-summary-submodule relation-impact-submodule">
           <div class="rule-summary-heading">
             <span class="module-index">01</span>
-            <div><strong>二级关系影响输出</strong><small>${escapeHtml(business.name)}</small></div>
+            <div><strong>关系影响输出</strong><small>${escapeHtml(business.name)}</small></div>
           </div>
           <div class="scope-pill-list">${outputsList || `<span class="scope-pill">全套穿着方案</span>`}</div>
         </div>
