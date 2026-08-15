@@ -257,7 +257,23 @@ async function choose(page, pathName, value) {
     assert(trendEditorText.includes("理念来源") && trendEditorText.includes("会优先使用的服装路线"), "潮流方向配置缺少理念与服装映射");
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="personal"]').click();
+    await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').click();
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "具体模块", "个人特征三级导航仍标记为具体分支");
+    assert((await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').innerText()).includes("3个模块"), "外观色彩仍以分支数量而不是模块数量展示");
+    const colorModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
+    assert(JSON.stringify(colorModuleLabels) === JSON.stringify(["肤色", "发色", "瞳色"]), "外观色彩没有按输入模块展开");
+    assert(colorModuleLabels.every((label) => !/冷|暖|低|中等|高/.test(label)), "外观色彩仍把条件选项当作三级模块");
+    assert((await rules.page.locator("#editorContent").innerText()).includes("推导配置"), "肤色模块没有展示输入到推导结果的关系");
+
+    await rules.page.locator('#configTier2Chips button[data-tier2-id="body"]').click();
+    const bodyModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
+    assert(JSON.stringify(bodyModuleLabels) === JSON.stringify(["纵向尺度表现", "腿身比例", "腰线特征", "肩胯横向平衡"]), "体型比例没有按身材输入模块展开");
+    await rules.page.locator('#configTier3Chips button[data-personal-module-id="legRatio"]').click();
+    assert(await rules.page.locator(".personal-branch-btn").count() === 5, "腿身比例模块没有在配置区展示具体分支");
+    assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("优先服装路线"), "腿身比例分支没有展示对应输出结果");
+
     await rules.page.locator('#configTier2Chips button[data-tier2-id="face"]').click();
+    assert(JSON.stringify(await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts()) === JSON.stringify(["脸型"]), "脸型没有作为独立输入模块展示");
     assert((await rules.page.locator("#editorTitle").innerText()) === "脸型特征", "点击二级导航未切换到脸型特征");
 
     const faceScope = await rules.page.evaluate(() => ({
@@ -276,6 +292,7 @@ async function choose(page, pathName, value) {
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="context"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "具体分支", "场景条件三级导航没有恢复为具体分支");
     assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 6, "温度关系三级导航没有展开六个分支");
     const tier3Labels = await rules.page.locator("#configTier3Chips button[data-tier3-id]").allInnerTexts();
     assert(tier3Labels.every((label) => !/层数|袖长|外层|覆盖|厚薄/.test(label)), "三级分支入口混入了具体推荐结果");

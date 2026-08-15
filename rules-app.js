@@ -150,6 +150,66 @@
     }
   ];
 
+  // Personal-feature navigation is organised by input module. Branch values
+  // remain inside the selected module so they can be traced to their outputs.
+  const personalModuleDefinitions = {
+    color: [
+      {
+        id: "skin",
+        name: "肤色",
+        conditionFields: ["input.appearance.skinTemperature", "input.appearance.skinValue", "input.appearance.skinChroma"],
+        derivedOutputs: ["color.temperature", "color.contrast", "color.chroma"]
+      },
+      {
+        id: "hair",
+        name: "发色",
+        conditionFields: ["input.appearance.hairTemperature", "input.appearance.hairValue", "input.appearance.hairChroma"],
+        derivedOutputs: ["color.temperature", "color.contrast", "color.chroma"]
+      },
+      {
+        id: "eye",
+        name: "瞳色",
+        conditionFields: ["input.appearance.eyeTemperature", "input.appearance.eyeValue", "input.appearance.eyeChroma"],
+        derivedOutputs: ["color.temperature", "color.contrast", "color.chroma"]
+      }
+    ],
+    body: [
+      {
+        id: "vertical",
+        name: "纵向尺度表现",
+        conditionFields: ["input.body.heightPresence"],
+        derivedOutputs: ["body.slenderness"]
+      },
+      {
+        id: "legRatio",
+        name: "腿身比例",
+        conditionFields: ["input.body.legRatio"],
+        relationFamily: "BODY-PROPORTION",
+        derivedOutputs: ["body.slenderness", "body.proportion"]
+      },
+      {
+        id: "waist",
+        name: "腰线特征",
+        conditionFields: ["input.body.waistDefinition"],
+        derivedOutputs: ["body.waistDefinition", "body.shape"]
+      },
+      {
+        id: "horizontal",
+        name: "肩胯横向平衡",
+        conditionFields: ["input.body.shoulderHipBalance"],
+        derivedOutputs: ["body.shoulderHipBalance", "body.shape"]
+      }
+    ],
+    face: [
+      {
+        id: "shape",
+        name: "脸型",
+        conditionFields: ["input.face.shape"],
+        relationFamily: "FACE-SHAPE"
+      }
+    ]
+  };
+
   function getTier1ForRelation(relationId) {
     for (const cat of inputTier1Categories) {
       if (cat.relations.some((r) => r.id === relationId)) return cat.id;
@@ -181,6 +241,7 @@
     resourceGarmentSearch: "",
     memberSelection: {},
     branchSelection: {},
+    personalModuleSelection: {},
     mode: "overview",
     dirty: false,
     validation: null
@@ -241,6 +302,13 @@
     const tier3Nav = $("#configTier3Chips");
     if (tier3Nav) {
       tier3Nav.addEventListener("click", (event) => {
+        const moduleChip = event.target.closest("button[data-personal-module-id]");
+        if (moduleChip) {
+          state.personalModuleSelection[state.selectedId] = moduleChip.dataset.personalModuleId;
+          renderRelationPicker();
+          renderEditor();
+          return;
+        }
         const addBtn = event.target.closest("[data-add-branch-tier3]");
         if (addBtn) {
           duplicateRule();
@@ -468,6 +536,38 @@
 
   function businessRelationById(id) { return businessRelations().find((item) => item.id === id); }
 
+  function personalModulesFor(businessId) {
+    return personalModuleDefinitions[businessId] || [];
+  }
+
+  function selectedPersonalModule(business) {
+    const modules = personalModulesFor(business?.id);
+    if (!modules.length) return null;
+    const selected = state.personalModuleSelection[business.id];
+    const module = modules.find((item) => item.id === selected) || modules[0];
+    state.personalModuleSelection[business.id] = module.id;
+    return module;
+  }
+
+  function personalModuleRelation(business, module) {
+    if (!business || !module?.relationFamily) return null;
+    const relation = (business.mappingMembers || []).find((item) => (
+      relationFamilyKey(item.rule, item.type) === module.relationFamily
+      || item.id === `SET-${module.relationFamily}`
+      || (item.rules || []).some((branch) => relationFamilyKey(branch, item.type) === module.relationFamily)
+    ));
+    if (relation) state.memberSelection[business.id] = relation.id;
+    return relation || null;
+  }
+
+  function personalModuleDerivations(business, module) {
+    const fields = new Set(module?.conditionFields || []);
+    return (business?.derivations || []).filter((relation) => {
+      const inputs = relation.rule?.inputs || [];
+      return inputs.some((input) => fields.has(input.field.startsWith("input.") ? input.field : `input.${input.field}`));
+    });
+  }
+
   const overviewRowSpecs = [
     { groupId: "context", label: "近期温度", relationId: "temperature", mappingId: "context.temperatureRange" },
     { groupId: "context", label: "使用场合", relationId: "occasion", mappingId: "context.occasion" },
@@ -618,6 +718,8 @@
       state.selectedTier1 = getTier1ForRelation(state.selectedId) || "context";
     }
     const currentCat = inputTier1Categories.find((cat) => cat.id === state.selectedTier1) || inputTier1Categories[0];
+    const tier3Label = $("#configTier3Label");
+    if (tier3Label) tier3Label.textContent = state.selectedTier1 === "personal" ? "具体模块" : "具体分支";
     if (!currentCat.relations.some((r) => r.id === state.selectedId)) {
       state.selectedId = currentCat.relations[0]?.id || "temperature";
     }
@@ -637,13 +739,28 @@
         const fullRel = allRels.find((r) => r.id === relItem.id);
         const isActive = relItem.id === state.selectedId;
         const branchCount = fullRel?.branchCount || 0;
-        return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${branchCount}个分支</small></button>`;
+        const personalModuleCount = personalModulesFor(relItem.id).length;
+        const countLabel = state.selectedTier1 === "personal" && personalModuleCount ? `${personalModuleCount}个模块` : `${branchCount}个分支`;
+        return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${countLabel}</small></button>`;
       }).join("");
     }
 
     const tier3Nav = $("#configTier3Chips");
     if (tier3Nav) {
       const business = businessRelationById(state.selectedId);
+      if (state.selectedTier1 === "personal" && business) {
+        const modules = personalModulesFor(business.id);
+        const selectedModule = selectedPersonalModule(business);
+        tier3Nav.innerHTML = modules.map((module) => {
+          const isActive = module.id === selectedModule?.id;
+          const hasRuleBranch = Boolean(module.relationFamily);
+          return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn config-tier3-module-btn ${isActive ? "is-active" : ""}" data-personal-module-id="${escapeHtml(module.id)}" title="${hasRuleBranch ? "模块分支在配置区展开" : "查看该模块如何进入推导结果"}">
+            <span class="chip-status-dot ${hasRuleBranch ? "is-active" : "is-derived"}"></span>
+            <span>${escapeHtml(module.name)}</span>
+          </button>`;
+        }).join("");
+        return;
+      }
       const members = business?.mappingMembers || [];
       const groups = members.map((member) => {
         const branches = member.rules || (member.rule ? [member.rule] : []);
@@ -671,11 +788,28 @@
     const business = businessRelationById(state.selectedId);
     $("#editorTitle").textContent = business?.name || "选择一组关系";
     $(".editor-toolbar").hidden = !business;
-    $("#editorActions").hidden = !business?.mappingMembers.length;
     if (!business) {
+      $("#editorActions").hidden = true;
       $("#editorContent").innerHTML = `<div class="editor-empty"><strong>选择一条关系开始配置</strong></div>`;
       return;
     }
+
+    const personalModule = state.selectedTier1 === "personal" ? selectedPersonalModule(business) : null;
+    const personalRelation = personalModule ? personalModuleRelation(business, personalModule) : null;
+    $("#editorActions").hidden = personalModule ? !personalRelation : !business.mappingMembers.length;
+
+    if (personalModule) {
+      if (personalRelation) {
+        const editable = activeRule(personalRelation);
+        editable.analysis ||= { conclusion: editable.name, direction: editable.reason || "" };
+        const editableRelation = { ...personalRelation, rule: editable };
+        $("#editorContent").innerHTML = renderMappingEditor(editableRelation, business, { module: personalModule });
+      } else {
+        $("#editorContent").innerHTML = renderPersonalCalculationEditor(business, personalModule);
+      }
+      return;
+    }
+
     const relation = activeAtomicRelation(business);
     if (!relation) {
       $("#editorContent").innerHTML = renderCalculationDetails(business, true);
@@ -803,8 +937,55 @@
     </div>`;
   }
 
-  function renderMappingEditor(relation, business) {
+  function renderPersonalBranchSelector(relation, module) {
+    const branches = relation.rules || (relation.rule ? [relation.rule] : []);
+    const active = activeRule(relation);
+    if (!branches.length) return "";
+    return `<section class="personal-branch-selector">
+      <div class="personal-branch-heading"><strong>具体分支</strong><small>${escapeHtml(module.name)}的条件值在此展开，推荐结果单独显示在下方。</small></div>
+      <div class="personal-branch-list">${branches.map((branch) => {
+        const isActive = branch.id === active?.id;
+        return `<button type="button" class="personal-branch-btn ${isActive ? "is-active" : ""}" data-branch-chip="${escapeHtml(branch.id)}" aria-pressed="${isActive}">${escapeHtml(branchEntryName(branch, relation))}</button>`;
+      }).join("")}</div>
+    </section>`;
+  }
+
+  function moduleFieldLabels(module) {
+    return (module.conditionFields || []).map((fieldId) => conditionDefinition(fieldId)).filter(Boolean);
+  }
+
+  function moduleOutputNames(business, module, derivations) {
+    const derived = (derivations || []).map((relation) => derivedOutputName(relation.rule.output));
+    const direct = business.outputs || [];
+    return [...new Set([...derived, ...direct])];
+  }
+
+  function renderPersonalCalculationEditor(business, module) {
+    const derivations = personalModuleDerivations(business, module);
+    const fields = moduleFieldLabels(module);
+    const outputNames = moduleOutputNames(business, module, derivations);
+    const calculationBusiness = { ...business, derivations };
+    return `
+      <section class="rule-summary-module personal-module-summary">
+        <div class="rule-summary-submodule relation-impact-submodule">
+          <div class="rule-summary-heading"><span class="module-index">01</span><div><strong>模块影响输出</strong><small>${escapeHtml(module.name)}</small></div></div>
+          <div class="scope-pill-list">${outputNames.map((name) => `<span class="scope-pill">${escapeHtml(name)}</span>`).join("") || `<span class="scope-pill">暂无已连接结果</span>`}</div>
+        </div>
+        <div class="rule-summary-submodule branch-output-submodule">
+          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>模块条件范围</strong><small>条件值进入推导关系</small></div></div>
+          <div class="branch-output-grid">${fields.map((definition) => `<div class="branch-output-item"><span>${escapeHtml(definition.name)}</span><strong>${escapeHtml((definition.options || []).map((option) => Array.isArray(option) ? option[1] : option.label).join("、") || "可输入")}</strong></div>`).join("")}</div>
+        </div>
+      </section>
+      <section class="rule-config-module personal-calculation-module">
+        <div class="rule-config-heading"><span>03</span><strong>推导配置</strong><small>输入 → 推导 → 结果</small></div>
+        ${renderCalculationDetails(calculationBusiness, true)}
+      </section>
+    `;
+  }
+
+  function renderMappingEditor(relation, business, options = {}) {
     const rule = relation.rule;
+    const module = options.module;
     const conditionFields = scopedFields(state.ruleSet.conditionFields, business.scope?.condition);
     const resultFields = scopedFields(state.ruleSet.resultFields, business.scope?.result);
     const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule, resultFields);
@@ -816,7 +997,7 @@
         <div class="rule-summary-submodule relation-impact-submodule">
           <div class="rule-summary-heading">
             <span class="module-index">01</span>
-            <div><strong>关系影响输出</strong><small>${escapeHtml(business.name)}</small></div>
+            <div><strong>${module ? `${escapeHtml(module.name)}影响输出` : "关系影响输出"}</strong><small>${escapeHtml(business.name)}</small></div>
           </div>
           <div class="scope-pill-list">${outputsList || `<span class="scope-pill">全套穿着方案</span>`}</div>
         </div>
@@ -831,6 +1012,7 @@
 
       <section class="rule-config-module">
         <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>WHEN / THEN / WHY</small></div>
+        ${module ? renderPersonalBranchSelector(relation, module) : ""}
         ${renderEditorBase(relation)}
         <article class="natural-rule-card">
           <section class="rule-clause rule-clause--when">

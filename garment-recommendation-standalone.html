@@ -2277,6 +2277,16 @@ button {
   opacity: 0.5;
 }
 
+.config-tier3-module-btn {
+  min-width: 84px;
+  justify-content: center;
+}
+
+.chip-status-dot.is-derived {
+  background: var(--blue);
+  opacity: 0.65;
+}
+
 .config-tier3-add-btn {
   display: inline-flex;
   align-items: center;
@@ -2480,6 +2490,62 @@ button {
 .rule-config-heading small {
   color: var(--text-muted);
   font-size: 10px;
+}
+
+.personal-branch-selector {
+  margin-bottom: 10px;
+  padding: 7px 9px;
+  border: 1px solid #dbece2;
+  border-radius: var(--radius-md);
+  background: #f6fbf8;
+}
+
+.personal-branch-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.personal-branch-heading strong {
+  color: var(--green-dark);
+  font-size: 11px;
+}
+
+.personal-branch-heading small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.personal-branch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.personal-branch-btn {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.personal-branch-btn:hover,
+.personal-branch-btn.is-active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.personal-calculation-module .calculation-details {
+  margin-top: 0;
+  border-top: 0;
 }
 
 .rule-config-meta {
