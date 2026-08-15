@@ -113,6 +113,56 @@
     definition.scope = relationScopes[definition.id] || { condition: [], result: [] };
   });
 
+  const inputTier1Categories = [
+    {
+      id: "context",
+      name: "场景条件",
+      relations: [
+        { id: "temperature", name: "温度与层次", tag: "边界" },
+        { id: "occasion", name: "场合要求", tag: "搭配" }
+      ]
+    },
+    {
+      id: "personal",
+      name: "个人特征",
+      relations: [
+        { id: "color", name: "整体色彩", tag: "搭配" },
+        { id: "body", name: "身材与比例", tag: "搭配" },
+        { id: "face", name: "脸型与领口", tag: "搭配" }
+      ]
+    },
+    {
+      id: "preference",
+      name: "风格偏好",
+      relations: [
+        { id: "style", name: "风格方向", tag: "搭配" },
+        { id: "formality", name: "正式程度", tag: "搭配" },
+        { id: "trend", name: "潮流方向", tag: "搭配" }
+      ]
+    },
+    {
+      id: "goal-boundaries",
+      name: "本次目标与边界",
+      relations: [
+        { id: "goal", name: "本次目标偏好", tag: "搭配" },
+        { id: "boundaries", name: "明确拒绝与身体边界", tag: "边界" }
+      ]
+    }
+  ];
+
+  function getTier1ForRelation(relationId) {
+    for (const cat of inputTier1Categories) {
+      if (cat.relations.some((r) => r.id === relationId)) return cat.id;
+    }
+    return "context";
+  }
+
+  const overviewImpactSymbols = {
+    strong: "●",
+    medium: "◐",
+    light: "○"
+  };
+
   const resourceTabs = [
     { id: "inputs", label: "输入选项" },
     { id: "garments", label: "服装库" },
@@ -124,7 +174,8 @@
 
   const state = {
     ruleSet: Engine.Store.loadDraft(),
-    selectedId: null,
+    selectedTier1: "context",
+    selectedId: "temperature",
     resourceTab: "inputs",
     resourceGarmentFilter: "all",
     resourceGarmentSearch: "",
@@ -138,7 +189,7 @@
   window.addEventListener("DOMContentLoaded", init, { once: true });
 
   function init() {
-    state.selectedId = businessRelations()[0]?.id || null;
+    state.selectedTier1 = getTier1ForRelation(state.selectedId) || "context";
     bindEvents();
     renderAll();
   }
@@ -154,26 +205,38 @@
     $("#overviewView").addEventListener("click", (event) => {
       const target = event.target.closest("button[data-overview-target]");
       if (!target) return;
-      state.selectedId = target.dataset.overviewTarget;
+      const relId = target.dataset.overviewTarget;
+      state.selectedId = relId;
+      state.selectedTier1 = getTier1ForRelation(relId);
       state.mode = "configure";
       renderAll();
     });
 
-    $("#backToOverview").addEventListener("click", () => {
-      state.mode = "overview";
-      renderMode();
-    });
+    const tier1Nav = $("#configTier1Tabs");
+    if (tier1Nav) {
+      tier1Nav.addEventListener("click", (event) => {
+        const btn = event.target.closest("button[data-tier1-id]");
+        if (!btn) return;
+        state.selectedTier1 = btn.dataset.tier1Id;
+        const cat = inputTier1Categories.find((c) => c.id === state.selectedTier1);
+        if (cat && cat.relations.length) {
+          state.selectedId = cat.relations[0].id;
+        }
+        renderRelationPicker();
+        renderEditor();
+      });
+    }
 
-    $("#relationNavButtons").addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-relation-id]");
-      if (!button) return;
-      state.selectedId = button.dataset.relationId;
-      renderRelationPicker();
-      renderEditor();
-    });
-
-    $("#previousRelationButton").addEventListener("click", () => stepRelation(-1));
-    $("#nextRelationButton").addEventListener("click", () => stepRelation(1));
+    const tier2Nav = $("#configTier2Chips");
+    if (tier2Nav) {
+      tier2Nav.addEventListener("click", (event) => {
+        const chip = event.target.closest("button[data-tier2-id]");
+        if (!chip) return;
+        state.selectedId = chip.dataset.tier2Id;
+        renderRelationPicker();
+        renderEditor();
+      });
+    }
 
     $("#editorContent").addEventListener("change", handleEditorChange);
     $("#editorContent").addEventListener("click", handleEditorClick);
@@ -197,7 +260,9 @@
       valContent.addEventListener("click", (event) => {
         const jumpBtn = event.target.closest("button[data-jump-relation]");
         if (!jumpBtn) return;
-        state.selectedId = jumpBtn.dataset.jumpRelation;
+        const relId = jumpBtn.dataset.jumpRelation;
+        state.selectedId = relId;
+        state.selectedTier1 = getTier1ForRelation(relId);
         if (jumpBtn.dataset.jumpBranch) {
           state.branchSelection[state.selectedId] = jumpBtn.dataset.jumpBranch;
         }
@@ -424,12 +489,13 @@
   function renderOverviewImpact(row, domain, field) {
     const level = overviewImpact(row, domain.id, field.id);
     if (!level) {
-      return `<td class="overview-impact-cell is-empty"><span aria-label="${escapeHtml(row.label)}不影响${escapeHtml(field.name)}">—</span></td>`;
+      return `<td class="overview-impact-cell is-empty"><span class="overview-empty-mark" aria-label="${escapeHtml(row.label)}不影响${escapeHtml(field.name)}">—</span></td>`;
     }
+    const symbol = overviewImpactSymbols[level] || "●";
     const label = overviewImpactLabels[level] || "有关联";
     return `<td class="overview-impact-cell is-${escapeHtml(level)}">
-      <button type="button" data-overview-target="${escapeHtml(row.relationId)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(row.label)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(row.label)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
-        <span class="impact-dot" aria-hidden="true"></span><span class="impact-status">${escapeHtml(label)}</span>
+      <button type="button" class="overview-impact-btn is-${escapeHtml(level)}" data-overview-target="${escapeHtml(row.relationId)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(row.label)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(row.label)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
+        <span class="impact-symbol" aria-hidden="true">${symbol}</span>
       </button>
     </td>`;
   }
@@ -441,7 +507,7 @@
     $("#overviewMatrix").innerHTML = `
       <thead>
         <tr>
-          <th class="overview-row-heading" rowspan="2">输入分组</th>
+          <th class="overview-row-heading" rowspan="2">输入分类</th>
           <th class="overview-row-heading" rowspan="2">输入字段</th>
           ${overviewGroups.map((group) => `<th class="overview-group-heading overview-group-${escapeHtml(group.id)}" colspan="${group.fields.length}">${escapeHtml(group.name)}</th>`).join("")}
         </tr>
@@ -450,10 +516,10 @@
         </tr>
       </thead>
       <tbody>${rows.map((row) => {
-        const groupCell = row.groupId === previousGroup ? "" : `<th class="overview-group-label" rowspan="${groupSpans[row.groupId]}"><span>${escapeHtml(row.groupName)}</span><small>${escapeHtml(row.groupDescription)}</small></th>`;
+        const groupCell = row.groupId === previousGroup ? "" : `<th class="overview-group-label" rowspan="${groupSpans[row.groupId]}"><span>${escapeHtml(row.groupName)}</span></th>`;
         previousGroup = row.groupId;
         return `<tr class="${row.hard ? "is-hard" : ""}">${groupCell}
-        <th class="overview-row-label"><span>${escapeHtml(row.label)}</span>${row.hard ? `<em>边界</em>` : `<em class="soft-tag">输入</em>`}<small>${escapeHtml(row.inputs.join("、"))}</small></th>
+        <th class="overview-row-label"><span>${escapeHtml(row.label)}</span>${row.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}</th>
         ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(row, domain, field))).join("")}
       </tr>`;
       }).join("")}</tbody>`;
@@ -474,13 +540,13 @@
           <div class="mobile-relation-header">
             <div>
               <strong>${escapeHtml(row.groupName)} · ${escapeHtml(row.label)}</strong>
-              ${row.hard ? `<em>边界</em>` : `<em class="soft-tag">输入</em>`}
+              ${row.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}
             </div>
-            <small>${escapeHtml(row.inputs.join("、"))}</small>
           </div>
           <div class="mobile-relation-impacts">
             ${impacts.map(i => {
               const label = overviewImpactLabels[i.level] || "有关联";
+              const symbol = overviewImpactSymbols[i.level] || "●";
               return `
                 <button type="button" class="mobile-impact-item is-${escapeHtml(i.level)}"
                   data-overview-target="${escapeHtml(row.relationId)}"
@@ -489,7 +555,7 @@
                   aria-label="${escapeHtml(row.label)}对${escapeHtml(i.field.name)}：${escapeHtml(label)}">
                   <span class="impact-field">${escapeHtml(i.field.name)}</span>
                   <div class="impact-status-wrap">
-                    <span class="impact-dot" aria-hidden="true"></span>
+                    <span class="impact-symbol" aria-hidden="true">${symbol}</span>
                     <span class="impact-status">${escapeHtml(label)}</span>
                   </div>
                 </button>
@@ -502,31 +568,32 @@
   }
 
   function renderRelationPicker() {
-    const groups = businessRelations();
-    if (!groups.length) {
-      $("#relationNavButtons").innerHTML = "<span class=\"muted-copy\">暂无可配置关系</span>";
-      $("#relationStatus").textContent = "暂无关系";
-      $("#previousRelationButton").disabled = true;
-      $("#nextRelationButton").disabled = true;
-      return;
+    if (!state.selectedTier1) {
+      state.selectedTier1 = getTier1ForRelation(state.selectedId) || "context";
     }
-    if (!groups.some((group) => group.id === state.selectedId)) state.selectedId = groups[0].id;
-    const index = groups.findIndex((group) => group.id === state.selectedId);
-    const selected = groups[index];
-    $("#relationNavButtons").innerHTML = groups.map((group) => `<button type="button" role="tab" aria-selected="${group.id === selected.id}" class="relation-nav-button ${group.id === selected.id ? "is-active" : ""}" data-relation-id="${escapeHtml(group.id)}"><span>${escapeHtml(group.name)}</span><small>${group.branchCount || 0} 个分支</small></button>`).join("");
-    $("#relationStatus").textContent = `${index + 1} / ${groups.length} · ${selected.enabled ? "已启用" : "已停用"} · ${selected.branchCount || 0} 个分支`;
-    $("#previousRelationButton").disabled = index <= 0;
-    $("#nextRelationButton").disabled = index >= groups.length - 1;
-  }
+    const currentCat = inputTier1Categories.find((cat) => cat.id === state.selectedTier1) || inputTier1Categories[0];
+    if (!currentCat.relations.some((r) => r.id === state.selectedId)) {
+      state.selectedId = currentCat.relations[0]?.id || "temperature";
+    }
 
-  function stepRelation(direction) {
-    const groups = businessRelations();
-    const index = groups.findIndex((group) => group.id === state.selectedId);
-    const nextIndex = Math.max(0, Math.min(groups.length - 1, index + direction));
-    if (nextIndex === index || !groups[nextIndex]) return;
-    state.selectedId = groups[nextIndex].id;
-    renderRelationPicker();
-    renderEditor();
+    const tier1Nav = $("#configTier1Tabs");
+    if (tier1Nav) {
+      tier1Nav.innerHTML = inputTier1Categories.map((cat) => {
+        const isActive = cat.id === state.selectedTier1;
+        return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier1-btn ${isActive ? "is-active" : ""}" data-tier1-id="${escapeHtml(cat.id)}"><span>${escapeHtml(cat.name)}</span></button>`;
+      }).join("");
+    }
+
+    const tier2Nav = $("#configTier2Chips");
+    if (tier2Nav) {
+      const allRels = businessRelations();
+      tier2Nav.innerHTML = currentCat.relations.map((relItem) => {
+        const fullRel = allRels.find((r) => r.id === relItem.id);
+        const isActive = relItem.id === state.selectedId;
+        const branchCount = fullRel?.branchCount || 0;
+        return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${branchCount}个分支</small></button>`;
+      }).join("");
+    }
   }
 
   function renderEditor() {

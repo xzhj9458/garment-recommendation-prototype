@@ -329,13 +329,10 @@ button {
   max-width: var(--content-max-width);
   width: calc(100% - var(--page-gutter) * 2);
   margin: 14px auto 30px;
-}
-
-.demo-top-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  min-height: 0;
+  grid-template-columns: minmax(340px, 380px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
 
 .surface {
@@ -344,6 +341,15 @@ button {
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+}
+
+.input-surface {
+  position: sticky;
+  top: calc(var(--header-height) + 14px);
+  max-height: calc(100vh - var(--header-height) - 28px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .surface-header {
@@ -355,6 +361,7 @@ button {
   padding: 8px 16px;
   border-bottom: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex: 0 0 auto;
 }
 
 .surface-header h1,
@@ -395,11 +402,10 @@ button {
 
 /* Integrated Condition Snapshot Bar */
 .input-sticky-header {
-  position: sticky;
-  top: var(--header-height);
-  z-index: 20;
+  position: static;
   background: var(--surface-muted);
   border-bottom: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
 }
 
 .condition-snapshot {
@@ -479,7 +485,8 @@ button {
 }
 
 .input-content {
-  height: var(--input-panel-height);
+  flex: 1 1 auto;
+  height: auto;
   max-height: none;
   overflow-y: auto;
   padding: 12px 16px;
@@ -935,7 +942,8 @@ button {
    ========================================================= */
 
 .recommendation-section {
-  margin-top: 14px;
+  margin-top: 0;
+  min-width: 0;
 }
 
 .recommendation-heading {
@@ -1485,7 +1493,7 @@ button {
 .overview-legend {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 11px;
 }
 
@@ -1493,21 +1501,18 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  font-weight: 600;
 }
 
-.overview-legend i,
-.impact-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
+.overview-legend i {
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1;
 }
 
-.overview-legend .is-medium i,
-.is-medium .impact-dot { background: var(--blue); }
-
-.overview-legend .is-light i,
-.is-light .impact-dot { background: #88948b; }
+.overview-legend .is-strong i { color: var(--green-dark); }
+.overview-legend .is-medium i { color: var(--blue); }
+.overview-legend .is-light i { color: #6c7a70; }
 
 .overview-matrix-wrap {
   width: 100%;
@@ -1746,113 +1751,188 @@ button {
 }
 
 .overview-impact-cell {
-  min-width: 40px;
+  min-width: 38px;
+  padding: 4px 2px;
 }
 
-.overview-impact-cell button {
-  width: 100%;
-  height: 26px;
+.overview-impact-btn {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
   border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
   transition: all 120ms ease;
 }
 
-.overview-impact-cell button:hover {
-  background: var(--green-soft);
+.overview-impact-btn .impact-symbol {
+  font-size: 13px;
+  line-height: 1;
 }
 
-.overview-impact-cell.is-empty {
-  color: #c4cdc6;
+.overview-impact-btn.is-strong {
+  background: #edf7f2;
+  color: var(--green-dark);
+  border-color: rgba(37, 93, 72, 0.15);
 }
 
-.overview-impact-cell.is-strong { background: #edf7f2; }
-.overview-impact-cell.is-medium { background: #f0f6f8; }
-.overview-impact-cell.is-light { background: #f5f8f6; }
+.overview-impact-btn.is-strong:hover {
+  background: #d8eae1;
+  border-color: var(--green);
+  transform: scale(1.08);
+}
 
-.impact-status {
-  font-size: 9px;
-  font-weight: 600;
+.overview-impact-btn.is-medium {
+  background: #edf3f7;
+  color: var(--blue);
+  border-color: rgba(45, 90, 120, 0.15);
+}
+
+.overview-impact-btn.is-medium:hover {
+  background: #dbe7f0;
+  border-color: var(--blue);
+  transform: scale(1.08);
+}
+
+.overview-impact-btn.is-light {
+  background: #f4f6f4;
+  color: #6c7a70;
+  border-color: rgba(108, 122, 112, 0.15);
+}
+
+.overview-impact-btn.is-light:hover {
+  background: #e6eae6;
+  border-color: #6c7a70;
+  transform: scale(1.08);
+}
+
+.overview-empty-mark {
+  color: #d1dad3;
+  font-size: 11px;
 }
 
 /* =========================================================
-   Configure View & Workspace (Pill Branch + Soft Cards)
+   Configure View & Workspace (Two-Tier Flat Bar + Soft Cards)
    ========================================================= */
 
 .configure-view {
   height: 100%;
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.configure-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0 max(var(--page-gutter), calc((100% - var(--content-max-width)) / 2));
+.config-tier-bar {
+  display: grid;
+  gap: 6px;
+  padding: 8px max(var(--page-gutter), calc((100% - var(--content-max-width)) / 2));
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
 }
 
-.configure-relation-picker {
+.config-tier-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.config-tier-label {
+  flex: 0 0 56px;
+  font-size: 11px;
   font-weight: 700;
-  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.relation-nav-buttons {
+.config-tier1-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  max-width: min(980px, 70vw);
+  gap: 6px;
   overflow-x: auto;
-  padding: 2px;
 }
 
-.relation-nav-button {
+.config-tier1-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  flex: 0 0 auto;
-  min-height: 28px;
-  padding: 4px 8px;
+  height: 30px;
+  padding: 0 14px;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   background: var(--surface-muted);
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
+  transition: all 120ms ease;
   white-space: nowrap;
 }
 
-.relation-nav-button:hover {
+.config-tier1-btn:hover {
   border-color: var(--green-border);
   background: var(--green-soft);
+  color: var(--green-dark);
 }
 
-.relation-nav-button.is-active {
+.config-tier1-btn.is-active {
   border-color: var(--green);
   background: var(--green);
   color: #fff;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(37, 93, 72, 0.2);
 }
 
-.relation-nav-button small {
-  font-size: 9px;
-  font-weight: 500;
-  opacity: 0.8;
-}
-
-.configure-toolbar-meta {
+.config-tier2-chips {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.config-tier2-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
   font-size: 11px;
+  font-weight: 600;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+
+.config-tier2-btn:hover {
+  border-color: var(--green-border);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.config-tier2-btn.is-active {
+  border-color: var(--green-dark);
+  background: #eef5f1;
+  color: var(--green-dark);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+
+.config-tier2-btn.is-hard-chip {
+  border-left: 2px solid var(--red);
+}
+
+.config-tier2-btn small {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.config-tier2-btn.is-active small {
+  color: var(--green);
 }
 
 .relationship-workspace {
@@ -2704,8 +2784,15 @@ button {
   }
 
   .demo-main {
+    grid-template-columns: 1fr;
+    gap: 14px;
     width: calc(100% - var(--page-gutter) * 2);
     margin: 10px auto 24px;
+  }
+
+  .input-surface {
+    position: static;
+    max-height: none;
   }
 
   .input-tabs {
@@ -2717,7 +2804,8 @@ button {
   }
 
   .input-content {
-    height: 360px;
+    height: auto;
+    max-height: 360px;
   }
 
   .appearance-row-scales {
@@ -2779,26 +2867,29 @@ button {
     padding: 0 var(--page-gutter);
   }
 
-  .configure-toolbar {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    height: auto;
-    min-height: 44px;
-    padding: 7px var(--page-gutter);
+  .config-tier-bar {
+    padding: 6px var(--page-gutter);
   }
 
-  .configure-view {
-    grid-template-rows: auto minmax(0, 1fr);
+  .config-tier-row {
+    gap: 6px;
   }
 
-  .configure-relation-picker {
-    min-width: 0;
-    flex: 1 1 100%;
-    align-items: flex-start;
+  .config-tier-label {
+    flex: 0 0 48px;
+    font-size: 10px;
   }
 
-  .relation-nav-buttons {
-    max-width: calc(100vw - 92px);
+  .config-tier1-btn {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .config-tier2-btn {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 10px;
   }
 
   .relationship-workspace {

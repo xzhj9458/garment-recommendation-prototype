@@ -57,16 +57,14 @@
     </section>
 
     <section class="rules-mode-view configure-view" id="configureView" hidden>
-      <div class="configure-toolbar">
-        <button class="secondary-button configure-back" id="backToOverview" type="button">← 返回关系总览</button>
-        <div class="configure-relation-picker">
-          <span>当前关系</span>
-          <nav class="relation-nav-buttons" id="relationNavButtons" aria-label="选择关系" role="tablist"></nav>
+      <div class="config-tier-bar">
+        <div class="config-tier-row config-tier1-row">
+          <span class="config-tier-label">一级分类</span>
+          <nav class="config-tier1-tabs" id="configTier1Tabs" aria-label="输入一级分类" role="tablist"></nav>
         </div>
-        <div class="configure-toolbar-meta">
-          <span id="relationStatus">—</span>
-          <button class="text-button" id="previousRelationButton" type="button">上一条</button>
-          <button class="text-button" id="nextRelationButton" type="button">下一条</button>
+        <div class="config-tier-row config-tier2-row">
+          <span class="config-tier-label">二级关系</span>
+          <nav class="config-tier2-chips" id="configTier2Chips" aria-label="具体业务关系" role="tablist"></nav>
         </div>
       </div>
 
