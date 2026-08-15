@@ -4907,6 +4907,33 @@ button {
     normalized.fieldMappings ||= clone(DATA.defaultRuleSet.fieldMappings || []);
     normalized.operatorDictionary ||= clone(DATA.defaultRuleSet.operatorDictionary || {});
     normalized.tests ||= [];
+
+    const visibleParameterLabels = {
+      "appearance.skinTemperature": "肤色冷暖倾向",
+      "appearance.hairTemperature": "发色冷暖倾向",
+      "appearance.eyeTemperature": "眼睛颜色冷暖倾向",
+      "body.legRatio": "上下身比例",
+      "body.waistDefinition": "腰部曲线明显度",
+      "body.shoulderHipBalance": "肩胯轮廓关系"
+    };
+    normalized.parameters.forEach((parameter) => {
+      if (visibleParameterLabels[parameter.id]) parameter.name = visibleParameterLabels[parameter.id];
+    });
+    normalized.conditionFields.forEach((field) => {
+      if (!field.id?.startsWith("input.")) return;
+      const parameter = normalized.parameters.find((item) => `input.${item.id}` === field.id);
+      if (parameter) {
+        field.name = parameter.name;
+        field.group = parameter.group;
+        field.options = (parameter.options || []).map((item) => Array.isArray(item) ? [item[0], item[1]] : [item.value, item.label]);
+      }
+    });
+    const visibleResultLabels = {
+      "requirements.colorTemperature": "服装冷暖倾向"
+    };
+    normalized.resultFields.forEach((field) => {
+      if (visibleResultLabels[field.id]) field.name = visibleResultLabels[field.id];
+    });
     const trendParameter = normalized.parameters.find((item) => item.id === "preference.trendDirection");
     if (trendParameter) {
       trendParameter.options = [
