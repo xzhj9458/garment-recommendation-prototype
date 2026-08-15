@@ -28,6 +28,60 @@
     parent[last] = clone(value);
   }
 
+  function mergeKnown(target, source) {
+    Object.entries(source || {}).forEach(([key, value]) => {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        if (!target[key] || typeof target[key] !== "object" || Array.isArray(target[key])) target[key] = {};
+        mergeKnown(target[key], value);
+      } else if (value !== undefined) {
+        target[key] = clone(value);
+      }
+    });
+    return target;
+  }
+
+  function normalizeInput(input) {
+    const source = clone(input || {});
+    const normalized = mergeKnown(clone(DATA.defaultInput), source);
+    const migrate = (legacyPath, canonicalPath, transform = (value) => value) => {
+      if (isKnown(getByPath(source, canonicalPath))) return;
+      const legacyValue = getByPath(source, legacyPath);
+      if (isKnown(legacyValue)) setByPath(normalized, canonicalPath, transform(legacyValue));
+    };
+
+    ["skin", "hair", "eye"].forEach((part) => {
+      migrate(`color.${part}.hue`, `appearance.${part}Temperature`);
+      migrate(`color.${part}.contrast`, `appearance.${part}Value`);
+      migrate(`color.${part}.chroma`, `appearance.${part}Chroma`);
+    });
+    const legacyScale = (value) => Math.max(0, Math.min(4, Number(value) <= 2 ? Number(value) + 1 : Number(value)));
+    migrate("body.heightScale", "body.heightPresence", legacyScale);
+    migrate("body.legBodyRatio", "body.legRatio", legacyScale);
+    migrate("body.waistLine", "body.waistDefinition", legacyScale);
+    migrate("body.shoulderHip", "body.shoulderHipBalance", legacyScale);
+    migrate("goal.target", "goal.endpoint", (value) => ({ none: "unknown" })[value] || value);
+    migrate("goal.direction", "goal.direction", (value) => ({ auto: "keep", soften: "weaken" })[value] || value);
+
+    const valueAliases = {
+      "context.occasion": { party: "social", trip: "travel" },
+      "preference.style": { relaxed: "casual", cityboy: "urban" },
+      "preference.trendIntensity": { subtle: "light" },
+      "face.shape": { oval: "standard" }
+    };
+    Object.entries(valueAliases).forEach(([path, aliases]) => {
+      const value = getByPath(normalized, path);
+      if (aliases[value]) setByPath(normalized, path, aliases[value]);
+    });
+
+    const legacyForbidden = source.boundaries?.forbiddenCategories || [];
+    const legacyBody = source.boundaries?.bodyBoundaries || [];
+    if (!isKnown(source.boundaries?.strictCoverage) && legacyBody.includes("hideMidriff")) normalized.boundaries.strictCoverage = true;
+    if (!isKnown(source.boundaries?.movementFriendly) && legacyBody.includes("looseArm")) normalized.boundaries.movementFriendly = true;
+    if (!isKnown(source.boundaries?.rejectDefinedWaist) && legacyForbidden.includes("tightTop")) normalized.boundaries.rejectDefinedWaist = true;
+
+    return normalized;
+  }
+
   function isKnown(value) {
     return value !== undefined && value !== null && value !== "" && !Number.isNaN(value);
   }
@@ -129,6 +183,8 @@
         ruleId: rule.id,
         name: rule.name,
         reason: rule.reason,
+        inputs: rule.inputs.map((item) => item.field),
+        sourcePaths: rule.inputs.map((item) => item.field),
         output: rule.output,
         value: rounded,
         label: band?.label || String(rounded)
@@ -251,7 +307,13 @@
 
       state.trace.push({
         stage: rule.kind === "hard" ? "hard" : "soft",
-        status: actionResults.some((item) => item.status === "conflict") ? "conflict" : "matched",
+        status: actionResults.some((item) => item.status === "conflict")
+          ? "conflict"
+          : actionResults.length && actionResults.every((item) => item.status === "skipped")
+            ? "skipped"
+            : actionResults.some((item) => item.status === "skipped")
+              ? "partial"
+              : "matched",
         ruleId: rule.id,
         name: rule.name,
         kind: rule.kind,
@@ -358,6 +420,7 @@
       group: "潮流方向",
       conditions: clone(trend.conditions || []),
       outputResult: {
+        families: clone(families),
         trendName: trend.name,
         silhouette: state.requirements.silhouette,
         proportion: state.requirements.proportion,
@@ -433,7 +496,14 @@
     }
   }
 
-  function componentMatches(component, family, requirements, forbidden, category) {
+  function requirementMaterialClass(value) {
+    const text = String(value || "");
+    if (/保暖|御寒|厚重/.test(text)) return "warm";
+    if (/轻|薄|透气/.test(text)) return "light";
+    return "regular";
+  }
+
+  function componentMatches(component, family, requirements, forbidden, category, locks = {}) {
     if (!component.enabled || component.category !== category) return false;
     const attributes = component.attributes || {};
     if (category === "top" && attributes.sleeve !== requirements.sleeve) return false;
@@ -443,6 +513,13 @@
     if (requirements.movement && !attributes.movement) return false;
     if (family && attributes.family !== family && !(category === "outer" && attributes.outerKind === "none")) return false;
 
+    const materialClass = requirementMaterialClass(requirements.material);
+    if (materialClass === "warm" && category === "outer" && attributes.outerKind !== "warm") return false;
+    if (materialClass === "light" && attributes.materialClass === "warm") return false;
+    if (locks["requirements.texture"] && requirements.texture === "smooth" && attributes.texture === "rough") return false;
+    if (locks["requirements.waist"] && requirements.waist && category === "bottom" && attributes.waistPosition !== requirements.waist) return false;
+    if (locks["requirements.coverage"] && category === "bottom" && Number(attributes.coverageRank || 0) < Number({ light: 0, regular: 1, full: 2 }[requirements.coverage] ?? 1)) return false;
+
     const candidateShape = category === "bottom" ? { bottomType: attributes.bottomType } : {};
     return !forbidden.some((item) => {
       if (item.field === `candidate.${category}Id`) return component.id === item.value;
@@ -451,11 +528,27 @@
     });
   }
 
-  function chooseComponent(components, family, requirements, forbidden, category, strictFamily) {
-    const exact = components.find((item) => componentMatches(item, family, requirements, forbidden, category));
+  function componentScore(component, requirements, category) {
+    const attributes = component.attributes || {};
+    let score = 0;
+    if (category === "bottom" && requirements.waist && attributes.waistPosition === requirements.waist) score += 8;
+    if (requirements.line && attributes.lineDirection === requirements.line) score += 5;
+    if (category === "top" && requirements.neckline && attributes.neckline === requirements.neckline) score += 5;
+    if (requirements.texture && attributes.texture === requirements.texture) score += 2;
+    if (requirements.material && requirementMaterialClass(requirements.material) === attributes.materialClass) score += 1;
+    return score;
+  }
+
+  function chooseComponent(components, family, requirements, forbidden, category, strictFamily, locks) {
+    const eligible = components
+      .filter((item) => componentMatches(item, family, requirements, forbidden, category, locks))
+      .sort((a, b) => componentScore(b, requirements, category) - componentScore(a, requirements, category));
+    const exact = eligible[0];
     if (exact) return exact;
     if (strictFamily) return null;
-    return components.find((item) => componentMatches(item, null, requirements, forbidden, category)) || null;
+    return components
+      .filter((item) => componentMatches(item, null, requirements, forbidden, category, locks))
+      .sort((a, b) => componentScore(b, requirements, category) - componentScore(a, requirements, category))[0] || null;
   }
 
   function candidateBlocked(candidate, forbidden) {
@@ -485,9 +578,9 @@
     const blocked = [];
 
     familyOrder.forEach((family) => {
-      const top = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "top", strictStyle);
-      const outer = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "outer", strictStyle);
-      const bottom = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "bottom", strictStyle);
+      const top = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "top", strictStyle, decision.locks);
+      const outer = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "outer", strictStyle, decision.locks);
+      const bottom = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "bottom", strictStyle, decision.locks);
       if (!top || !outer || !bottom) {
         blocked.push({ family, reason: "没有找到同时满足袖长、覆盖、正式度和边界的完整组合。" });
         return;
@@ -531,19 +624,37 @@
       tailored: { line: "清晰结构", focus: "提高完成度" },
       street: { line: "宽松箱型", focus: "建立层次和款式重点" },
       retro: { line: "复古收放", focus: "保留领型与比例特征" }
-    }[family];
-
-    const hardRules = decision.trace.filter((item) => item.stage === "hard" && ["matched", "rewritten"].includes(item.status));
-    const softRules = decision.trace.filter((item) => item.stage === "soft" && item.status === "matched");
+    }[family] || { line: "自然线条", focus: "保持整体平衡" };
+    const hardRules = decision.trace.filter((item) => item.stage === "hard" && ["matched", "rewritten", "partial"].includes(item.status));
+    const softRules = decision.trace.filter((item) => item.stage === "soft" && ["matched", "rewritten", "partial"].includes(item.status));
     const outerName = outer.attributes.outerKind === "none" ? "无外层" : outer.name;
-    const waist = decision.requirements.waist || (family === "straight" ? "raised" : family === "tailored" ? "defined" : "natural");
-    const line = decision.requirements.line || familyMeta.line;
+    const waist = bottom.attributes.waistPosition || decision.requirements.waist || "natural";
+    const line = decision.requirements.line || bottom.attributes.lineDirection || familyMeta.line;
     const unknownColor = [derived.color?.temperature, derived.color?.contrast, derived.color?.chroma].some((item) => !item || item.value === null);
     const palette = resolvePalette(ruleSet, palettePlanId || decision.requirements.palettePlanId);
     const nameParts = [top.name, outer.attributes.outerKind === "none" ? null : outer.name, bottom.name].filter(Boolean);
+    const components = [top, outer.attributes.outerKind === "none" ? null : outer, bottom].filter(Boolean).map((component) => clone(component));
+    const relevantRule = (trace) => {
+      const familyValues = [
+        ...(trace.actions || []).filter((action) => action.field === "preferences.family" && ["ADD", "BOOST"].includes(action.type)).map((action) => action.value),
+        ...(trace.outputResult?.families || []),
+        ...(trace.outputResult?.family ? [trace.outputResult.family] : [])
+      ];
+      return !familyValues.length || familyValues.includes(family);
+    };
+    const hardRequirements = hardRules.map((item) => ({ ruleId: item.ruleId, name: item.name, text: item.reason, summary: item.reason, detail: item.reason }));
+    const softReasons = softRules.filter(relevantRule).map((item) => ({ ruleId: item.ruleId, name: item.name, text: item.reason }));
+    if (palette) softReasons.push({ ruleId: palette.id, name: palette.name, text: `配色采用“${palette.name}”：${palette.reason}` });
+    const unverified = [
+      { item: "具体商品的尺码与纸样", affectsPlan: true, validation: "核对成衣肩、胸、腰、臀和关键长度，并试穿确认活动量。", failure: "关键部位尺寸不足、衣长落点偏离或动作受限。" },
+      { item: "面料厚度、织法与垂坠度", affectsPlan: false, validation: `确认商品能实现“${decision.requirements.material}”且不过度蓬胀。`, failure: "实际面料过厚、过硬或蓬胀，改变了当前轮廓。" },
+      ...(palette ? [{ item: `配色方案“${palette.name}”的实物呈现`, affectsPlan: false, validation: palette.validation || "在自然光下核对近脸色、主色和辅助色。", failure: "实物色温、明度或彩度偏离当前配色方向。" }] : []),
+      ...(unknownColor ? [{ item: "外观色彩事实不完整", affectsPlan: false, validation: "在自然光下确认肤色、发色和眼睛颜色的冷暖、明度和彩度。", failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。" }] : [])
+    ].map((item) => ({ ...item, field: item.item, impact: item.affectsPlan, howToVerify: item.validation, failureCondition: item.failure }));
 
     return {
       id: `CANDIDATE-${family.toUpperCase()}`,
+      title: nameParts.join(" + "),
       name: nameParts.join(" + "),
       family,
       topId: top.id,
@@ -551,6 +662,7 @@
       bottomId: bottom.id,
       bottomType: bottom.attributes.bottomType,
       garments: { top: top.name, outer: outerName, bottom: bottom.name },
+      components,
       layerCount: decision.requirements.layerCount,
       sleeve: decision.requirements.sleeve,
       coverage: decision.requirements.coverage,
@@ -580,38 +692,12 @@
       seasonVersion: decision.requirements.seasonVersion || "长期",
       focus: familyMeta.focus,
       expectedEffect: buildExpectedEffect(decision.requirements, palette),
-      hardRequirementsMet: hardRules.map((item) => ({ ruleId: item.ruleId, name: item.name, text: item.reason })),
-      softReasons: [
-        ...softRules.map((item) => ({ ruleId: item.ruleId, name: item.name, text: item.reason })),
-        ...(palette ? [{ ruleId: palette.id, name: palette.name, text: `配色采用“${palette.name}”：${palette.reason}` }] : [])
-      ],
-      unverified: [
-        {
-          item: "具体商品的尺码与纸样",
-          affectsPlan: true,
-          validation: "核对成衣肩、胸、腰、臀和关键长度，并试穿确认活动量。",
-          failure: "关键部位尺寸不足、衣长落点偏离或动作受限。"
-        },
-        {
-          item: "面料厚度、织法与垂坠度",
-          affectsPlan: false,
-          validation: `确认商品能实现“${decision.requirements.material}”且不过度蓬胀。`,
-          failure: "实际面料过厚、过硬或蓬胀，改变了当前轮廓。"
-        },
-        ...(palette ? [{
-          item: `配色方案“${palette.name}”的实物呈现`,
-          affectsPlan: false,
-          validation: palette.validation || "在自然光下核对近脸色、主色和辅助色。",
-          failure: "实物色温、明度或彩度偏离当前配色方向。"
-        }] : []),
-        ...(unknownColor ? [{
-          item: "外观色彩事实不完整",
-          affectsPlan: false,
-          validation: "在自然光下确认肤色、发色和眼睛颜色的冷暖、明度和彩度。",
-          failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。"
-        }] : [])
-      ],
-      traceRuleIds: [...hardRules, ...softRules].map((item) => item.ruleId)
+      hardRequirementsMet: hardRequirements,
+      hardRequirements,
+      softReasons,
+      implementations: softReasons.map((item) => ({ relationName: item.name, actionSummary: item.text })),
+      unverified,
+      traceRuleIds: [...hardRules, ...softRules.filter(relevantRule)].map((item) => item.ruleId)
     };
   }
 
@@ -627,7 +713,15 @@
       chroma: plan.chroma,
       reason: plan.reason,
       validation: plan.validation,
-      roles: (plan.roles || []).map((item) => ({ ...item, color: colors.get(item.colorId) || null }))
+      roles: (plan.roles || []).map((item) => {
+        const color = colors.get(item.colorId) || null;
+        return {
+          ...item,
+          color,
+          colorName: color?.name || "基础色",
+          hex: color?.hex || "#c7c7c7"
+        };
+      })
     };
   }
 
@@ -756,10 +850,11 @@
   function buildAnalysisInsights(decision, assembly, ruleSet) {
     const ruleIndex = new Map([
       ...ruleSet.decisionRules.map((rule) => [rule.id, rule]),
-      ...ruleSet.outfitOutputs.map((rule) => [rule.id, rule])
+      ...ruleSet.outfitOutputs.map((rule) => [rule.id, rule]),
+      ...(ruleSet.trendDirections || []).map((rule) => [rule.id, rule])
     ]);
     return decision.trace
-      .filter((trace) => ["matched", "rewritten"].includes(trace.status))
+      .filter((trace) => ["matched", "rewritten", "partial", "skipped", "conflict"].includes(trace.status))
       .map((trace) => {
         const rule = ruleIndex.get(trace.ruleId);
         const conditions = trace.conditions || rule?.conditions || [];
@@ -795,6 +890,7 @@
           ruleId: trace.ruleId,
           group: trace.group || rule?.group || "其他",
           kind: trace.kind || rule?.kind || "soft",
+          status: trace.status,
           priority: Number(trace.priority || rule?.priority || 0),
           finding,
           conclusion,
@@ -810,7 +906,7 @@
 
   function run(input, suppliedRuleSet) {
     const ruleSet = normalizeRuleSet(suppliedRuleSet);
-    const safeInput = clone(input || DATA.defaultInput);
+    const safeInput = normalizeInput(input);
     const derivation = deriveFeatures(safeInput, ruleSet);
     const decision = applyDecisionRules(safeInput, derivation.derived, ruleSet);
     const assembly = assembleCandidates(safeInput, derivation.derived, decision, ruleSet);
@@ -825,6 +921,12 @@
         candidate.silhouette,
         candidate.palette?.name
       ].filter(Boolean))].slice(0, 5);
+    });
+    const baseline = assembly.candidates[0];
+    assembly.candidates.forEach((candidate, index) => {
+      candidate.differenceSummary = index === 0
+        ? "基准方案"
+        : meaningfulDifference(baseline, candidate).join("、") || "候选细节差异";
     });
     return {
       input: safeInput,
@@ -864,6 +966,57 @@
     ruleSet.decisionRules.forEach((rule) => {
       if (!rule.conditions?.length) warnings.push({ type: "no_condition", ruleId: rule.id, message: `${rule.name} 没有条件，将始终命中。` });
       if (!rule.actions?.length) warnings.push({ type: "no_action", ruleId: rule.id, message: `${rule.name} 没有动作。` });
+    });
+
+    const conditionFieldIds = new Set(ruleSet.conditionFields.map((field) => field.id));
+    const parameterIds = new Set(ruleSet.parameters.map((parameter) => parameter.id));
+    const derivedOutputs = new Set(ruleSet.derivedRules.map((rule) => rule.output));
+    const resultFieldMap = new Map(ruleSet.resultFields.map((field) => [field.id, field]));
+    const allowedOperators = new Set(Object.keys(ruleSet.operatorDictionary?.operators || {}));
+    const validateRuleReferences = (rule) => {
+      (rule.inputs || []).forEach((input) => {
+        if (!parameterIds.has(input.field) && !derivedOutputs.has(input.field)) {
+          errors.push({ type: "missing_input_field", ruleId: rule.id, field: input.field, message: `${rule.name} 引用了不存在的输入字段 ${input.field}。` });
+        }
+      });
+      if (rule.output && rule.id.startsWith("DERIVED-") && !rule.output.includes(".")) {
+        errors.push({ type: "invalid_derived_output", ruleId: rule.id, field: rule.output, message: `${rule.name} 的派生输出字段无效。` });
+      }
+      (rule.conditions || []).forEach((condition) => {
+        if (!conditionFieldIds.has(condition.field)) {
+          errors.push({ type: "missing_condition_field", ruleId: rule.id, field: condition.field, message: `${rule.name} 引用了不存在的条件字段 ${condition.field}。` });
+        }
+        if (!allowedOperators.has(condition.operator)) {
+          errors.push({ type: "invalid_operator", ruleId: rule.id, operator: condition.operator, message: `${rule.name} 使用了未定义的运算符 ${condition.operator}。` });
+        }
+      });
+      (rule.actions || []).forEach((action) => {
+        if (["FORBID", "FILTER"].includes(action.type)) {
+          if (!conditionFieldIds.has(action.field) && !action.field.startsWith("candidate.")) {
+            errors.push({ type: "missing_filter_field", ruleId: rule.id, field: action.field, message: `${rule.name} 的筛选字段 ${action.field} 不存在。` });
+          }
+          return;
+        }
+        const definition = resultFieldMap.get(action.field);
+        if (!definition) {
+          errors.push({ type: "missing_result_field", ruleId: rule.id, field: action.field, message: `${rule.name} 写入了不存在的结果字段 ${action.field}。` });
+        } else if (definition.actions && !definition.actions.includes(action.type)) {
+          errors.push({ type: "invalid_action", ruleId: rule.id, field: action.field, action: action.type, message: `${rule.name} 不能对 ${action.field} 使用 ${action.type}。` });
+        }
+      });
+    };
+    [...ruleSet.derivedRules, ...ruleSet.decisionRules, ...ruleSet.outfitOutputs, ...(ruleSet.trendDirections || [])].forEach(validateRuleReferences);
+
+    ruleSet.components.forEach((component) => {
+      const attributes = component.attributes || {};
+      if (!component.category || !["top", "outer", "bottom"].includes(component.category)) {
+        errors.push({ type: "invalid_component_category", componentId: component.id, message: `${component.name || component.id} 的品类无效。` });
+      }
+      if (!component.enabled) return;
+      if (!attributes.family) warnings.push({ type: "missing_component_family", componentId: component.id, message: `${component.name || component.id} 缺少风格路线。` });
+      if (component.category === "top" && !attributes.sleeve) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少袖长属性。` });
+      if (component.category === "outer" && !attributes.outerKind) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少外层类型属性。` });
+      if (component.category === "bottom" && (!attributes.bottomType || !attributes.coverage)) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少下装类型或覆盖属性。` });
     });
 
     const colorIds = new Set(ruleSet.colorLibrary.map((item) => item.id));
@@ -934,6 +1087,24 @@
         actual: result.candidates.map((candidate) => candidate.bottomType).join(", "),
         expected: `不含 ${expected.forbiddenBottomType}`
       });
+      if (expected.noDefinedWaist) checks.push({
+        name: "拒绝明确收腰",
+        pass: result.candidates.every((candidate) => candidate.waist !== "defined"),
+        actual: result.candidates.map((candidate) => candidate.waist).join(", "),
+        expected: "不含 defined"
+      });
+      if (expected.coverage) checks.push({
+        name: "覆盖程度",
+        pass: result.requirements.coverage === expected.coverage && result.candidates.every((candidate) => candidate.coverage === expected.coverage),
+        actual: `${result.requirements.coverage}; ${result.candidates.map((candidate) => candidate.coverage).join(", ")}`,
+        expected: expected.coverage
+      });
+      if (expected.movement) checks.push({
+        name: "行动便利",
+        pass: result.requirements.movement === true && result.candidates.every((candidate) => candidate.components.every((component) => component.attributes.movement !== false)),
+        actual: result.requirements.movement,
+        expected: true
+      });
       return { id: test.id, name: test.name, pass: checks.every((check) => check.pass), checks, result };
     });
   }
@@ -982,10 +1153,10 @@
       return clone(DATA.defaultRuleSet);
     },
     loadInput() {
-      return loadJSON(STORAGE_KEYS.input, DATA.defaultInput);
+      return normalizeInput(loadJSON(STORAGE_KEYS.input, DATA.defaultInput));
     },
     saveInput(input) {
-      window.localStorage.setItem(STORAGE_KEYS.input, JSON.stringify(input));
+      window.localStorage.setItem(STORAGE_KEYS.input, JSON.stringify(normalizeInput(input)));
     },
     export(ruleSet) {
       return JSON.stringify(normalizeRuleSet(ruleSet), null, 2);
@@ -1035,6 +1206,7 @@
     clone,
     getByPath,
     setByPath,
+    normalizeInput,
     labelForOption,
     deriveFeatures,
     applyDecisionRules,

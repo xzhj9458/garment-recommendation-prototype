@@ -49,6 +49,50 @@ async function choose(page, pathName, value) {
     assert(impactHeight <= 38, `本次影响单行仍然过高：${impactHeight}px`);
     assert(await demo.page.locator(".candidate-card").count() === 3, "默认输入没有生成三个完整方案");
 
+    // Every input group must be renderable and persist a canonical value.
+    for (const group of ["context", "color", "body", "face", "preference", "goal", "boundaries"]) {
+      await demo.page.locator(`button[data-group="${group}"]`).click();
+      assert(await demo.page.locator("#inputContent").innerText(), `${group} 输入组没有内容`);
+    }
+    await demo.page.locator('button[data-group="color"]').click();
+    await choose(demo.page, "appearance.skinValue", "4");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().appearance.skinValue === 4), "颜色输入没有写入规范化字段");
+    await demo.page.locator('button[data-group="body"]').click();
+    await choose(demo.page, "body.legRatio", "0");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().body.legRatio === 0), "身体输入没有写入规范化字段");
+    await demo.page.locator('button[data-group="goal"]').click();
+    await demo.page.locator('select[data-input-path="goal.endpoint"]').selectOption("waist");
+    await demo.page.locator('select[data-input-path="goal.direction"]').selectOption("strengthen");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().goal.endpoint === "waist"), "目标输入没有写入规范化字段");
+    await demo.page.locator('button[data-group="boundaries"]').click();
+    await demo.page.locator('input[data-input-boolean="boundaries.rejectDefinedWaist"]').check({ force: true });
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().boundaries.rejectDefinedWaist === true), "边界输入没有写入规范化字段");
+    const boundaryResult = await demo.page.evaluate(() => {
+      const input = window.GarmentRuleEngine.Store.loadInput();
+      return window.GarmentRuleEngine.run(input, window.GarmentRuleEngine.Store.loadPublished());
+    });
+    assert(boundaryResult.candidates.every((candidate) => candidate.waist !== "defined"), "拒绝明显收腰没有落实到候选组件");
+    await demo.page.locator("#resetInputButton").click();
+    await demo.page.locator('button[data-group="context"]').click();
+
+    await demo.page.locator(".detail-button").first().click();
+    const detailText = await demo.page.locator("#candidateDetailContent").innerText();
+    assert(detailText.includes("完整穿着单品") && detailText.includes("怎么验证") && !detailText.includes("undefined"), "方案详情没有消费完整候选契约");
+    await demo.page.locator("[data-close-dialog]").click();
+
+    const traceTarget = await demo.page.evaluate(() => {
+      const result = window.GarmentRuleEngine.run(window.GarmentPrototypeData.defaultInput, window.GarmentRuleEngine.Store.loadPublished());
+      return result.insights.find((insight) => insight.candidateIds.length > 0 && insight.candidateIds.length < result.candidates.length)?.ruleId || null;
+    });
+    if (traceTarget) {
+      const traceRow = demo.page.locator(`.impact-link-row[data-rule-id="${traceTarget}"]`).first();
+      await traceRow.hover();
+      const relatedCount = await demo.page.locator(".candidate-card.is-related").count();
+      assert(relatedCount > 0 && relatedCount < 3, "规则高亮仍然把所有候选标记为相关");
+      await traceRow.click();
+      assert(await demo.page.locator(".candidate-card.is-dimmed").count() > 0, "规则高亮没有弱化无关候选");
+    }
+
     const paletteState = await demo.page.evaluate(() => {
       const result = window.GarmentRuleEngine.run(window.GarmentPrototypeData.defaultInput, window.GarmentRuleEngine.Store.loadPublished());
       return result.candidates.map((candidate) => ({ name: candidate.palette?.name, contrast: candidate.colorContrast, chroma: candidate.colorChroma }));
@@ -94,6 +138,20 @@ async function choose(page, pathName, value) {
     await rules.page.evaluate(() => localStorage.clear());
     await rules.page.reload({ waitUntil: "networkidle" });
     assert(await rules.page.locator("#overviewView").isVisible(), "规则管理没有默认显示规则总览");
+    const ruleChecks = await rules.page.evaluate(() => {
+      const engine = window.GarmentRuleEngine;
+      const data = window.GarmentPrototypeData.defaultRuleSet;
+      const tests = engine.runTests(data);
+      const broken = engine.clone(data);
+      broken.decisionRules[0].conditions[0].field = "input.missingField";
+      return {
+        tests: tests.length,
+        failed: tests.filter((test) => !test.pass).map((test) => test.id),
+        catchesDangling: engine.validateRuleSet(broken).errors.some((error) => error.type === "missing_condition_field")
+      };
+    });
+    assert(ruleChecks.tests >= 7 && ruleChecks.failed.length === 0, "规则回归用例存在失败");
+    assert(ruleChecks.catchesDangling, "规则校验器没有捕获悬空条件字段");
     assert(!(await rules.page.locator("#configureView").isVisible()), "规则配置与总览仍然同时挤在主工作区");
     assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 10, "规则总览没有展示十类业务关系");
     assert(await rules.page.locator("#overviewMatrix thead tr").count() === 2, "规则总览没有使用两层结果表头");

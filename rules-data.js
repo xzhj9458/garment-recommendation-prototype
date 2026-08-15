@@ -1247,6 +1247,35 @@
     ...formalComponents
   ];
 
+  const familyLine = {
+    straight: "continuous",
+    tailored: "structured",
+    soft: "soft",
+    relaxed: "balanced",
+    street: "sectioned",
+    retro: "sectioned"
+  };
+
+  components.forEach((component) => {
+    const attributes = component.attributes ||= {};
+    const name = component.name || "";
+    const family = attributes.family || "straight";
+    const coverageRank = { light: 0, regular: 1, full: 2 };
+    if (component.category === "top" && !attributes.coverage) {
+      attributes.coverage = attributes.sleeve === "long" ? "full" : attributes.sleeve === "threeQuarter" ? "regular" : "light";
+    }
+    if (component.category === "outer" && !attributes.coverage) {
+      attributes.coverage = attributes.outerKind === "warm" ? "full" : attributes.outerKind === "light" ? "regular" : "light";
+    }
+    attributes.coverageRank = coverageRank[attributes.coverage] ?? 1;
+    attributes.waistPosition ||= /高腰/.test(name) ? "raised" : family === "tailored" ? "defined" : "natural";
+    attributes.lineDirection ||= familyLine[family] || "balanced";
+    attributes.neckline ||= /柔和领|针织/.test(name) ? "softCurve" : /复古领|翻领/.test(name) ? "open" : "regular";
+    attributes.texture ||= /针织|柔软|垂坠/.test(name) ? "soft" : "smooth";
+    attributes.materialClass ||= attributes.outerKind === "warm" ? "warm" : attributes.sleeve === "short" ? "light" : "regular";
+    attributes.silhouette ||= family;
+  });
+
   const defaultInput = {
     context: { temperatureRange: "10_18", occasion: "commute" },
     preference: { style: "urban", formality: 2, trendDirection: "relaxedTailoring", trendIntensity: "light" },
@@ -1317,6 +1346,37 @@
         boundaries: { ...defaultInput.boundaries, rejectSkirt: true }
       },
       expected: { forbiddenBottomType: "skirt", minCandidates: 2 }
+    },
+    {
+      id: "TEST-REJECT-WAIST",
+      name: "拒绝明显收腰",
+      enabled: true,
+      input: {
+        ...defaultInput,
+        boundaries: { ...defaultInput.boundaries, rejectDefinedWaist: true }
+      },
+      expected: { noDefinedWaist: true, minCandidates: 2 }
+    },
+    {
+      id: "TEST-STRICT-COVERAGE",
+      name: "要求完整覆盖",
+      enabled: true,
+      input: {
+        ...defaultInput,
+        boundaries: { ...defaultInput.boundaries, strictCoverage: true }
+      },
+      expected: { coverage: "full", minCandidates: 2 }
+    },
+    {
+      id: "TEST-TRAVEL-MOVEMENT",
+      name: "出游行动便利",
+      enabled: true,
+      input: {
+        ...defaultInput,
+        context: { temperatureRange: "18_24", occasion: "travel" },
+        boundaries: { ...defaultInput.boundaries, movementFriendly: true }
+      },
+      expected: { movement: true, minCandidates: 2 }
     }
   ];
 
