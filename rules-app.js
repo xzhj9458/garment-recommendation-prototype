@@ -36,9 +36,9 @@
       id: "color",
       name: "颜色搭配",
       fields: [
-        { id: "temperature", name: "冷暖倾向" },
+        { id: "temperature", name: "冷暖属性" },
         { id: "contrast", name: "明度对比" },
-        { id: "chroma", name: "彩度" },
+        { id: "chroma", name: "彩度水平" },
         { id: "palette", name: "配色方案" },
         { id: "placement", name: "颜色位置" }
       ]
@@ -52,16 +52,16 @@
   };
 
   const businessDefinitions = [
-    { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期温度"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
-    { id: "occasion", name: "场合要求", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
-    { id: "color", name: "整体色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装冷暖倾向", "明度对比", "彩度", "配色方案"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
-    { id: "body", name: "身材与比例", topics: ["身材与比例"], inputs: ["身高表现", "上下身比例", "腰部曲线明显度", "肩胯轮廓关系"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
-    { id: "face", name: "脸型与领口", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: { neckline: "strong" } } },
+    { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期气温"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
+    { id: "occasion", name: "使用场合", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
+    { id: "color", name: "外观色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装冷暖属性", "明度对比", "彩度水平", "配色方案"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
+    { id: "body", name: "体型比例", topics: ["身材与比例"], inputs: ["纵向比例感", "上下身比例", "腰线明确度", "肩胯平衡度"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
+    { id: "face", name: "脸型特征", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: { neckline: "strong" } } },
     { id: "style", name: "风格方向", topics: ["风格方向"], inputs: ["风格方向"], outputs: ["外轮廓", "服装量感", "款式细节", "表面纹理"], overview: { style: { silhouette: "strong", volume: "strong", details: "strong" } } },
     { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { wear: { formality: "strong" }, style: { silhouette: "medium", details: "medium" } } },
     { id: "trend", name: "潮流方向", topics: ["潮流方向"], inputs: ["潮流方向", "表达强度"], outputs: ["外轮廓", "服装量感", "表面纹理", "款式细节"], overview: { style: { silhouette: "medium", volume: "medium", details: "strong" } } },
-    { id: "goal", name: "本次偏好", topics: ["本次偏好"], inputs: ["想调整什么", "希望如何调整"], outputs: ["腰位", "线条方向", "配色对比"], overview: { style: { length: "medium", waist: "strong" }, color: { contrast: "medium" } } },
-    { id: "boundaries", name: "拒绝与边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖程度", "行动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
+    { id: "goal", name: "调整目标", topics: ["本次偏好"], inputs: ["调整目标", "调整方向"], outputs: ["腰位", "线条方向", "配色对比"], overview: { style: { length: "medium", waist: "strong" }, color: { contrast: "medium" } } },
+    { id: "boundaries", name: "拒绝边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖程度", "行动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
   ];
 
   // Each business relation owns a bounded set of fields. The editor uses this
@@ -118,17 +118,17 @@
       id: "context",
       name: "场景条件",
       relations: [
-        { id: "temperature", name: "温度与层次", tag: "边界" },
-        { id: "occasion", name: "场合要求", tag: "搭配" }
+        { id: "temperature", name: "近期气温", tag: "边界" },
+        { id: "occasion", name: "使用场合", tag: "搭配" }
       ]
     },
     {
       id: "personal",
       name: "个人特征",
       relations: [
-        { id: "color", name: "整体色彩", tag: "搭配" },
-        { id: "body", name: "身材与比例", tag: "搭配" },
-        { id: "face", name: "脸型与领口", tag: "搭配" }
+        { id: "color", name: "外观色彩", tag: "搭配" },
+        { id: "body", name: "体型比例", tag: "搭配" },
+        { id: "face", name: "脸型特征", tag: "搭配" }
       ]
     },
     {
@@ -144,8 +144,8 @@
       id: "goal-boundaries",
       name: "本次目标与边界",
       relations: [
-        { id: "goal", name: "本次目标偏好", tag: "搭配" },
-        { id: "boundaries", name: "明确拒绝与身体边界", tag: "边界" }
+        { id: "goal", name: "调整目标", tag: "搭配" },
+        { id: "boundaries", name: "拒绝边界", tag: "边界" }
       ]
     }
   ];
@@ -249,8 +249,12 @@
         const chip = event.target.closest("button[data-tier3-id]");
         if (!chip) return;
         const business = businessRelationById(state.selectedId);
-        const relation = activeAtomicRelation(business);
+        const memberId = chip.dataset.tier3MemberId;
+        const relation = memberId
+          ? business?.mappingMembers.find((item) => item.id === memberId)
+          : activeAtomicRelation(business);
         if (relation) {
+          if (memberId && business) state.memberSelection[business.id] = memberId;
           state.branchSelection[relation.id] = chip.dataset.tier3Id;
         }
         renderRelationPicker();
@@ -358,22 +362,44 @@
 
   function relationFamilyName(key, branches, type) {
     const names = {
-      TEMP: "近期温度与穿着层次",
-      OCCASION: "场合与穿着要求",
-      "COLOR-TEMP": "整体冷暖倾向与服装冷暖倾向",
-      "COLOR-CONTRAST": "明度对比与配色层次",
-      "COLOR-CHROMA": "整体彩度与服装彩度",
-      "FACE-SHAPE": "脸型与领口方向",
-      "BODY-PROPORTION": "身材比例与候选路线",
-      "GOAL-VERTICAL": "整体修长感调整",
-      "GOAL-WAIST": "腰线表现调整",
+      TEMP: "近期气温",
+      OCCASION: "使用场合",
+      "COLOR-TEMP": "冷暖属性",
+      "COLOR-CONTRAST": "明度对比",
+      "COLOR-CHROMA": "彩度水平",
+      "FACE-SHAPE": "脸型特征",
+      "BODY-PROPORTION": "体型比例",
+      "GOAL-VERTICAL": "纵向比例调整",
+      "GOAL-WAIST": "腰线特征调整",
       "GOAL-CONTRAST": "配色对比调整",
-      BOUNDARY: "明确拒绝与身体边界",
-      "OUTFIT-风格方向": "风格与款式语言",
-      "OUTFIT-正式程度": "正式程度与服装完成度",
-      "TREND-DIRECTION": "潮流方向与款式表达"
+      BOUNDARY: "拒绝边界",
+      "OUTFIT-风格方向": "风格方向",
+      "OUTFIT-正式程度": "正式程度",
+      "TREND-DIRECTION": "潮流方向"
     };
-    return names[key] || (type === "outfit" ? `${branches[0].group}搭配关系` : branches[0].name);
+    return names[key] || (type === "outfit" ? `${branches[0].group}搭配` : branches[0].name);
+  }
+
+  function relationMemberName(relation) {
+    const id = relation?.id || "";
+    const key = relationFamilyKey(relation?.rule || {}, relation?.type);
+    const names = {
+      TEMP: "近期气温",
+      OCCASION: "使用场合",
+      "COLOR-TEMP": "冷暖属性",
+      "COLOR-CONTRAST": "明度对比",
+      "COLOR-CHROMA": "彩度水平",
+      "FACE-SHAPE": "脸型特征",
+      "BODY-PROPORTION": "体型比例",
+      "GOAL-VERTICAL": "纵向比例调整",
+      "GOAL-WAIST": "腰线特征调整",
+      "GOAL-CONTRAST": "配色对比调整",
+      BOUNDARY: "拒绝边界",
+      "OUTFIT-风格方向": "风格方向",
+      "OUTFIT-正式程度": "正式程度",
+      "TREND-DIRECTION": "潮流方向"
+    };
+    return names[key] || relation?.rule?.name || relation?.name || id;
   }
 
   function activeRule(relation) {
@@ -446,13 +472,13 @@
     { groupId: "context", label: "近期温度", relationId: "temperature", mappingId: "context.temperatureRange" },
     { groupId: "context", label: "使用场合", relationId: "occasion", mappingId: "context.occasion" },
     { groupId: "personal", label: "外观色彩", relationId: "color", mappingId: "personal.appearance" },
-    { groupId: "personal", label: "身材情况", relationId: "body", mappingId: "personal.body" },
-    { groupId: "personal", label: "脸型", relationId: "face", mappingId: "personal.face" },
+    { groupId: "personal", label: "体型比例", relationId: "body", mappingId: "personal.body" },
+    { groupId: "personal", label: "脸型特征", relationId: "face", mappingId: "personal.face" },
     { groupId: "preference", label: "风格方向", relationId: "style", mappingId: "preference.style" },
     { groupId: "preference", label: "正式程度", relationId: "formality", mappingId: "preference.formality" },
     { groupId: "preference", label: "潮流方向", relationId: "trend", mappingId: "preference.trendDirection" },
-    { groupId: "goal-boundaries", label: "本次调整目标", relationId: "goal", mappingId: "goal-boundaries" },
-    { groupId: "goal-boundaries", label: "拒绝与边界", relationId: "boundaries", mappingId: "goal-boundaries" }
+    { groupId: "goal-boundaries", label: "调整目标", relationId: "goal", mappingId: "goal-boundaries" },
+    { groupId: "goal-boundaries", label: "拒绝边界", relationId: "boundaries", mappingId: "goal-boundaries" }
   ];
 
   function canonicalOverviewRows() {
@@ -618,28 +644,33 @@
     const tier3Nav = $("#configTier3Chips");
     if (tier3Nav) {
       const business = businessRelationById(state.selectedId);
-      const relation = activeAtomicRelation(business);
-      const branches = relation?.rules || (relation?.rule ? [relation.rule] : []);
-      const activeBranch = activeRule(relation);
-
-      tier3Nav.innerHTML = branches.map((branch) => {
-        const isActive = branch.id === activeBranch?.id;
-        const isEnabled = branch.enabled !== false;
-        const summary = ruleBranchSummary(branch, relation?.type);
-        return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn ${isActive ? "is-active" : ""} ${isEnabled ? "" : "is-disabled"}" data-tier3-id="${escapeHtml(branch.id)}" title="${escapeHtml(branch.name)}: ${escapeHtml(summary)}">
-          <span class="chip-status-dot ${isEnabled ? "is-active" : ""}"></span>
-          <span>${escapeHtml(branch.name)}</span>
-          <small>${escapeHtml(summary)}</small>
-        </button>`;
-      }).join("") + `<button type="button" class="config-tier3-add-btn" data-add-branch-tier3 title="新增分支">＋ 新增分支</button>`;
+      const members = business?.mappingMembers || [];
+      const groups = members.map((member) => {
+        const branches = member.rules || (member.rule ? [member.rule] : []);
+        const activeBranch = activeRule(member);
+        const branchButtons = branches.map((branch) => {
+          const isActive = branch.id === activeBranch?.id;
+          const isEnabled = branch.enabled !== false;
+          const entryName = branchEntryName(branch, member);
+          return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn ${isActive ? "is-active" : ""} ${isEnabled ? "" : "is-disabled"}" data-tier3-id="${escapeHtml(branch.id)}" data-tier3-member-id="${escapeHtml(member.id)}" title="分支入口：${escapeHtml(entryName)}">
+            <span class="chip-status-dot ${isEnabled ? "is-active" : ""}"></span>
+            <span>${escapeHtml(entryName)}</span>
+          </button>`;
+        }).join("");
+        return `<section class="config-tier3-group" data-tier3-group="${escapeHtml(member.id)}">
+          <span class="config-tier3-group-label">${escapeHtml(relationMemberName(member))}</span>
+          <div class="config-tier3-group-items">${branchButtons || `<span class="config-tier3-empty">暂无分支</span>`}</div>
+        </section>`;
+      }).join("");
+      tier3Nav.innerHTML = `${groups}<button type="button" class="config-tier3-add-btn" data-add-branch-tier3 title="新增分支">＋ 新增分支</button>`;
     }
   }
 
   function renderEditor() {
     const business = businessRelationById(state.selectedId);
     $("#editorTitle").textContent = business?.name || "选择一组关系";
-    $("#editorKicker").textContent = business?.hard ? "硬性边界配置" : "关系配置";
-    $("#editorSummary").textContent = business ? `${business.inputs.join("、")} → ${business.outputs.join("、")}` : "选择一条关系开始配置。";
+    $("#editorKicker").textContent = business ? "二级关系" : "二级关系";
+    $("#editorSummary").textContent = business ? `影响输出：${business.outputs.join("、") || "全套穿着方案"}` : "选择一条关系开始配置。";
     $("#editorActions").hidden = !business?.mappingMembers.length;
     if (!business) {
       $("#editorContent").innerHTML = `<div class="editor-empty"><strong>选择一条关系开始配置</strong></div>`;
@@ -652,9 +683,8 @@
     }
     const editable = activeRule(relation);
     editable.analysis ||= { conclusion: editable.name, direction: editable.reason || "" };
-    const memberSelector = business.mappingMembers.length > 1 ? renderMemberSelector(business, relation) : "";
     const editableRelation = { ...relation, rule: editable };
-    $("#editorContent").innerHTML = memberSelector + renderMappingEditor(editableRelation, business) + renderCalculationDetails(business);
+    $("#editorContent").innerHTML = renderMappingEditor(editableRelation, business) + renderCalculationDetails(business);
   }
 
   function renderMemberSelector(business, relation) {
@@ -670,17 +700,36 @@
     return actions.slice(0, 3).map((a) => `${resultDefinition(a.field)?.name || a.field}: ${a.value}`).join(" · ");
   }
 
+  function branchConditionValue(condition) {
+    const definition = conditionDefinition(condition?.field);
+    const option = definition?.options?.find(([value]) => String(value) === String(condition?.value));
+    return option?.[1] || serializeValue(condition?.value);
+  }
+
+  function branchEntryName(branch, relation) {
+    const conditions = branch?.conditions || [];
+    if (conditions.length === 1) return branchConditionValue(conditions[0]);
+    if (conditions.length > 1) {
+      return conditions.map((condition) => {
+        const definition = conditionDefinition(condition.field);
+        return `${definition?.name || condition.field}：${branchConditionValue(condition)}`;
+      }).join(" · ");
+    }
+    return branch?.name || relationMemberName(relation);
+  }
+
   function renderEditorBase(relation) {
+    const entryName = branchEntryName(relation.rule, relation);
     return `<section class="editor-section editor-section--base">
       <div class="editor-section-title">
         <div class="branch-title-wrap">
           <span class="rule-kind-chip is-${relation.kind}">${relation.kind === "hard" ? "硬性边界" : "搭配偏好"}</span>
-          <h3>${escapeHtml(relation.rule.name)}</h3>
+          <h3>${escapeHtml(entryName)}</h3>
         </div>
         <label class="switch-control"><input type="checkbox" data-edit="enabled" ${relation.rule.enabled === false ? "" : "checked"}><span></span>启用分支</label>
       </div>
       <div class="form-grid">
-        ${field("分支显示名称", "name", relation.rule.name)}
+        ${field("分支内部名称", "name", relation.rule.name)}
       </div>
       <details class="advanced-details"><summary>高级系统编号</summary>${field("规则 ID", "id", relation.rule.id)}</details>
     </section>`;
@@ -692,17 +741,11 @@
     const resultFields = scopedFields(state.ruleSet.resultFields, business.scope?.result);
     const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule, resultFields);
 
-    const outputsList = (business.outputs || []).map((o) => `<span class="scope-pill">${escapeHtml(o)}</span>`).join("");
     const liveSynopsis = ruleBranchSummary(rule, relation.type);
 
     return `
-      <section class="relation-scope-banner">
-        <span class="scope-label">控制输出维度：</span>
-        <div class="scope-pill-list">${outputsList || `<span class="scope-pill">全套穿着方案</span>`}</div>
-      </section>
-
       <section class="branch-live-synopsis">
-        <span class="synopsis-label">当前【${escapeHtml(rule.name)}】匹配结果：</span>
+        <span class="synopsis-label">具体输出</span>
         <strong class="synopsis-content">${escapeHtml(liveSynopsis)}</strong>
       </section>
 
@@ -711,9 +754,9 @@
         <section class="rule-clause rule-clause--when">
           <div class="clause-heading">
             <span class="clause-prefix">WHEN</span>
-            <strong>当满足以下输入条件时</strong>
+            <strong>满足条件</strong>
             <div class="condition-mode-inline">
-              ${selectField("条件关系", "conditionMode", rule.conditionMode || "all", [["all", "全部满足 (AND)"], ["any", "任一满足 (OR)"]])}
+              ${(rule.conditions || []).length > 1 ? selectField("条件关系", "conditionMode", rule.conditionMode || "all", [["all", "全部满足 (AND)"], ["any", "任一满足 (OR)"]]) : `<span class="condition-lock-note">首条分支条件已固定</span>`}
               <button type="button" class="text-button" data-add-condition>＋ 添加条件</button>
             </div>
           </div>
@@ -725,7 +768,7 @@
         <section class="rule-clause rule-clause--then">
           <div class="clause-heading">
             <span class="clause-prefix">THEN</span>
-            <strong>输出决策结果 · 决定具体指标与要求</strong>
+            <strong>输出结果</strong>
           </div>
           ${stepTwo}
         </section>
@@ -733,12 +776,11 @@
         <section class="rule-clause rule-clause--why">
           <div class="clause-heading">
             <span class="clause-prefix">WHY</span>
-            <strong>业务依据与设计原理说明</strong>
+            <strong>配置依据</strong>
           </div>
-          ${textareaField("设计理由与穿搭逻辑", "reason", rule.reason || "")}
+          ${textareaField("说明理由", "reason", rule.reason || "")}
         </section>
       </article>
-      ${renderSharedInfluence(business)}
     `;
   }
 
@@ -765,32 +807,48 @@
   }
 
   function renderConditionRow(condition, index, definitions) {
-    const definition = conditionDefinition(condition.field);
+    const definition = definitions.find((item) => item.id === condition.field) || conditionDefinition(condition.field);
     const fieldName = definition?.name || condition.field;
     const opText = condition.operator === "neq" ? "不等于" : condition.operator === "gt" ? "高于" : condition.operator === "gte" ? "不低于" : condition.operator === "lt" ? "低于" : condition.operator === "lte" ? "不高于" : "等于";
+    const operatorOptions = [["eq", "等于"], ["neq", "不等于"], ["gt", "高于"], ["gte", "不低于"], ["lt", "低于"], ["lte", "不高于"]];
+    const isBase = index === 0;
+    const fieldOptions = definitions.map((item) => [item.id, item.name]);
     return `<div class="natural-condition-row">
       <span class="clause-tag">IF</span>
-      <span class="condition-prefix-label">当</span>
-      <strong class="condition-locked-name">【${escapeHtml(fieldName)}】</strong>
-      <span class="condition-op-badge">${escapeHtml(opText)}</span>
-      <div class="condition-val-control">${typedValueField("", `conditions.${index}.value`, condition.value, definition)}</div>
+      ${isBase
+        ? `<span class="condition-prefix-label">当</span><strong class="condition-locked-name">【${escapeHtml(fieldName)}】</strong><span class="condition-op-badge">${escapeHtml(opText)}</span><div class="condition-val-control">${typedValueField("", `conditions.${index}.value`, condition.value, definition, true)}</div>`
+        : `<div class="condition-extra-field">${selectField("输入字段", `conditions.${index}.field`, condition.field, fieldOptions)}</div><div class="condition-extra-op">${selectField("关系", `conditions.${index}.operator`, condition.operator || "eq", operatorOptions)}</div><div class="condition-val-control">${typedValueField("", `conditions.${index}.value`, condition.value, definition)}</div>`}
       <span class="condition-suffix-label">时</span>
       ${index > 0 ? `<button class="icon-button is-danger" type="button" data-remove-condition="${index}" title="删除条件" aria-label="删除条件">×</button>` : ""}
     </div>`;
   }
 
   function renderDecisionActions(rule, definitions) {
+    const actionTypeLabels = { SET: "设为", REQUIRE: "必须满足", FORBID: "禁止", FILTER: "过滤", BOOST: "优先", ADD: "追加", REPLACE: "替换" };
+    const existingFields = new Set((rule.actions || []).map((action) => action.field));
+    const availableFields = definitions.filter((definition) => !existingFields.has(definition.id));
     return `
       <div class="action-heading">
         <strong>输出决策项列表</strong>
-        <button type="button" class="secondary-button action-add-btn" data-add-action>＋ 添加输出决策项</button>
+        <div class="action-add-controls">
+          ${availableFields.length ? `<select class="action-add-field" data-add-action-field aria-label="选择新增输出维度">${availableFields.map((definition) => `<option value="${escapeHtml(definition.id)}">${escapeHtml(definition.name)}</option>`).join("")}</select>` : `<span class="action-add-empty">当前关系的输出维度已配置</span>`}
+          <button type="button" class="secondary-button action-add-btn" data-add-action ${availableFields.length ? "" : "disabled"}>＋ 添加输出项</button>
+        </div>
       </div>
       <div class="natural-action-list">
         ${(rule.actions || []).map((action, index) => {
-          const definition = resultDefinition(action.field);
+          const definition = definitions.find((item) => item.id === action.field) || resultDefinition(action.field);
           const fieldName = definition?.name || action.field;
+          const allowedActionTypes = definition?.actions?.length ? definition.actions : ["SET"];
+          const actionTypeOptions = [...new Set([...allowedActionTypes, action.type || "SET"])].map((value) => [value, actionTypeLabels[value] || value]);
+          const actionLabel = actionTypeLabels[action.type] || "设为";
+          const actionFieldOptions = definitions.map((item) => [item.id, item.name]);
           return `<div class="natural-action-row">
-            <span class="action-field-badge">${escapeHtml(fieldName)}</span>
+            <div class="action-field-control">${selectField("输出维度", `actions.${index}.field`, action.field, actionFieldOptions)}</div>
+            <details class="action-type-details">
+              <summary>${escapeHtml(actionLabel)}</summary>
+              ${selectField("动作方式", `actions.${index}.type`, action.type || "SET", actionTypeOptions)}
+            </details>
             <span class="action-arrow" aria-hidden="true">➔</span>
             <div class="action-value-control">
               ${typedValueField("", `actions.${index}.value`, action.value, definition)}
@@ -956,9 +1014,13 @@
       editable.actions ||= [];
       const allowed = scopedFields(state.ruleSet.resultFields, business.scope?.result);
       const existingFields = new Set(editable.actions.map(a => a.field));
-      const unassigned = allowed.find(f => !existingFields.has(f.id)) || allowed[0] || state.ruleSet.resultFields[0];
+      const requestedField = event.target.closest("[data-add-action]")?.parentElement?.querySelector("[data-add-action-field]")?.value;
+      const unassigned = allowed.find(f => f.id === requestedField && !existingFields.has(f.id))
+        || allowed.find(f => !existingFields.has(f.id))
+        || allowed[0]
+        || state.ruleSet.resultFields[0];
       const defaultVal = unassigned?.options?.[0]?.[0] ?? (unassigned?.valueType === "boolean" ? true : unassigned?.valueType === "number" ? 1 : "");
-      editable.actions.push({ type: "SET", field: unassigned?.id || "requirements.material", value: defaultVal });
+      editable.actions.push({ type: unassigned?.actions?.[0] || "SET", field: unassigned?.id || "requirements.material", value: defaultVal });
       markDirty();
       renderEditor();
       return;
@@ -1306,8 +1368,8 @@
     return `<label class="editor-field editor-field--wide"><span>${label}</span><textarea data-edit="${path}" rows="3">${escapeHtml(value)}</textarea></label>`;
   }
 
-  function selectField(label, path, value, options) {
-    return `<label class="editor-field"><span>${label}</span><select data-edit="${path}">${options.map(([option, name]) => `<option value="${escapeHtml(option)}" ${String(option) === String(value) ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>`;
+  function selectField(label, path, value, options, disabled = false) {
+    return `<label class="editor-field"><span>${label}</span><select data-edit="${path}" ${disabled ? "disabled" : ""}>${options.map(([option, name]) => `<option value="${escapeHtml(option)}" ${String(option) === String(value) ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>`;
   }
 
   function groupedSelect(label, path, value, definitions) {
@@ -1322,9 +1384,9 @@
     return scoped.length ? scoped : definitions;
   }
 
-  function typedValueField(label, path, value, definition) {
-    if (definition?.options?.length) return selectField(label, path, value, definition.options);
-    return field(label, path, serializeValue(value), definition?.valueType === "number" ? "number" : "text");
+  function typedValueField(label, path, value, definition, disabled = false) {
+    if (definition?.options?.length) return selectField(label, path, value, definition.options, disabled);
+    return field(label, path, serializeValue(value), definition?.valueType === "number" ? "number" : "text", disabled);
   }
 
   function parseByPrevious(rawValue, previous) {

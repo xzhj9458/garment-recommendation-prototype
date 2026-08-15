@@ -2203,10 +2203,35 @@ button {
 
 .config-tier3-chips {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow-x: auto;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px 14px;
   padding-bottom: 2px;
+}
+
+.config-tier3-group {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.config-tier3-group-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.config-tier3-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.config-tier3-empty {
+  color: var(--text-muted);
+  font-size: 10px;
 }
 
 .config-tier3-btn {
@@ -2242,19 +2267,6 @@ button {
 
 .config-tier3-btn.is-disabled {
   opacity: 0.5;
-}
-
-.config-tier3-btn small {
-  font-size: 9px;
-  font-weight: 400;
-  color: var(--text-muted);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.config-tier3-btn.is-active small {
-  color: var(--green-dark);
 }
 
 .config-tier3-add-btn {
@@ -2447,10 +2459,78 @@ button {
   font-size: 11px;
 }
 
+.condition-val-control select:disabled,
+.condition-val-control input:disabled {
+  color: var(--blue);
+  background: #f1f6fb;
+  border-color: #cbdceb;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.condition-lock-note {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.condition-extra-field,
+.condition-extra-op {
+  flex: 0 1 170px;
+  min-width: 120px;
+}
+
+.condition-extra-op {
+  flex-basis: 112px;
+}
+
+.condition-extra-field .editor-field,
+.condition-extra-op .editor-field,
+.action-field-control .editor-field,
+.action-type-details .editor-field {
+  gap: 0;
+}
+
+.condition-extra-field .editor-field > span,
+.condition-extra-op .editor-field > span,
+.action-field-control .editor-field > span,
+.action-type-details .editor-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.condition-extra-field select,
+.condition-extra-op select {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
 /* Natural Action Rows */
 .natural-action-list {
   display: grid;
   gap: 6px;
+}
+
+.action-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.action-heading > strong {
+  font-size: 11px;
+  color: var(--text-soft);
 }
 
 .natural-action-row {
@@ -2461,6 +2541,71 @@ button {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface);
+}
+
+.action-field-control {
+  flex: 0 1 220px;
+  min-width: 150px;
+}
+
+.action-field-control select {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.action-type-details {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.action-type-details summary {
+  min-width: 64px;
+  height: 26px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.action-type-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.action-type-details[open] summary {
+  border-color: var(--green-border);
+  color: var(--green-dark);
+  background: var(--green-soft);
+}
+
+.action-type-details .editor-field {
+  position: absolute;
+  z-index: 2;
+  top: 31px;
+  right: 0;
+  width: 124px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.action-type-details .editor-field select {
+  width: 100%;
+  height: 26px;
+  font-size: 10px;
 }
 
 .action-field-badge {
@@ -2496,6 +2641,28 @@ button {
   padding: 0 10px;
   font-size: 11px;
   font-weight: 600;
+}
+
+.action-add-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-add-field {
+  max-width: 180px;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.action-add-empty {
+  color: var(--text-muted);
+  font-size: 10px;
 }
 
 .outfit-result-grid {
@@ -3208,6 +3375,34 @@ button {
   .relationship-workspace {
     width: calc(100% - var(--page-gutter) * 2);
     padding: 10px 0 30px;
+  }
+
+  .config-tier3-group {
+    flex: 1 1 100%;
+  }
+
+  .natural-condition-row,
+  .natural-action-row {
+    flex-wrap: wrap;
+  }
+
+  .condition-val-control,
+  .action-value-control {
+    flex: 1 1 180px;
+  }
+
+  .action-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-add-controls {
+    width: 100%;
+  }
+
+  .action-add-field {
+    flex: 1 1 auto;
+    max-width: none;
   }
 }
 
