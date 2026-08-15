@@ -142,7 +142,7 @@
     },
     {
       id: "goal-boundaries",
-      name: "本次目标与边界",
+      name: "目标边界",
       relations: [
         { id: "goal", name: "调整目标", tag: "搭配" },
         { id: "boundaries", name: "拒绝边界", tag: "边界" }
@@ -657,8 +657,9 @@
             <span>${escapeHtml(entryName)}</span>
           </button>`;
         }).join("");
-        return `<section class="config-tier3-group" data-tier3-group="${escapeHtml(member.id)}">
-          <span class="config-tier3-group-label">${escapeHtml(relationMemberName(member))}</span>
+        const memberLabel = members.length > 1 ? `<span class="config-tier3-group-label">${escapeHtml(relationMemberName(member))}</span>` : "";
+        return `<section class="config-tier3-group ${members.length > 1 ? "is-grouped" : "is-single"}" data-tier3-group="${escapeHtml(member.id)}">
+          ${memberLabel}
           <div class="config-tier3-group-items">${branchButtons || `<span class="config-tier3-empty">暂无分支</span>`}</div>
         </section>`;
       }).join("");
@@ -670,7 +671,7 @@
     const business = businessRelationById(state.selectedId);
     $("#editorTitle").textContent = business?.name || "选择一组关系";
     $("#editorKicker").textContent = business ? "二级关系" : "二级关系";
-    $("#editorSummary").textContent = business ? `影响输出：${business.outputs.join("、") || "全套穿着方案"}` : "选择一条关系开始配置。";
+    $("#editorSummary").textContent = business ? "从具体分支入口进入规则配置" : "选择一条关系开始配置。";
     $("#editorActions").hidden = !business?.mappingMembers.length;
     if (!business) {
       $("#editorContent").innerHTML = `<div class="editor-empty"><strong>选择一条关系开始配置</strong></div>`;
@@ -691,13 +692,90 @@
     return `<section class="member-selector"><label><span>配置内容</span><select data-member-select>${business.mappingMembers.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === relation.id ? "selected" : ""}>${escapeHtml(item.rule.name)}</option>`).join("")}</select></label></section>`;
   }
 
+  const internalValueLabels = {
+    none: "无外层",
+    long: "长袖",
+    threeQuarter: "七分袖",
+    short: "短袖",
+    light: "轻薄/轻量",
+    warm: "保暖外层",
+    full: "完整覆盖",
+    regular: "适中覆盖",
+    smooth: "表面平滑",
+    natural: "自然腰位",
+    raised: "偏高腰位",
+    defined: "明确腰线",
+    straight: "连续直线",
+    tailored: "利落结构",
+    soft: "柔和过渡",
+    relaxed: "自然留量",
+    street: "都市工装",
+    retro: "复古精裁",
+    classic: "经典稳妥",
+    current: "适度当下",
+    statement: "明显潮流",
+    true: "是",
+    false: "否"
+  };
+
+  const outputDisplayNames = {
+    family: "服装路线",
+    families: "候选路线",
+    silhouette: "服装轮廓",
+    detail: "款式细节",
+    pattern: "图案纹理",
+    finish: "材质表面",
+    proportion: "版型比例",
+    detailIntensity: "细节强度",
+    note: "穿着表达",
+    seasonVersion: "款式时效",
+    trend: "潮流表达",
+    layerCount: "推荐层数",
+    sleeve: "推荐袖长",
+    outer: "推荐外层",
+    coverage: "身体覆盖程度",
+    material: "材质厚薄表现"
+  };
+
+  function formatDisplayValue(definition, value, field = "") {
+    const option = definition?.options?.find((item) => String(Array.isArray(item) ? item[0] : item.value) === String(value));
+    if (option) return Array.isArray(option) ? option[1] : option.label;
+    if (value === undefined || value === null || value === "") return "未设置";
+    return internalValueLabels[String(value)] || String(value);
+  }
+
+  function formatOutputField(field) {
+    const definition = resultDefinition(field);
+    return definition?.name || outputDisplayNames[field.split(".").pop()] || field;
+  }
+
+  function formatActionOutput(action) {
+    return `${formatOutputField(action.field)}：${formatDisplayValue(resultDefinition(action.field), action.value, action.field)}`;
+  }
+
   function ruleBranchSummary(rule, type) {
     if (!rule) return "默认处理";
-    if (type === "trend") return rule.coreIdea?.slice(0, 16) || "潮流表达";
+    if (type === "trend") return rule.coreIdea?.slice(0, 24) || "潮流表达";
     if (type === "outfit") return rule.result?.silhouette || "款式组合";
     const actions = rule.actions || [];
     if (!actions.length) return "默认处理";
-    return actions.slice(0, 3).map((a) => `${resultDefinition(a.field)?.name || a.field}: ${a.value}`).join(" · ");
+    return actions.map(formatActionOutput).join(" · ");
+  }
+
+  function renderBranchOutputDetails(rule, relation) {
+    if (relation.type === "decision") {
+      const actions = rule.actions || [];
+      return actions.length
+        ? actions.map((action) => `<div class="branch-output-item"><span>${escapeHtml(formatOutputField(action.field))}</span><strong>${escapeHtml(formatDisplayValue(resultDefinition(action.field), action.value, action.field))}</strong></div>`).join("")
+        : `<p class="muted-copy">当前分支尚未配置输出。</p>`;
+    }
+    const result = rule.result || {};
+    const entries = Object.entries(result).filter(([key, value]) => value !== undefined && value !== null && value !== "" && key !== "families");
+    if (relation.type === "trend" && rule.coreIdea) entries.unshift(["coreIdea", rule.coreIdea]);
+    const labels = { coreIdea: "核心理念", reference: "理念来源", season: "适用时间" };
+    return entries.length
+      ? entries.map(([key, value]) => `<div class="branch-output-item"><span>${escapeHtml(labels[key] || outputDisplayNames[key] || key)}</span><strong>${escapeHtml(formatDisplayValue(null, Array.isArray(value) ? value.join("、") : value, key))}</strong></div>`).join("")
+      : `<p class="muted-copy">当前分支尚未配置输出。</p>`;
   }
 
   function branchConditionValue(condition) {
@@ -740,47 +818,62 @@
     const conditionFields = scopedFields(state.ruleSet.conditionFields, business.scope?.condition);
     const resultFields = scopedFields(state.ruleSet.resultFields, business.scope?.result);
     const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule, resultFields);
-
-    const liveSynopsis = ruleBranchSummary(rule, relation.type);
+    const entryName = branchEntryName(rule, relation);
+    const outputsList = (business.outputs || []).map((output) => `<span class="scope-pill">${escapeHtml(output)}</span>`).join("");
 
     return `
-      <section class="branch-live-synopsis">
-        <span class="synopsis-label">具体输出</span>
-        <strong class="synopsis-content">${escapeHtml(liveSynopsis)}</strong>
+      <section class="rule-summary-module">
+        <div class="rule-summary-submodule relation-impact-submodule">
+          <div class="rule-summary-heading">
+            <span class="module-index">01</span>
+            <div><strong>二级关系影响输出</strong><small>${escapeHtml(business.name)}</small></div>
+          </div>
+          <div class="scope-pill-list">${outputsList || `<span class="scope-pill">全套穿着方案</span>`}</div>
+        </div>
+        <div class="rule-summary-submodule branch-output-submodule">
+          <div class="rule-summary-heading">
+            <span class="module-index">02</span>
+            <div><strong>当前分支具体输出</strong><small>${escapeHtml(entryName)}</small></div>
+          </div>
+          <div class="branch-output-grid">${renderBranchOutputDetails(rule, relation)}</div>
+        </div>
       </section>
 
-      ${renderEditorBase(relation)}
-      <article class="natural-rule-card">
-        <section class="rule-clause rule-clause--when">
-          <div class="clause-heading">
-            <span class="clause-prefix">WHEN</span>
-            <strong>满足条件</strong>
-            <div class="condition-mode-inline">
-              ${(rule.conditions || []).length > 1 ? selectField("条件关系", "conditionMode", rule.conditionMode || "all", [["all", "全部满足 (AND)"], ["any", "任一满足 (OR)"]]) : `<span class="condition-lock-note">首条分支条件已固定</span>`}
-              <button type="button" class="text-button" data-add-condition>＋ 添加条件</button>
+      <section class="rule-config-module">
+        <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>WHEN / THEN / WHY</small></div>
+        ${renderEditorBase(relation)}
+        <article class="natural-rule-card">
+          <section class="rule-clause rule-clause--when">
+            <div class="clause-heading">
+              <span class="clause-prefix">WHEN</span>
+              <strong>满足条件</strong>
+              <div class="condition-mode-inline">
+                ${(rule.conditions || []).length > 1 ? selectField("条件关系", "conditionMode", rule.conditionMode || "all", [["all", "全部满足 (AND)"], ["any", "任一满足 (OR)"]]) : `<span class="condition-lock-note">首条分支条件已固定</span>`}
+                <button type="button" class="text-button" data-add-condition>＋ 添加条件</button>
+              </div>
             </div>
-          </div>
-          <div class="condition-list">
-            ${(rule.conditions || []).map((condition, index) => renderConditionRow(condition, index, conditionFields)).join("") || `<p class="muted-copy">没有条件限制时，该规则默认始终适用。</p>`}
-          </div>
-        </section>
+            <div class="condition-list">
+              ${(rule.conditions || []).map((condition, index) => renderConditionRow(condition, index, conditionFields)).join("") || `<p class="muted-copy">没有条件限制时，该规则默认始终适用。</p>`}
+            </div>
+          </section>
 
-        <section class="rule-clause rule-clause--then">
-          <div class="clause-heading">
-            <span class="clause-prefix">THEN</span>
-            <strong>输出结果</strong>
-          </div>
-          ${stepTwo}
-        </section>
+          <section class="rule-clause rule-clause--then">
+            <div class="clause-heading">
+              <span class="clause-prefix">THEN</span>
+              <strong>输出结果</strong>
+            </div>
+            ${stepTwo}
+          </section>
 
-        <section class="rule-clause rule-clause--why">
-          <div class="clause-heading">
-            <span class="clause-prefix">WHY</span>
-            <strong>配置依据</strong>
-          </div>
-          ${textareaField("说明理由", "reason", rule.reason || "")}
-        </section>
-      </article>
+          <section class="rule-clause rule-clause--why">
+            <div class="clause-heading">
+              <span class="clause-prefix">WHY</span>
+              <strong>配置依据</strong>
+            </div>
+            ${textareaField("说明理由", "reason", rule.reason || "")}
+          </section>
+        </article>
+      </section>
     `;
   }
 
@@ -835,21 +928,21 @@
           <button type="button" class="secondary-button action-add-btn" data-add-action ${availableFields.length ? "" : "disabled"}>＋ 添加输出项</button>
         </div>
       </div>
+      <div class="action-column-head" aria-hidden="true"><span>输出维度</span><span>目标值</span><span>动作</span></div>
       <div class="natural-action-list">
         ${(rule.actions || []).map((action, index) => {
           const definition = definitions.find((item) => item.id === action.field) || resultDefinition(action.field);
-          const fieldName = definition?.name || action.field;
           const allowedActionTypes = definition?.actions?.length ? definition.actions : ["SET"];
           const actionTypeOptions = [...new Set([...allowedActionTypes, action.type || "SET"])].map((value) => [value, actionTypeLabels[value] || value]);
           const actionLabel = actionTypeLabels[action.type] || "设为";
           const actionFieldOptions = definitions.map((item) => [item.id, item.name]);
+          const actionMenuLabel = action.type === "SET" ? "⋯" : actionLabel;
           return `<div class="natural-action-row">
             <div class="action-field-control">${selectField("输出维度", `actions.${index}.field`, action.field, actionFieldOptions)}</div>
             <details class="action-type-details">
-              <summary>${escapeHtml(actionLabel)}</summary>
+              <summary title="更改动作方式" aria-label="更改动作方式">${escapeHtml(actionMenuLabel)}</summary>
               ${selectField("动作方式", `actions.${index}.type`, action.type || "SET", actionTypeOptions)}
             </details>
-            <span class="action-arrow" aria-hidden="true">➔</span>
             <div class="action-value-control">
               ${typedValueField("", `actions.${index}.value`, action.value, definition)}
             </div>

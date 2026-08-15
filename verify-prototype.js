@@ -74,6 +74,10 @@ async function choose(page, pathName, value) {
     }
 
     assert((await demo.page.locator("#recommendationTitle").innerText()).includes("02"), "案例页方案模块缺少02完整方案标题");
+    assert((await demo.page.locator(".module-heading--input").innerText()).replace(/\s+/g, "") === "01本次条件客户确认", "案例页输入模块标题仍存在重复文案");
+    assert((await demo.page.locator(".recommendation-heading").innerText()).includes("02 完整方案") && !(await demo.page.locator(".recommendation-heading").innerText()).includes("02 完整穿着方案"), "案例页方案模块标题仍存在重复文案");
+    assert(await demo.page.locator('.snapshot-chip').count() === 5, "已选条件快照缺少分类");
+    assert(await demo.page.locator('.snapshot-chip').nth(4).isVisible(), "已选条件快照的边界项被遮盖");
 
     await demo.page.locator('button[data-group="personal"]').click();
     assert(await demo.page.locator(".range-step").count() >= 65, "连续档位没有渲染为刻度按钮");
@@ -107,8 +111,10 @@ async function choose(page, pathName, value) {
     assert(await demo.page.locator('.appearance-matrix-wrap .range-form-item--inline').first().locator(".range-current").count() === 0, "选中极值时仍重复显示当前语义");
     const beforeGoalIllustrations = await demo.page.locator(".candidate-card .illustration-svg").evaluateAll((elements) => elements.map((element) => element.innerHTML));
     await demo.page.locator('button[data-group="goal-boundaries"]').click();
-    await demo.page.locator('select[data-input-path="goal.endpoint"]').selectOption("waist");
-    await demo.page.locator('select[data-input-path="goal.direction"]').selectOption("strengthen");
+    assert((await demo.page.locator('button[data-group="goal-boundaries"]').innerText()) === "目标边界", "目标边界分类名称未统一");
+    assert(await demo.page.locator('button[data-input-path="goal.endpoint"]').count() > 0 && await demo.page.locator('button[data-input-path="goal.direction"]').count() > 0, "调整目标与调整方向没有统一为按钮组");
+    await demo.page.locator('button[data-input-path="goal.endpoint"][data-value="waist"]').click();
+    await demo.page.locator('button[data-input-path="goal.direction"][data-value="strengthen"]').click();
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().goal.endpoint === "waist"), "目标输入没有写入规范化字段");
     const waistIllustrations = await demo.page.locator(".candidate-card .illustration-svg").evaluateAll((elements) => elements.map((element) => element.innerHTML));
     assert(waistIllustrations.some((svg, index) => svg !== beforeGoalIllustrations[index]), "目标变化没有改变效果图中的腰线表现");
@@ -262,6 +268,7 @@ async function choose(page, pathName, value) {
     assert(faceScope.actionFields.every((label) => label === "推荐领口方向" || label === "脸型配合说明"), "脸型关系暴露了无关结果字段");
     assert(await rules.page.locator('.natural-condition-row:first-child [data-edit="conditions.0.value"]:disabled').count() === 1, "分支入口条件值仍可编辑");
     assert(await rules.page.locator("#editorContent").innerText().then((text) => !text.includes("配置内容")), "编辑区仍保留重复的配置内容切换器");
+    assert(await rules.page.locator(".rule-summary-module").count() === 1 && await rules.page.locator(".rule-config-module").count() === 1, "规则页没有拆分关系结果与配置模块");
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="context"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();
@@ -269,10 +276,13 @@ async function choose(page, pathName, value) {
     const tier3Labels = await rules.page.locator("#configTier3Chips button[data-tier3-id]").allInnerTexts();
     assert(tier3Labels.every((label) => !/层数|袖长|外层|覆盖|厚薄/.test(label)), "三级分支入口混入了具体推荐结果");
     assert((await rules.page.locator("#editorContent").innerText()).includes("输出结果"), "配置编辑器没有形成输入到结果的闭环");
+    assert((await rules.page.locator("#editorContent").innerText()).includes("具体输出"), "当前分支没有展示具体输出模块");
 
     await rules.page.locator('#configTier3Chips button[data-tier3-id="TEMP-05_12"]').click();
-    const coldSynopsis = await rules.page.locator(".branch-live-synopsis").innerText();
-    assert(coldSynopsis.includes("05-12°C") || coldSynopsis.includes("5-12°C") || coldSynopsis.includes("层"), "点击三级具体分支未切换对应规则");
+    const coldSynopsis = await rules.page.locator(".branch-output-submodule").innerText();
+    assert(coldSynopsis.includes("5-12°C") && coldSynopsis.includes("推荐层数") && coldSynopsis.includes("长袖") && coldSynopsis.includes("保暖外层"), "点击三级具体分支未展示完整中文输出");
+    assert(!/\blong\b|\bnone\b|\bwarm\b|\bfull\b/.test(coldSynopsis), "规则结果仍暴露内部英文枚举值");
+    assert(await rules.page.locator(".action-type-details summary").allInnerTexts().then((labels) => labels.every((label) => label.trim() !== "设为")), "默认 SET 动作仍显示无意义的设为按钮");
 
     await rules.page.locator("#resourceButton").click();
     await rules.page.locator('button[data-resource-tab="trends"]').click();

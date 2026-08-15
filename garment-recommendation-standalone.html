@@ -475,7 +475,7 @@ button {
 
 .snapshot-badges {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: 20px;
   min-width: 0;
   gap: 4px 6px;
@@ -2349,6 +2349,116 @@ button {
   padding: 14px 16px;
 }
 
+.rule-summary-module {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rule-summary-submodule,
+.rule-config-module {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.rule-summary-submodule {
+  padding: 10px 12px;
+}
+
+.rule-summary-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rule-summary-heading .module-index,
+.rule-config-heading > span {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rule-summary-heading div {
+  display: grid;
+  gap: 2px;
+}
+
+.rule-summary-heading strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.rule-summary-heading small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.branch-output-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.branch-output-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.branch-output-item span {
+  min-width: 0;
+  color: var(--text-soft);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.branch-output-item strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--green-dark);
+  font-size: 11px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rule-config-module {
+  padding: 10px 12px 12px;
+}
+
+.rule-config-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rule-config-heading strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.rule-config-heading small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
 /* Relation Scope Banner & Live Synopsis */
 .relation-scope-banner {
   display: flex;
@@ -2541,8 +2651,19 @@ button {
   color: var(--text-soft);
 }
 
+.action-column-head {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.95fr) 32px minmax(160px, 1fr) 28px;
+  gap: 8px;
+  padding: 0 10px 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .natural-action-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.95fr) 32px minmax(160px, 1fr) 28px;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
@@ -2552,8 +2673,24 @@ button {
 }
 
 .action-field-control {
-  flex: 0 1 220px;
-  min-width: 150px;
+  min-width: 0;
+  width: 100%;
+}
+
+.action-field-control .editor-field,
+.action-value-control .editor-field {
+  min-width: 0;
+  width: 100%;
+}
+
+.action-field-control .editor-field > span,
+.action-value-control .editor-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .action-field-control select {
@@ -2571,7 +2708,7 @@ button {
 }
 
 .action-type-details summary {
-  min-width: 64px;
+  min-width: 30px;
   height: 26px;
   padding: 0 7px;
   display: inline-flex;
@@ -2616,22 +2753,8 @@ button {
   font-size: 10px;
 }
 
-.action-field-badge {
-  flex: 0 0 160px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--green-dark);
-}
-
-.action-arrow {
-  font-size: 12px;
-  color: var(--green);
-  font-weight: 700;
-}
-
 .action-value-control {
-  flex: 1 1 auto;
-  min-width: 140px;
+  min-width: 0;
 }
 
 .action-value-control select,
@@ -3296,6 +3419,18 @@ button {
     max-height: 360px;
   }
 
+  .condition-snapshot {
+    height: 82px;
+  }
+
+  .snapshot-inner {
+    height: 68px;
+  }
+
+  .snapshot-badges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .appearance-row-scales {
     flex-direction: column;
     gap: 16px;
@@ -3394,6 +3529,35 @@ button {
     flex-wrap: wrap;
   }
 
+  .branch-output-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-column-head {
+    display: none;
+  }
+
+  .natural-action-row {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+
+  .natural-action-row .action-field-control {
+    grid-column: 1;
+  }
+
+  .natural-action-row .action-type-details {
+    grid-column: 2;
+  }
+
+  .natural-action-row .action-value-control {
+    grid-column: 1;
+  }
+
+  .natural-action-row > .icon-button {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
   .condition-val-control,
   .action-value-control {
     flex: 1 1 180px;
@@ -3450,8 +3614,7 @@ button {
     <section class="demo-column demo-column-input">
       <div class="module-heading module-heading--input">
         <div>
-          <p class="section-kicker">01 本次条件</p>
-          <h1>01 确认本次条件</h1>
+          <h1>01 本次条件</h1>
         </div>
         <span class="source-badge">客户确认</span>
       </div>
@@ -3468,8 +3631,7 @@ button {
     <section class="demo-column demo-column-results">
       <div class="module-heading recommendation-heading">
         <div>
-          <p class="section-kicker">02 完整方案</p>
-          <h2 id="recommendationTitle">02 完整穿着方案</h2>
+          <h2 id="recommendationTitle">02 完整方案</h2>
         </div>
         <div class="recommendation-heading-controls">
           <p id="candidateSummary">根据当前规则生成 3 个不同方向</p>
@@ -6372,7 +6534,7 @@ button {
     { id: "context", label: "场景条件" },
     { id: "personal", label: "个人特征" },
     { id: "preference", label: "风格偏好" },
-    { id: "goal-boundaries", label: "本次目标与边界" }
+    { id: "goal-boundaries", label: "目标边界" }
   ];
 
   const scaleLabels = {
@@ -6559,7 +6721,7 @@ button {
           <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温与场合">场景: ${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底色与体型脸型">特征: ${escapeHtml(skinToneLabel)}调 · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="本次目标：优先调整方向">目标: ${escapeHtml(goalLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="调整目标与方向">目标: ${escapeHtml(goalLabel)}</button>
           <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="身体与穿着边界">边界: ${escapeHtml(boundaryLabel)}</button>
         </div>
       </div>
@@ -6638,14 +6800,14 @@ button {
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>本次目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
+          <div class="input-section-heading"><strong>调整目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
           <div class="field-stack-grid">
-            ${renderParameterSelect("goal.endpoint", "本次调整目标", endpoint)}
-            ${renderParameterSelect("goal.direction", "目标调整方向", direction)}
+            ${renderParameterScale("goal.endpoint", "调整目标", endpoint)}
+            ${renderParameterScale("goal.direction", "调整方向", direction)}
           </div>
         </div>
         <div class="input-section">
-          <div class="input-section-heading"><strong>拒绝与边界</strong><span>明确不可接受的方案条件，优先级高于风格偏好</span></div>
+          <div class="input-section-heading"><strong>拒绝边界</strong><span>明确不可接受的方案条件，优先级高于风格偏好</span></div>
           <div class="checkbox-grid">${boundaryFields.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div>
         </div>`;
     }

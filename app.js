@@ -21,7 +21,7 @@
     { id: "context", label: "场景条件" },
     { id: "personal", label: "个人特征" },
     { id: "preference", label: "风格偏好" },
-    { id: "goal-boundaries", label: "本次目标与边界" }
+    { id: "goal-boundaries", label: "目标边界" }
   ];
 
   const scaleLabels = {
@@ -208,7 +208,7 @@
           <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温与场合">场景: ${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底色与体型脸型">特征: ${escapeHtml(skinToneLabel)}调 · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="本次目标：优先调整方向">目标: ${escapeHtml(goalLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="调整目标与方向">目标: ${escapeHtml(goalLabel)}</button>
           <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="身体与穿着边界">边界: ${escapeHtml(boundaryLabel)}</button>
         </div>
       </div>
@@ -287,14 +287,14 @@
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>本次目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
+          <div class="input-section-heading"><strong>调整目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
           <div class="field-stack-grid">
-            ${renderParameterSelect("goal.endpoint", "本次调整目标", endpoint)}
-            ${renderParameterSelect("goal.direction", "目标调整方向", direction)}
+            ${renderParameterScale("goal.endpoint", "调整目标", endpoint)}
+            ${renderParameterScale("goal.direction", "调整方向", direction)}
           </div>
         </div>
         <div class="input-section">
-          <div class="input-section-heading"><strong>拒绝与边界</strong><span>明确不可接受的方案条件，优先级高于风格偏好</span></div>
+          <div class="input-section-heading"><strong>拒绝边界</strong><span>明确不可接受的方案条件，优先级高于风格偏好</span></div>
           <div class="checkbox-grid">${boundaryFields.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div>
         </div>`;
     }
