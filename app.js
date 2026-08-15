@@ -239,7 +239,7 @@
         </div>
         <div class="input-section">
           <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
-          <div class="field-stack-grid">
+          <div class="field-stack-grid field-stack-grid--ranges">
             ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
             ${renderParameterScale("body.legRatio", "腿身比例（现状）", parameter("body.legRatio"))}
             ${renderParameterScale("body.waistDefinition", "腰部曲线明显度（现状）", parameter("body.waistDefinition"))}
@@ -256,11 +256,11 @@
       const formalityOptions = parameter("preference.formality");
       const trendOptions = [{ value: "none", label: "不限定" }, ...(state.ruleSet.trendDirections || []).filter((item) => item.enabled !== false).map((item) => ({ value: item.value, label: item.name }))];
       content.innerHTML = `<div class="field-stack-grid--preference">
-        ${renderParameterScale("preference.style", "风格方向", styleOptions)}
+        ${renderParameterScale("preference.style", "风格方向", styleOptions, "choice-flow")}
         ${renderParameterScale("preference.formality", "正式程度偏好", formalityOptions)}
-        ${renderOptionScale("preference.trendDirection", "潮流方向", state.input.preference.trendDirection, trendOptions)}
+        ${renderTrendDirectionScale("preference.trendDirection", "潮流方向", state.input.preference.trendDirection, trendOptions)}
         ${state.input.preference.trendDirection !== "none" ? renderOptionScale("preference.trendIntensity", "潮流表达强度", state.input.preference.trendIntensity, parameter("preference.trendIntensity").options) : ""}
-        ${activeTrend ? `<div class="trend-input-summary" style="grid-column:1 / -1;"><div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div><p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p><p>${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p></div>` : ""}
+        ${activeTrend ? renderTrendSummary(activeTrend) : ""}
       </div>`;
     } else if (group === "goal-boundaries") {
       const endpoint = parameter("goal.endpoint");
@@ -288,13 +288,70 @@
     }
   }
 
-  function renderParameterScale(path, label, definition) {
-    return renderOptionScale(path, label, Engine.getByPath(state.input, path), definition?.options || []);
+  function renderParameterScale(path, label, definition, variant = "") {
+    const value = Engine.getByPath(state.input, path);
+    if (definition?.type === "scale") return renderRangeScale(path, label, value, definition.options || []);
+    return renderOptionScale(path, label, value, definition?.options || [], variant);
   }
 
-  function renderOptionScale(path, label, value, options) {
+  function renderRangeScale(path, label, value, options) {
     const normalized = options.map((option) => Array.isArray(option) ? { value: option[0], label: option[1] } : option);
-    return `<div class="form-item"><div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(translateValue(normalized.find((option) => String(option.value) === String(value))?.label || value || "需确认"))}</strong></div><div class="pill-segment-control segment-control--${Math.min(normalized.length, 6)}">${normalized.map((option) => `<button type="button" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" class="${String(option.value) === String(value) ? "is-active" : ""}">${escapeHtml(option.label)}</button>`).join("")}</div></div>`;
+    const selected = normalized.find((option) => String(option.value) === String(value)) || normalized[0];
+    const [minLabel, maxLabel] = rangeEndpointLabels(path, normalized);
+    return `<div class="form-item range-form-item">
+      <div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(selected?.label || "需确认")}</strong></div>
+      <div class="range-scale" role="radiogroup" aria-label="${escapeHtml(label)}">
+        <span class="range-endpoint" aria-hidden="true">${escapeHtml(minLabel)}</span>
+        <div class="range-track">
+          ${normalized.map((option) => `<button type="button" class="range-step ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" aria-label="${escapeHtml(label)}：${escapeHtml(option.label)}" title="${escapeHtml(option.label)}"><span class="range-dot" aria-hidden="true"></span></button>`).join("")}
+        </div>
+        <span class="range-endpoint" aria-hidden="true">${escapeHtml(maxLabel)}</span>
+      </div>
+    </div>`;
+  }
+
+  function rangeEndpointLabels(path, options) {
+    const overrides = {
+      body: {
+        heightPresence: ["偏矮", "偏高"],
+        legRatio: ["腿短", "腿长"],
+        waistDefinition: ["不明显", "明显"],
+        shoulderHipBalance: ["偏胯", "偏肩"]
+      }
+    };
+    const [scope, field] = path.split(".");
+    if (scope === "body" && overrides.body[field]) return overrides.body[field];
+    if (path.endsWith("Temperature")) return ["冷", "暖"];
+    if (path.endsWith("Value")) return ["浅", "深"];
+    if (path.endsWith("Chroma")) return ["低", "高"];
+    return [options[0]?.label || "低", options[options.length - 1]?.label || "高"];
+  }
+
+  function renderOptionScale(path, label, value, options, variant = "") {
+    const normalized = options.map((option) => Array.isArray(option) ? { value: option[0], label: option[1] } : option);
+    return `<div class="form-item option-scale--${escapeHtml(variant)}"><div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(translateValue(normalized.find((option) => String(option.value) === String(value))?.label || value || "需确认"))}</strong></div><div class="pill-segment-control segment-control--${Math.min(normalized.length, 6)}">${normalized.map((option) => `<button type="button" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" class="${String(option.value) === String(value) ? "is-active" : ""}">${escapeHtml(option.label)}</button>`).join("")}</div></div>`;
+  }
+
+  function renderTrendDirectionScale(path, label, value, options) {
+    const normalized = options.map((option) => Array.isArray(option) ? { value: option[0], label: option[1] } : option);
+    const directions = state.ruleSet.trendDirections || [];
+    return `<div class="form-item option-scale--trend-flow">
+      <div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(normalized.find((option) => String(option.value) === String(value))?.label || "不限定")}</strong></div>
+      <div class="trend-option-list">
+        ${normalized.map((option) => {
+          const trend = directions.find((item) => item.value === option.value);
+          return `<button type="button" class="trend-option-card ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}">
+            <strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(trend?.reference || (option.value === "none" ? "保持经典稳妥路线" : "潮流方向"))}</small>
+          </button>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+
+  function renderTrendSummary(activeTrend) {
+    const familyLabels = { straight: "简洁直线", tailored: "利落结构", soft: "柔和收放", relaxed: "自然留量", street: "街头箱型", retro: "复古收放" };
+    const families = (activeTrend.result?.families || []).map((family) => familyLabels[family] || family);
+    return `<div class="trend-input-summary"><div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div><p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p><p class="trend-route"><span>优先服装路线</span>${families.map((family) => `<b>${escapeHtml(family)}</b>`).join("")}</p><p class="trend-influence-list">${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p></div>`;
   }
 
   function renderParameterSelect(path, label, definition) {

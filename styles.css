@@ -335,6 +335,18 @@ button {
   align-items: start;
 }
 
+.demo-column {
+  min-width: 0;
+}
+
+.demo-column-input {
+  position: sticky;
+  top: calc(var(--header-height) + 14px);
+  max-height: calc(100vh - var(--header-height) - 28px);
+  display: flex;
+  flex-direction: column;
+}
+
 .surface {
   min-width: 0;
   border: 1px solid var(--border-subtle);
@@ -344,12 +356,29 @@ button {
 }
 
 .input-surface {
-  position: sticky;
-  top: calc(var(--header-height) + 14px);
-  max-height: calc(100vh - var(--header-height) - 28px);
+  position: static;
+  max-height: none;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.module-heading {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 2px 8px;
+}
+
+.module-heading h1,
+.module-heading h2 {
+  margin-top: 1px;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 700;
 }
 
 .surface-header {
@@ -622,10 +651,14 @@ button {
   grid-template-columns: 1fr;
 }
 
+.field-stack-grid--ranges {
+  grid-template-columns: 1fr;
+}
+
 .field-stack-grid--preference {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .field-control,
@@ -675,6 +708,146 @@ button {
   font-weight: 700;
 }
 
+.range-scale {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.range-endpoint {
+  min-width: 28px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.range-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(28px, 1fr));
+  align-items: center;
+  min-height: 30px;
+  padding: 0 4px;
+}
+
+.range-track::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  height: 2px;
+  background: var(--border);
+  transform: translateY(-50%);
+}
+
+.range-step {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.range-dot {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  transition: all 140ms ease;
+}
+
+.range-step:hover .range-dot,
+.range-step.is-active .range-dot {
+  width: 14px;
+  height: 14px;
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow: 0 0 0 4px var(--green-soft);
+}
+
+.option-scale--choice-flow .pill-segment-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+}
+
+.option-scale--choice-flow .pill-segment-control button {
+  flex: 1 1 84px;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.option-scale--choice-flow .pill-segment-control button.is-active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  box-shadow: none;
+}
+
+.trend-option-list {
+  display: grid;
+  gap: 6px;
+}
+
+.trend-option-card {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  text-align: left;
+}
+
+.trend-option-card:hover,
+.trend-option-card.is-active {
+  border-color: var(--green-border);
+  background: var(--green-soft);
+}
+
+.trend-option-card strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.trend-option-card small {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.trend-route {
+  align-items: center;
+}
+
+.trend-route > span {
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.trend-influence-list {
+  margin-top: 4px !important;
+}
+
 /* Appearance Matrix 3-row layout */
 .appearance-matrix-wrap {
   display: grid;
@@ -707,7 +880,7 @@ button {
 
 .appearance-row-scales {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 6px;
 }
 
@@ -947,6 +1120,11 @@ button {
 }
 
 .recommendation-heading {
+  position: sticky;
+  z-index: 5;
+  top: calc(var(--header-height) + 14px);
+  min-height: 50px;
+  background: var(--bg);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -1722,16 +1900,12 @@ button {
   gap: 6px;
 }
 
-/* Match the desktop status colors */
-.mobile-impact-item.is-1 .impact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-.mobile-impact-item.is-1 .impact-status { font-size: 11px; color: var(--green-dark); font-weight: 600; }
-.mobile-impact-item.is-1 { background: #f0f5f1; border-color: var(--green-border); }
-.mobile-impact-item.is-2 .impact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
-.mobile-impact-item.is-2 .impact-status { font-size: 11px; color: var(--amber-dark); font-weight: 600; }
-.mobile-impact-item.is-2 { background: #fdfaf5; border-color: var(--amber-border); }
-.mobile-impact-item.is-3 .impact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
-.mobile-impact-item.is-3 .impact-status { font-size: 11px; color: var(--red-dark); font-weight: 600; }
-.mobile-impact-item.is-3 { background: #fdf5f5; border-color: var(--red-border); }
+/* The mobile matrix keeps the same symbol and color semantics as desktop. */
+.mobile-impact-item .impact-status { display: none; }
+.mobile-impact-item .impact-symbol { font-size: 13px; line-height: 1; }
+.mobile-impact-item.is-strong { background: #f0f5f1; border-color: var(--green-border); color: var(--green-dark); }
+.mobile-impact-item.is-medium { background: #f1f6f8; border-color: var(--blue-border); color: var(--blue); }
+.mobile-impact-item.is-light { background: #f5f7f5; border-color: var(--border); color: #6c7a70; }
 
 .hard-tag,
 .overview-row-label em {
@@ -2714,10 +2888,16 @@ button {
    Responsive Design
    ========================================================= */
 
-@media (max-width: 1080px) {
-  .demo-top-grid {
+@media (max-width: 991px) {
+  .demo-main {
     grid-template-columns: 1fr;
   }
+
+  .demo-column-input {
+    position: static;
+    max-height: none;
+  }
+
   .candidate-grid {
     grid-template-columns: 1fr;
   }
@@ -2793,6 +2973,10 @@ button {
   .input-surface {
     position: static;
     max-height: none;
+  }
+
+  .recommendation-heading {
+    position: static;
   }
 
   .input-tabs {

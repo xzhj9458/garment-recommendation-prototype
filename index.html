@@ -32,28 +32,24 @@
   </header>
 
   <main class="demo-main">
-    <aside class="surface input-surface" aria-label="本次输入条件">
-      <div class="surface-header">
-        <div>
-          <p class="section-kicker">01 本次输入</p>
-          <h1>确认本次条件</h1>
-        </div>
+    <section class="demo-column demo-column-input">
+      <div class="module-heading module-heading--input">
+        <h1>01 本次条件</h1>
         <span class="source-badge">客户确认</span>
       </div>
 
-      <div class="input-sticky-header" id="inputStickyHeader">
-        <div class="condition-snapshot" id="conditionSnapshot" aria-label="已选输入概览"></div>
-        <nav class="input-tabs" id="inputTabs" aria-label="输入分组"></nav>
-      </div>
-      <div class="input-content" id="inputContent"></div>
-    </aside>
-
-    <section class="recommendation-section" aria-labelledby="recommendationTitle">
-      <div class="recommendation-heading">
-        <div>
-          <p class="section-kicker">02 完整方案</p>
-          <h2 id="recommendationTitle">完整穿着方案</h2>
+      <aside class="surface input-surface" aria-label="本次输入条件">
+        <div class="input-sticky-header" id="inputStickyHeader">
+          <div class="condition-snapshot" id="conditionSnapshot" aria-label="已选输入概览"></div>
+          <nav class="input-tabs" id="inputTabs" aria-label="输入分组"></nav>
         </div>
+        <div class="input-content" id="inputContent"></div>
+      </aside>
+    </section>
+
+    <section class="demo-column demo-column-results">
+      <div class="module-heading recommendation-heading">
+        <h2 id="recommendationTitle">02 完整方案</h2>
         <div class="recommendation-heading-controls">
           <p id="candidateSummary">根据当前规则生成 3 个不同方向</p>
           <div class="view-mode-bar" id="viewModeBar" role="group" aria-label="方案视图模式">
@@ -63,9 +59,11 @@
         </div>
       </div>
 
+      <section class="recommendation-section" aria-labelledby="recommendationTitle">
       <div class="candidate-grid" id="candidateGrid"></div>
       <div class="candidate-table-wrap" id="candidateTableView" hidden></div>
       <div class="empty-result" id="emptyResult" hidden></div>
+      </section>
     </section>
   </main>
 
