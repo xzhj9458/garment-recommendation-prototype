@@ -263,7 +263,9 @@ async function choose(page, pathName, value) {
     const colorModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
     assert(JSON.stringify(colorModuleLabels) === JSON.stringify(["肤色", "发色", "瞳色"]), "外观色彩没有按输入模块展开");
     assert(colorModuleLabels.every((label) => !/冷|暖|低|中等|高/.test(label)), "外观色彩仍把条件选项当作三级模块");
-    assert((await rules.page.locator("#editorContent").innerText()).includes("推导配置"), "肤色模块没有展示输入到推导结果的关系");
+    const personalSkinText = await rules.page.locator("#editorContent").innerText();
+    assert(personalSkinText.includes("关系影响输出") && personalSkinText.includes("当前分支具体输出") && personalSkinText.includes("规则配置"), "个人特征没有使用统一的01/02/03规则模块");
+    assert(!personalSkinText.includes("模块影响输出") && !personalSkinText.includes("模块条件范围") && !personalSkinText.includes("推导配置"), "个人特征仍保留专用模块标题");
 
     await rules.page.locator('#configTier2Chips button[data-tier2-id="body"]').click();
     const bodyModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();

@@ -964,20 +964,21 @@
     const derivations = personalModuleDerivations(business, module);
     const fields = moduleFieldLabels(module);
     const outputNames = moduleOutputNames(business, module, derivations);
+    const derivationOutputs = derivations.map((relation) => derivedOutputName(relation.rule.output));
     const calculationBusiness = { ...business, derivations };
     return `
       <section class="rule-summary-module personal-module-summary">
         <div class="rule-summary-submodule relation-impact-submodule">
-          <div class="rule-summary-heading"><span class="module-index">01</span><div><strong>模块影响输出</strong><small>${escapeHtml(module.name)}</small></div></div>
+          <div class="rule-summary-heading"><span class="module-index">01</span><div><strong>关系影响输出</strong><small>${escapeHtml(module.name)}</small></div></div>
           <div class="scope-pill-list">${outputNames.map((name) => `<span class="scope-pill">${escapeHtml(name)}</span>`).join("") || `<span class="scope-pill">暂无已连接结果</span>`}</div>
         </div>
         <div class="rule-summary-submodule branch-output-submodule">
-          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>模块条件范围</strong><small>条件值进入推导关系</small></div></div>
-          <div class="branch-output-grid">${fields.map((definition) => `<div class="branch-output-item"><span>${escapeHtml(definition.name)}</span><strong>${escapeHtml((definition.options || []).map((option) => Array.isArray(option) ? option[1] : option.label).join("、") || "可输入")}</strong></div>`).join("")}</div>
+          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>当前分支具体输出</strong><small>当前模块输入进入的推导结果</small></div></div>
+          <div class="branch-output-grid">${(derivationOutputs.length ? derivationOutputs : outputNames).map((name) => `<div class="branch-output-item"><span>推导结果</span><strong>${escapeHtml(name)}</strong></div>`).join("") || fields.map((definition) => `<div class="branch-output-item"><span>${escapeHtml(definition.name)}</span><strong>待配置</strong></div>`).join("")}</div>
         </div>
       </section>
       <section class="rule-config-module personal-calculation-module">
-        <div class="rule-config-heading"><span>03</span><strong>推导配置</strong><small>输入 → 推导 → 结果</small></div>
+        <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>输入 → 推导 → 结果</small></div>
         ${renderCalculationDetails(calculationBusiness, true)}
       </section>
     `;
@@ -997,7 +998,7 @@
         <div class="rule-summary-submodule relation-impact-submodule">
           <div class="rule-summary-heading">
             <span class="module-index">01</span>
-            <div><strong>${module ? `${escapeHtml(module.name)}影响输出` : "关系影响输出"}</strong><small>${escapeHtml(business.name)}</small></div>
+            <div><strong>关系影响输出</strong><small>${escapeHtml(business.name)}</small></div>
           </div>
           <div class="scope-pill-list">${outputsList || `<span class="scope-pill">全套穿着方案</span>`}</div>
         </div>
