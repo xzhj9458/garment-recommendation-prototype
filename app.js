@@ -226,14 +226,14 @@
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的冷暖、明度和彩度</span></div>
+          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的色温、明度和彩度</span></div>
           <div class="appearance-matrix-wrap">${appearanceFields.map(([part, label]) => `
             <div class="appearance-row-card">
               <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
               <div class="appearance-row-scales">
-                ${renderParameterScale(`appearance.${part}Temperature`, "冷暖", parameter(`appearance.${part}Temperature`))}
-                ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`))}
-                ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`))}
+                ${renderParameterScale(`appearance.${part}Temperature`, "色温", parameter(`appearance.${part}Temperature`), "inline-range")}
+                ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`), "inline-range")}
+                ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`), "inline-range")}
               </div>
             </div>`).join("")}</div>
         </div>
@@ -290,23 +290,35 @@
 
   function renderParameterScale(path, label, definition, variant = "") {
     const value = Engine.getByPath(state.input, path);
-    if (definition?.type === "scale") return renderRangeScale(path, label, value, definition.options || []);
+    if (definition?.type === "scale") return renderRangeScale(path, label, value, definition.options || [], variant);
     return renderOptionScale(path, label, value, definition?.options || [], variant);
   }
 
-  function renderRangeScale(path, label, value, options) {
+  function renderRangeScale(path, label, value, options, variant = "") {
     const normalized = options.map((option) => Array.isArray(option) ? { value: option[0], label: option[1] } : option);
     const selected = normalized.find((option) => String(option.value) === String(value)) || normalized[0];
     const [minLabel, maxLabel] = rangeEndpointLabels(path, normalized);
+    const isInline = variant === "inline-range";
+    const isEndpoint = String(value) === String(normalized[0]?.value) || String(value) === String(normalized[normalized.length - 1]?.value);
+    const rangeMarkup = `<div class="range-scale" role="radiogroup" aria-label="${escapeHtml(label)}">
+      <span class="range-endpoint" aria-hidden="true">${escapeHtml(minLabel)}</span>
+      <div class="range-track">
+        ${normalized.map((option) => {
+          const active = String(option.value) === String(value);
+          return `<button type="button" role="radio" aria-checked="${active ? "true" : "false"}" class="range-step ${active ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" aria-label="${escapeHtml(label)}：${escapeHtml(option.label)}" title="${escapeHtml(option.label)}"><span class="range-dot" aria-hidden="true"></span></button>`;
+        }).join("")}
+      </div>
+      <span class="range-endpoint" aria-hidden="true">${escapeHtml(maxLabel)}</span>
+    </div>`;
+    if (isInline) {
+      const currentMarkup = isEndpoint ? "" : `<span class="range-current" title="当前：${escapeHtml(selected?.label || "需确认")}">${escapeHtml(selected?.label || "需确认")}</span>`;
+      return `<div class="form-item range-form-item range-form-item--inline">
+        <div class="range-inline-row"><span class="range-inline-label">${escapeHtml(label)}</span>${rangeMarkup}${currentMarkup}</div>
+      </div>`;
+    }
     return `<div class="form-item range-form-item">
       <div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(selected?.label || "需确认")}</strong></div>
-      <div class="range-scale" role="radiogroup" aria-label="${escapeHtml(label)}">
-        <span class="range-endpoint" aria-hidden="true">${escapeHtml(minLabel)}</span>
-        <div class="range-track">
-          ${normalized.map((option) => `<button type="button" class="range-step ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" aria-label="${escapeHtml(label)}：${escapeHtml(option.label)}" title="${escapeHtml(option.label)}"><span class="range-dot" aria-hidden="true"></span></button>`).join("")}
-        </div>
-        <span class="range-endpoint" aria-hidden="true">${escapeHtml(maxLabel)}</span>
-      </div>
+      ${rangeMarkup}
     </div>`;
   }
 

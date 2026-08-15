@@ -79,6 +79,17 @@ async function choose(page, pathName, value) {
     assert(await demo.page.locator(".range-step").count() >= 65, "连续档位没有渲染为刻度按钮");
     assert(await demo.page.locator(".range-endpoint").count() >= 26, "连续档位缺少两端极值标注");
     assert((await demo.page.locator(".range-track").first().innerText()).trim() === "", "连续档位中间刻度不应重复显示长文案");
+    const inlineRangeState = await demo.page.evaluate(() => ({
+      count: document.querySelectorAll(".appearance-matrix-wrap .range-form-item--inline").length,
+      rowHeights: [...document.querySelectorAll(".appearance-matrix-wrap .range-inline-row")].map((item) => item.getBoundingClientRect().height),
+      hasLegacyLabel: document.querySelector(".appearance-matrix-wrap")?.innerText.includes("冷暖"),
+      radioCount: document.querySelectorAll(".appearance-matrix-wrap .range-step[role=radio]").length,
+      checkedCount: document.querySelectorAll(".appearance-matrix-wrap .range-step[aria-checked=true]").length
+    }));
+    assert(inlineRangeState.count === 9, "外观色彩没有将九个连续量统一为行内控件");
+    assert(inlineRangeState.rowHeights.every((height) => height <= 36), "外观色彩行内控件仍占用过高的垂直空间");
+    assert(!inlineRangeState.hasLegacyLabel, "外观色彩仍显示重复的冷暖字段文案");
+    assert(inlineRangeState.radioCount === 45 && inlineRangeState.checkedCount === 9, "外观色彩刻度缺少可访问的单选状态");
     await choose(demo.page, "appearance.skinValue", "4");
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().appearance.skinValue === 4), "颜色输入没有写入规范化字段");
     await choose(demo.page, "body.legRatio", "0");
@@ -92,6 +103,8 @@ async function choose(page, pathName, value) {
     await choose(demo.page, "appearance.skinTemperature", "0");
     const afterColor = await demo.page.evaluate(() => window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished()).candidates.map((candidate) => candidate.palette?.name));
     assert(JSON.stringify(beforeColor) !== JSON.stringify(afterColor), "切换外观色温没有改变候选配色");
+    assert(await demo.page.locator('.appearance-matrix-wrap button[data-input-path="appearance.skinTemperature"][aria-checked="true"]').getAttribute("data-value") === "0", "行内色温刻度没有同步当前选中状态");
+    assert(await demo.page.locator('.appearance-matrix-wrap .range-form-item--inline').first().locator(".range-current").count() === 0, "选中极值时仍重复显示当前语义");
     const beforeGoalIllustrations = await demo.page.locator(".candidate-card .illustration-svg").evaluateAll((elements) => elements.map((element) => element.innerHTML));
     await demo.page.locator('button[data-group="goal-boundaries"]').click();
     await demo.page.locator('select[data-input-path="goal.endpoint"]').selectOption("waist");

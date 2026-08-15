@@ -716,6 +716,71 @@ button {
   min-height: 34px;
 }
 
+.range-form-item--inline {
+  gap: 0;
+}
+
+.range-inline-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+}
+
+.range-inline-label {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.range-form-item--inline .range-scale {
+  min-width: 0;
+  min-height: 30px;
+  gap: 4px;
+}
+
+.range-form-item--inline .range-endpoint {
+  min-width: 14px;
+  font-size: 9px;
+}
+
+.range-form-item--inline .range-track {
+  min-width: 120px;
+  grid-template-columns: repeat(5, minmax(24px, 1fr));
+  padding: 0 2px;
+}
+
+.range-form-item--inline .range-step {
+  width: 24px;
+  height: 24px;
+}
+
+.range-form-item--inline .range-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.range-form-item--inline .range-step:hover .range-dot,
+.range-form-item--inline .range-step.is-active .range-dot {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 0 3px var(--green-soft);
+}
+
+.range-current {
+  max-width: 42px;
+  overflow: hidden;
+  color: var(--green-dark);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .range-endpoint {
   min-width: 28px;
   color: var(--text-muted);
@@ -3079,5 +3144,15 @@ button {
   .relationship-workspace {
     width: calc(100% - var(--page-gutter) * 2);
     padding: 10px 0 30px;
+  }
+}
+
+@media (max-width: 360px) {
+  .range-inline-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .range-current {
+    display: none;
   }
 }
