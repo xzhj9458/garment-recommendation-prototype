@@ -2363,6 +2363,7 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+  align-items: start;
 }
 
 .rule-summary-submodule,
@@ -2490,6 +2491,185 @@ button {
   border: 1px solid #dbece2;
   border-radius: var(--radius-md);
   background: #f6fbf8;
+}
+
+.personal-input-branches {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid #dbece2;
+  border-radius: var(--radius-md);
+  background: #f6fbf8;
+}
+
+.personal-input-branch-list {
+  display: grid;
+  gap: 7px;
+}
+
+.personal-input-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 110px) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.personal-input-row > span {
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.personal-input-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.personal-value-btn {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.personal-value-btn:hover,
+.personal-value-btn.is-active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.personal-output-status {
+  margin: -2px 0 7px;
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.personal-output-status.is-incomplete {
+  color: #9a6b18;
+}
+
+.personal-clothing-grid {
+  margin-top: 7px;
+}
+
+.branch-output-item.has-color strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.output-color-swatch {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgb(0 0 0 / 15%);
+  border-radius: 50%;
+  background: var(--swatch);
+}
+
+.personal-rule-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.personal-rule-flow > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.personal-rule-flow span,
+.personal-config-subheading small,
+.personal-why-note span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.personal-rule-flow strong {
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.personal-decision-mappings {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.personal-config-subheading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.personal-config-subheading strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.personal-decision-map {
+  padding: 8px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.personal-decision-map-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.personal-decision-map-head span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.personal-decision-map-head strong {
+  color: var(--green-dark);
+  font-size: 11px;
+}
+
+.personal-decision-map-when {
+  margin-bottom: 7px;
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.personal-why-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 9px;
+  border-left: 3px solid var(--blue);
+  background: #f7faff;
+}
+
+.personal-why-note p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.55;
 }
 
 .personal-branch-heading {
@@ -3596,6 +3776,15 @@ button {
 
   .save-state {
     display: none;
+  }
+
+  .personal-input-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .personal-rule-flow {
+    grid-template-columns: 1fr;
   }
 
   .primary-button,

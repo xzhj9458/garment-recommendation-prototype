@@ -258,18 +258,20 @@ async function choose(page, pathName, value) {
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="personal"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').click();
-    assert((await rules.page.locator("#configTier3Label").innerText()) === "具体模块", "个人特征三级导航仍标记为具体分支");
-    assert((await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').innerText()).includes("3个模块"), "外观色彩仍以分支数量而不是模块数量展示");
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "具体输入项", "个人特征三级导航没有标记为具体输入项");
+    assert((await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').innerText()).includes("3个输入项"), "外观色彩没有按输入项数量展示");
     const colorModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
     assert(JSON.stringify(colorModuleLabels) === JSON.stringify(["肤色", "发色", "瞳色"]), "外观色彩没有按输入模块展开");
     assert(colorModuleLabels.every((label) => !/冷|暖|低|中等|高/.test(label)), "外观色彩仍把条件选项当作三级模块");
     const personalSkinText = await rules.page.locator("#editorContent").innerText();
     assert(personalSkinText.includes("关系影响输出") && personalSkinText.includes("当前分支具体输出") && personalSkinText.includes("规则配置"), "个人特征没有使用统一的01/02/03规则模块");
+    assert(personalSkinText.includes("当前输入分支") && personalSkinText.includes("服装冷暖属性") && personalSkinText.includes("近脸色") && personalSkinText.includes("主色"), "肤色没有展示从输入到具体服装颜色的完整链路");
+    assert(await rules.page.locator(".personal-input-row").count() === 3 && await rules.page.locator(".output-color-swatch").count() >= 3, "肤色输入项或配色角色没有具体化展示");
     assert(!personalSkinText.includes("模块影响输出") && !personalSkinText.includes("模块条件范围") && !personalSkinText.includes("推导配置"), "个人特征仍保留专用模块标题");
 
     await rules.page.locator('#configTier2Chips button[data-tier2-id="body"]').click();
     const bodyModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
-    assert(JSON.stringify(bodyModuleLabels) === JSON.stringify(["纵向尺度表现", "腿身比例", "腰线特征", "肩胯横向平衡"]), "体型比例没有按身材输入模块展开");
+    assert(JSON.stringify(bodyModuleLabels) === JSON.stringify(["纵向高度", "腿身分布", "腰线特征", "横向轮廓"]), "体型比例没有按身材输入项展开");
     await rules.page.locator('#configTier3Chips button[data-personal-module-id="legRatio"]').click();
     assert(await rules.page.locator(".personal-branch-btn").count() === 5, "腿身比例模块没有在配置区展示具体分支");
     assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("优先服装路线"), "腿身比例分支没有展示对应输出结果");

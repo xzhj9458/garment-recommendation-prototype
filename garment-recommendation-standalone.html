@@ -2371,6 +2371,7 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+  align-items: start;
 }
 
 .rule-summary-submodule,
@@ -2498,6 +2499,185 @@ button {
   border: 1px solid #dbece2;
   border-radius: var(--radius-md);
   background: #f6fbf8;
+}
+
+.personal-input-branches {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid #dbece2;
+  border-radius: var(--radius-md);
+  background: #f6fbf8;
+}
+
+.personal-input-branch-list {
+  display: grid;
+  gap: 7px;
+}
+
+.personal-input-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 110px) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.personal-input-row > span {
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.personal-input-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.personal-value-btn {
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.personal-value-btn:hover,
+.personal-value-btn.is-active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.personal-output-status {
+  margin: -2px 0 7px;
+  color: var(--green-dark);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.personal-output-status.is-incomplete {
+  color: #9a6b18;
+}
+
+.personal-clothing-grid {
+  margin-top: 7px;
+}
+
+.branch-output-item.has-color strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.output-color-swatch {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgb(0 0 0 / 15%);
+  border-radius: 50%;
+  background: var(--swatch);
+}
+
+.personal-rule-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.personal-rule-flow > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.personal-rule-flow span,
+.personal-config-subheading small,
+.personal-why-note span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.personal-rule-flow strong {
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.personal-decision-mappings {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.personal-config-subheading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.personal-config-subheading strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.personal-decision-map {
+  padding: 8px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.personal-decision-map-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.personal-decision-map-head span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.personal-decision-map-head strong {
+  color: var(--green-dark);
+  font-size: 11px;
+}
+
+.personal-decision-map-when {
+  margin-bottom: 7px;
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.personal-why-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 9px;
+  border-left: 3px solid var(--blue);
+  background: #f7faff;
+}
+
+.personal-why-note p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.55;
 }
 
 .personal-branch-heading {
@@ -3606,6 +3786,15 @@ button {
     display: none;
   }
 
+  .personal-input-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .personal-rule-flow {
+    grid-template-columns: 1fr;
+  }
+
   .primary-button,
   .secondary-button {
     padding: 0 8px;
@@ -4074,17 +4263,17 @@ button {
       description: "只在选定潮流方向后生效。"
     },
     ...["skin", "hair", "eye"].flatMap((part) => {
-      const labels = { skin: "肤色", hair: "发色", eye: "眼睛颜色" };
+      const labels = { skin: "肤色", hair: "发色", eye: "瞳色" };
       return [
         {
           id: `appearance.${part}Temperature`,
-          name: `${labels[part]}冷暖倾向`,
+          name: `${labels[part]}色调`,
           group: "外观色彩",
           type: "scale",
           required: false,
           enabled: true,
           options: colorTemperatureBands,
-          description: "来源可为用户确认或图片推断。"
+          description: "色调用于表达个人色彩的冷暖属性，来源可为用户确认或图片推断。"
         },
         {
           id: `appearance.${part}Value`,
@@ -4110,7 +4299,7 @@ button {
     }),
     {
       id: "body.heightPresence",
-      name: "身高表现",
+      name: "纵向高度",
       group: "身材比例",
       type: "scale",
       required: false,
@@ -4126,7 +4315,7 @@ button {
     },
     {
       id: "body.legRatio",
-      name: "上下身比例",
+      name: "腿身分布",
       group: "身材比例",
       type: "scale",
       required: false,
@@ -4142,7 +4331,7 @@ button {
     },
     {
       id: "body.waistDefinition",
-      name: "腰部曲线明显度",
+      name: "腰线特征",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -4158,7 +4347,7 @@ button {
     },
     {
       id: "body.shoulderHipBalance",
-      name: "肩胯轮廓关系",
+      name: "横向轮廓",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -4602,7 +4791,7 @@ button {
     { id: "requirements.texture", name: "贴肤触感", group: "身体边界", options: [["regular", "常规"], ["smooth", "避免粗糙"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.waist", name: "推荐服装腰位", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.line", name: "服装线条走向", group: "服装版型", options: [["balanced", "自然线条"], ["continuous", "纵向连贯"], ["sectioned", "分段层次"]], actions: ["SET"] },
-    { id: "requirements.colorTemperature", name: "服装冷暖倾向", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
+    { id: "requirements.colorTemperature", name: "服装冷暖属性", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
     { id: "requirements.colorContrast", name: "配色明度对比", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
     { id: "requirements.colorContrastMax", name: "配色对比上限", group: "配色", options: [["低", "不高于低"], ["中等", "不高于中等"], ["高", "不限制"]], actions: ["SET"] },
     { id: "requirements.colorChroma", name: "配色彩度", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
@@ -4882,7 +5071,7 @@ button {
     })),
     ...colorTemperatureBands.map((band, index) => ({
       id: `COLOR-TEMP-${index}`,
-      name: `${band.label}服装冷暖倾向`,
+      name: `${band.label}服装冷暖属性`,
       group: "色彩",
       enabled: true,
       kind: "soft",
@@ -5532,12 +5721,13 @@ button {
     normalized.tests ||= [];
 
     const visibleParameterLabels = {
-      "appearance.skinTemperature": "肤色冷暖倾向",
-      "appearance.hairTemperature": "发色冷暖倾向",
-      "appearance.eyeTemperature": "眼睛颜色冷暖倾向",
-      "body.legRatio": "上下身比例",
-      "body.waistDefinition": "腰部曲线明显度",
-      "body.shoulderHipBalance": "肩胯轮廓关系"
+      "appearance.skinTemperature": "肤色色调",
+      "appearance.hairTemperature": "发色色调",
+      "appearance.eyeTemperature": "瞳色色调",
+      "body.heightPresence": "纵向高度",
+      "body.legRatio": "腿身分布",
+      "body.waistDefinition": "腰线特征",
+      "body.shoulderHipBalance": "横向轮廓"
     };
     normalized.parameters.forEach((parameter) => {
       if (visibleParameterLabels[parameter.id]) parameter.name = visibleParameterLabels[parameter.id];
@@ -5552,7 +5742,7 @@ button {
       }
     });
     const visibleResultLabels = {
-      "requirements.colorTemperature": "服装冷暖倾向"
+      "requirements.colorTemperature": "服装冷暖属性"
     };
     normalized.resultFields.forEach((field) => {
       if (visibleResultLabels[field.id]) field.name = visibleResultLabels[field.id];

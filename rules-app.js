@@ -54,8 +54,8 @@
   const businessDefinitions = [
     { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期气温"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
     { id: "occasion", name: "使用场合", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
-    { id: "color", name: "外观色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装冷暖属性", "明度对比", "彩度水平", "配色方案"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
-    { id: "body", name: "体型比例", topics: ["身材与比例"], inputs: ["纵向比例感", "上下身比例", "腰线明确度", "肩胯平衡度"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
+    { id: "color", name: "外观色彩", topics: ["整体色彩"], inputs: ["肤色色调、明度、彩度", "发色色调、明度、彩度", "瞳色色调、明度、彩度"], outputs: ["服装冷暖属性", "配色明度对比", "配色彩度", "配色方案", "近脸色", "主色", "辅助色", "点缀色"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
+    { id: "body", name: "体型比例", topics: ["身材与比例"], inputs: ["纵向高度", "腿身分布", "腰线特征", "横向轮廓"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
     { id: "face", name: "脸型特征", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: { neckline: "strong" } } },
     { id: "style", name: "风格方向", topics: ["风格方向"], inputs: ["风格方向"], outputs: ["外轮廓", "服装量感", "款式细节", "表面纹理"], overview: { style: { silhouette: "strong", volume: "strong", details: "strong" } } },
     { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { wear: { formality: "strong" }, style: { silhouette: "medium", details: "medium" } } },
@@ -176,13 +176,13 @@
     body: [
       {
         id: "vertical",
-        name: "纵向尺度表现",
+        name: "纵向高度",
         conditionFields: ["input.body.heightPresence"],
         derivedOutputs: ["body.slenderness"]
       },
       {
         id: "legRatio",
-        name: "腿身比例",
+        name: "腿身分布",
         conditionFields: ["input.body.legRatio"],
         relationFamily: "BODY-PROPORTION",
         derivedOutputs: ["body.slenderness", "body.proportion"]
@@ -195,7 +195,7 @@
       },
       {
         id: "horizontal",
-        name: "肩胯横向平衡",
+        name: "横向轮廓",
         conditionFields: ["input.body.shoulderHipBalance"],
         derivedOutputs: ["body.shoulderHipBalance", "body.shape"]
       }
@@ -242,6 +242,7 @@
     memberSelection: {},
     branchSelection: {},
     personalModuleSelection: {},
+    personalValueSelections: {},
     mode: "overview",
     dirty: false,
     validation: null
@@ -719,7 +720,7 @@
     }
     const currentCat = inputTier1Categories.find((cat) => cat.id === state.selectedTier1) || inputTier1Categories[0];
     const tier3Label = $("#configTier3Label");
-    if (tier3Label) tier3Label.textContent = state.selectedTier1 === "personal" ? "具体模块" : "具体分支";
+    if (tier3Label) tier3Label.textContent = state.selectedTier1 === "personal" ? "具体输入项" : "具体分支";
     if (!currentCat.relations.some((r) => r.id === state.selectedId)) {
       state.selectedId = currentCat.relations[0]?.id || "temperature";
     }
@@ -740,7 +741,7 @@
         const isActive = relItem.id === state.selectedId;
         const branchCount = fullRel?.branchCount || 0;
         const personalModuleCount = personalModulesFor(relItem.id).length;
-        const countLabel = state.selectedTier1 === "personal" && personalModuleCount ? `${personalModuleCount}个模块` : `${branchCount}个分支`;
+        const countLabel = state.selectedTier1 === "personal" && personalModuleCount ? `${personalModuleCount}个输入项` : `${branchCount}个分支`;
         return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${countLabel}</small></button>`;
       }).join("");
     }
@@ -754,7 +755,7 @@
         tier3Nav.innerHTML = modules.map((module) => {
           const isActive = module.id === selectedModule?.id;
           const hasRuleBranch = Boolean(module.relationFamily);
-          return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn config-tier3-module-btn ${isActive ? "is-active" : ""}" data-personal-module-id="${escapeHtml(module.id)}" title="${hasRuleBranch ? "模块分支在配置区展开" : "查看该模块如何进入推导结果"}">
+          return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn config-tier3-module-btn ${isActive ? "is-active" : ""}" data-personal-module-id="${escapeHtml(module.id)}" title="${hasRuleBranch ? "具体分支在配置区展开" : "查看该输入项如何进入推导和服装输出"}">
             <span class="chip-status-dot ${hasRuleBranch ? "is-active" : "is-derived"}"></span>
             <span>${escapeHtml(module.name)}</span>
           </button>`;
@@ -954,17 +955,112 @@
     return (module.conditionFields || []).map((fieldId) => conditionDefinition(fieldId)).filter(Boolean);
   }
 
-  function moduleOutputNames(business, module, derivations) {
-    const derived = (derivations || []).map((relation) => derivedOutputName(relation.rule.output));
-    const direct = business.outputs || [];
-    return [...new Set([...derived, ...direct])];
+  function inputPath(fieldId) {
+    return String(fieldId || "").replace(/^input\./, "");
+  }
+
+  function personalSelectionKey(business, module) {
+    return `${business?.id || "personal"}.${module?.id || "input"}`;
+  }
+
+  function personalModuleInput(business, module) {
+    const input = Engine.clone(Engine.Store.loadInput());
+    const key = personalSelectionKey(business, module);
+    const selected = state.personalValueSelections[key] || {};
+    const values = {};
+    (module.conditionFields || []).forEach((fieldId) => {
+      const path = inputPath(fieldId);
+      const definition = conditionDefinition(fieldId);
+      const fallback = Engine.getByPath(input, path);
+      const value = Object.prototype.hasOwnProperty.call(selected, fieldId) ? selected[fieldId] : fallback;
+      values[fieldId] = value;
+      Engine.setByPath(input, path, value);
+      if (definition && !Object.prototype.hasOwnProperty.call(selected, fieldId)) selected[fieldId] = fallback;
+    });
+    state.personalValueSelections[key] = selected;
+    return { input, values };
+  }
+
+  function personalPreview(business, module) {
+    const { input, values } = personalModuleInput(business, module);
+    return { ...Engine.run(input, state.ruleSet), values };
+  }
+
+  function previewValue(fieldId, preview) {
+    const value = Engine.getByPath(preview, fieldId);
+    if (Array.isArray(value)) return value.map((item) => formatDisplayValue(null, item, fieldId)).join("、");
+    return formatDisplayValue(resultDefinition(fieldId), value, fieldId);
+  }
+
+  function previewPalette(preview) {
+    const candidatePalette = preview?.candidates?.[0]?.palette;
+    if (candidatePalette) return candidatePalette;
+    const plan = state.ruleSet.palettePlans.find((item) => item.id === preview?.requirements?.palettePlanId);
+    if (!plan) return null;
+    const colors = new Map((state.ruleSet.colorLibrary || []).map((item) => [item.id, item]));
+    return {
+      ...plan,
+      roles: (plan.roles || []).map((role) => {
+        const color = colors.get(role.colorId);
+        return { ...role, colorName: color?.name || "基础色", hex: color?.hex || "#c7c7c7" };
+      })
+    };
+  }
+
+  function paletteRoleLabel(role) {
+    return ({ nearFace: "近脸色", main: "主色", secondary: "辅助色", accent: "点缀色" })[role] || role || "颜色";
+  }
+
+  function renderPersonalInputBranches(business, module) {
+    const preview = personalPreview(business, module);
+    const key = personalSelectionKey(business, module);
+    return `<section class="personal-input-branches">
+      <div class="personal-branch-heading"><strong>当前输入分支</strong><small>分支入口只代表输入条件，推荐结果在下方单独呈现。</small></div>
+      <div class="personal-input-branch-list">${moduleFieldLabels(module).map((definition) => {
+        const selected = preview.values[definition.id];
+        const options = definition.options || [];
+        return `<div class="personal-input-row"><span>${escapeHtml(definition.name)}</span><div class="personal-input-values" role="radiogroup" aria-label="${escapeHtml(definition.name)}">${options.map(([value, label]) => `<button type="button" class="personal-value-btn ${String(value) === String(selected) ? "is-active" : ""}" data-personal-value-field="${escapeHtml(definition.id)}" data-personal-value="${escapeHtml(String(value))}" data-personal-value-key="${escapeHtml(key)}" aria-pressed="${String(value) === String(selected)}">${escapeHtml(label)}</button>`).join("")}</div></div>`;
+      }).join("")}</div>
+    </section>`;
+  }
+
+  function personalOutputItems(business, module, preview) {
+    const fields = (business.scope?.result || []).filter((fieldId) => resultDefinition(fieldId));
+    const items = fields.map((fieldId) => ({ label: formatOutputField(fieldId), value: previewValue(fieldId, preview), fieldId }));
+    const palette = previewPalette(preview);
+    if (palette?.roles?.length) {
+      palette.roles.forEach((role) => items.push({ label: paletteRoleLabel(role.role), value: role.colorName, color: role.hex, fieldId: `palette.${role.role}` }));
+    }
+    return items;
+  }
+
+  function renderPersonalDecisionMappings(business, module, preview) {
+    const relations = (business.mappingMembers || []).filter((relation) => relation.type === "decision");
+    if (!relations.length) return "";
+    const context = { input: preview.input, derived: preview.derived };
+    const resultDefinitions = scopedFields(state.ruleSet.resultFields, business.scope?.result);
+    return `<div class="personal-decision-mappings"><div class="personal-config-subheading"><strong>服装输出映射</strong><small>当前输入经过推导后命中的决策分支，可直接修改输出值。</small></div>${relations.map((relation) => {
+      const branches = relation.rules || (relation.rule ? [relation.rule] : []);
+      const matched = branches.find((branch) => (branch.conditions || []).every((condition) => Engine.getByPath(context, condition.field) === condition.value)) || branches[0];
+      if (!matched) return "";
+      const conditionText = (matched.conditions || []).map((condition) => {
+        const definition = conditionDefinition(condition.field);
+        return `${definition?.name || condition.field} = ${branchConditionValue(condition)}`;
+      }).join("；");
+      return `<section class="personal-decision-map" data-personal-relation-id="${escapeHtml(relation.id)}" data-personal-branch-id="${escapeHtml(matched.id)}"><div class="personal-decision-map-head"><span>${escapeHtml(relationMemberName(relation))}</span><strong>${escapeHtml(branchEntryName(matched, relation))}</strong></div><div class="personal-decision-map-when">WHEN：${escapeHtml(conditionText || "满足当前推导条件")}</div>${renderDecisionActions(matched, resultDefinitions)}</section>`;
+    }).join("")}</div>`;
   }
 
   function renderPersonalCalculationEditor(business, module) {
     const derivations = personalModuleDerivations(business, module);
-    const fields = moduleFieldLabels(module);
-    const outputNames = moduleOutputNames(business, module, derivations);
-    const derivationOutputs = derivations.map((relation) => derivedOutputName(relation.rule.output));
+    const preview = personalPreview(business, module);
+    const outputNames = business.outputs || [];
+    const derivedItems = (module.derivedOutputs || []).map((output) => ({
+      label: derivedOutputName(output),
+      value: previewValue(`derived.${output}.label`, preview)
+    }));
+    const outputItems = personalOutputItems(business, module, preview);
+    const missing = moduleFieldLabels(module).filter((definition) => preview.values[definition.id] === undefined || preview.values[definition.id] === null || preview.values[definition.id] === "");
     const calculationBusiness = { ...business, derivations };
     return `
       <section class="rule-summary-module personal-module-summary">
@@ -973,13 +1069,19 @@
           <div class="scope-pill-list">${outputNames.map((name) => `<span class="scope-pill">${escapeHtml(name)}</span>`).join("") || `<span class="scope-pill">暂无已连接结果</span>`}</div>
         </div>
         <div class="rule-summary-submodule branch-output-submodule">
-          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>当前分支具体输出</strong><small>当前模块输入进入的推导结果</small></div></div>
-          <div class="branch-output-grid">${(derivationOutputs.length ? derivationOutputs : outputNames).map((name) => `<div class="branch-output-item"><span>推导结果</span><strong>${escapeHtml(name)}</strong></div>`).join("") || fields.map((definition) => `<div class="branch-output-item"><span>${escapeHtml(definition.name)}</span><strong>待配置</strong></div>`).join("")}</div>
+          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>当前分支具体输出</strong><small>${missing.length ? "条件未完整，结果仅作影响预览" : "已解析到具体服装输出"}</small></div></div>
+          <div class="personal-output-status ${missing.length ? "is-incomplete" : "is-complete"}">${missing.length ? `还需要：${missing.map((definition) => escapeHtml(definition.name)).join("、")}` : "当前输入条件完整"}</div>
+          <div class="branch-output-grid personal-derived-grid">${derivedItems.map((item) => `<div class="branch-output-item"><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join("")}</div>
+          <div class="branch-output-grid personal-clothing-grid">${outputItems.map((item) => `<div class="branch-output-item ${item.color ? "has-color" : ""}"><span>${escapeHtml(item.label)}</span><strong>${item.color ? `<i class="output-color-swatch" style="--swatch:${escapeHtml(item.color)}" aria-hidden="true"></i>` : ""}${escapeHtml(item.value)}</strong></div>`).join("")}</div>
         </div>
       </section>
       <section class="rule-config-module personal-calculation-module">
-        <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>输入 → 推导 → 结果</small></div>
-        ${renderCalculationDetails(calculationBusiness, true)}
+        <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>WHEN / DERIVE / THEN / WHY</small></div>
+        ${renderPersonalInputBranches(business, module)}
+        <div class="personal-rule-flow"><div><span>WHEN</span><strong>${moduleFieldLabels(module).map((definition) => `${escapeHtml(definition.name)} = ${escapeHtml(formatDisplayValue(definition, preview.values[definition.id]))}`).join("；")}</strong></div><div><span>DERIVE</span><strong>${derivedItems.map((item) => `${escapeHtml(item.label)} = ${escapeHtml(item.value)}`).join("；") || "暂无推导"}</strong></div><div><span>THEN</span><strong>${outputItems.slice(0, 4).map((item) => `${escapeHtml(item.label)} = ${escapeHtml(item.value)}`).join("；") || "暂无服装输出"}</strong></div></div>
+        ${renderCalculationDetails(calculationBusiness, false)}
+        ${renderPersonalDecisionMappings(business, module, preview)}
+        <div class="personal-why-note"><span>WHY</span><p>个人色彩先综合肤色、发色和瞳色，再结合冷暖、明度对比和彩度匹配服装配色。单独一个输入项不会被错误地视为唯一决定因素。</p></div>
       </section>
     `;
   }
@@ -1197,6 +1299,24 @@
       return;
     }
 
+    const personalHost = event.target.closest("[data-personal-relation-id]");
+    if (personalHost && business) {
+      const personalRelation = (business.mappingMembers || []).find((item) => item.id === personalHost.dataset.personalRelationId);
+      if (personalRelation) {
+        const editable = personalRelation.rules?.find((rule) => rule.id === personalHost.dataset.personalBranchId) || activeRule(personalRelation);
+        const control = event.target.closest("[data-edit]");
+        if (!control || control.disabled) return;
+        const path = control.dataset.edit;
+        const previous = Engine.getByPath(editable, path);
+        const value = control.type === "checkbox" ? control.checked : parseByPrevious(control.value, previous);
+        Engine.setByPath(editable, path, value);
+        if (/^actions\.\d+\.field$/.test(path)) resetActionValue(editable, path, value);
+        markDirty();
+        renderAll();
+        return;
+      }
+    }
+
     const relation = activeAtomicRelation(business);
     const branch = event.target.closest("select[data-branch-select]");
     if (branch && relation?.rules?.length) {
@@ -1223,9 +1343,27 @@
 
   function handleEditorClick(event) {
     const business = businessRelationById(state.selectedId);
-    const relation = activeAtomicRelation(business);
-    if (!relation || !business) return;
-    const editable = activeRule(relation);
+    if (!business) return;
+
+    const personalValueButton = event.target.closest("button[data-personal-value-field]");
+    if (personalValueButton) {
+      const module = selectedPersonalModule(business);
+      if (!module) return;
+      const definition = conditionDefinition(personalValueButton.dataset.personalValueField);
+      const selectedOption = definition?.options?.find(([value]) => String(value) === personalValueButton.dataset.personalValue);
+      const key = personalValueButton.dataset.personalValueKey || personalSelectionKey(business, module);
+      state.personalValueSelections[key] ||= {};
+      state.personalValueSelections[key][personalValueButton.dataset.personalValueField] = selectedOption?.[0] ?? personalValueButton.dataset.personalValue;
+      renderEditor();
+      return;
+    }
+
+    const personalHost = event.target.closest("[data-personal-relation-id]");
+    const relation = personalHost
+      ? (business.mappingMembers || []).find((item) => item.id === personalHost.dataset.personalRelationId)
+      : activeAtomicRelation(business);
+    if (!relation) return;
+    const editable = relation.rules?.find((rule) => rule.id === personalHost?.dataset.personalBranchId) || activeRule(relation);
 
     const branchChip = event.target.closest("button[data-branch-chip]");
     if (branchChip && relation.rules?.length) {

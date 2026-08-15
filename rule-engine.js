@@ -116,12 +116,13 @@
     normalized.tests ||= [];
 
     const visibleParameterLabels = {
-      "appearance.skinTemperature": "肤色冷暖倾向",
-      "appearance.hairTemperature": "发色冷暖倾向",
-      "appearance.eyeTemperature": "眼睛颜色冷暖倾向",
-      "body.legRatio": "上下身比例",
-      "body.waistDefinition": "腰部曲线明显度",
-      "body.shoulderHipBalance": "肩胯轮廓关系"
+      "appearance.skinTemperature": "肤色色调",
+      "appearance.hairTemperature": "发色色调",
+      "appearance.eyeTemperature": "瞳色色调",
+      "body.heightPresence": "纵向高度",
+      "body.legRatio": "腿身分布",
+      "body.waistDefinition": "腰线特征",
+      "body.shoulderHipBalance": "横向轮廓"
     };
     normalized.parameters.forEach((parameter) => {
       if (visibleParameterLabels[parameter.id]) parameter.name = visibleParameterLabels[parameter.id];
@@ -136,7 +137,7 @@
       }
     });
     const visibleResultLabels = {
-      "requirements.colorTemperature": "服装冷暖倾向"
+      "requirements.colorTemperature": "服装冷暖属性"
     };
     normalized.resultFields.forEach((field) => {
       if (visibleResultLabels[field.id]) field.name = visibleResultLabels[field.id];
