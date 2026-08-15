@@ -329,9 +329,9 @@ button {
 
 .demo-top-grid {
   display: grid;
-  grid-template-columns: minmax(400px, 0.88fr) minmax(560px, 1.12fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-  min-height: 340px;
+  min-height: 0;
 }
 
 .surface {
@@ -443,7 +443,7 @@ button {
 
 .input-tabs {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: transparent;
   padding: 0 2px 0;
 }
@@ -476,9 +476,42 @@ button {
 
 .input-content {
   min-height: 240px;
-  max-height: 290px;
+  max-height: 440px;
   overflow: auto;
   padding: 12px 16px;
+}
+
+.input-section {
+  padding: 0 0 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.input-section:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+
+.input-section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.input-section-heading strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.input-section-heading span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.input-section--face {
+  max-width: 620px;
 }
 
 /* Modern iOS-style Pill Segment Controls */
@@ -995,6 +1028,30 @@ button {
   gap: 8px;
 }
 
+.outfit-illustration {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-height: 170px;
+  padding: 8px 8px 4px;
+  margin: 4px 0 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #f1f4f1;
+}
+
+.illustration-svg {
+  display: block;
+  width: min(100%, 148px);
+  height: 170px;
+}
+
+.illustration-caption {
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+}
+
 .candidate-card-meta {
   display: flex;
   align-items: center;
@@ -1413,6 +1470,78 @@ button {
 
 .overview-legend .is-light i,
 .is-light .impact-dot { background: #88948b; }
+
+.schema-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.schema-summary-group {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.schema-summary-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.schema-summary-head strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.schema-summary-head span {
+  min-height: 26px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.schema-summary-fields,
+.schema-summary-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.schema-summary-fields code,
+.schema-summary-results span {
+  padding: 2px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-soft);
+  background: var(--surface);
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.schema-summary-fields code {
+  color: var(--green-dark);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.schema-summary-results {
+  margin-top: 7px;
+}
+
+.schema-summary-illustration {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.schema-summary-results small {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 9px;
+}
 
 .overview-matrix-wrap {
   width: 100%;
@@ -2479,6 +2608,9 @@ button {
   .candidate-grid {
     grid-template-columns: 1fr;
   }
+  .schema-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -2557,6 +2689,10 @@ button {
 
   .overview-matrix-wrap {
     display: none !important;
+  }
+
+  .schema-summary {
+    grid-template-columns: 1fr;
   }
 
   .overview-mobile-list {

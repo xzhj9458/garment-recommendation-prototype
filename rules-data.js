@@ -749,6 +749,118 @@
     ...derivedFieldDefinitions
   ];
 
+  // The case runner and the rules workbench share these stable group ids.
+  // Labels can change without changing the input/result field contract.
+  const inputGroups = [
+    {
+      id: "context",
+      name: "场景条件",
+      order: 1,
+      description: "先确定温度与使用场合，决定穿着层数和正式程度。",
+      fields: ["context.temperatureRange", "context.occasion"]
+    },
+    {
+      id: "personal",
+      name: "个人特征",
+      order: 2,
+      description: "外观色彩、身材情况和脸型是并列事实，不把身材归入脸型。",
+      fields: [
+        "appearance.skinTemperature", "appearance.skinValue", "appearance.skinChroma",
+        "appearance.hairTemperature", "appearance.hairValue", "appearance.hairChroma",
+        "appearance.eyeTemperature", "appearance.eyeValue", "appearance.eyeChroma",
+        "body.heightPresence", "body.legRatio", "body.waistDefinition", "body.shoulderHipBalance",
+        "face.shape"
+      ]
+    },
+    {
+      id: "preference",
+      name: "风格偏好",
+      order: 3,
+      description: "表达用户想要的风格、正式程度和潮流参与方式。",
+      fields: ["preference.style", "preference.formality", "preference.trendDirection", "preference.trendIntensity"]
+    },
+    {
+      id: "goal-boundaries",
+      name: "本次目标与边界",
+      order: 4,
+      description: "本次想调整的方向与不可接受条件，边界优先级高于偏好。",
+      fields: [
+        "goal.endpoint", "goal.direction",
+        "boundaries.rejectSkirt", "boundaries.rejectDefinedWaist", "boundaries.rejectHighContrast",
+        "boundaries.strictCoverage", "boundaries.movementFriendly", "boundaries.sensitiveTexture"
+      ]
+    }
+  ];
+
+  const inputGroupByField = Object.fromEntries(inputGroups.flatMap((group) => group.fields.map((field) => [field, group.id])));
+  parameters.forEach((parameter) => {
+    parameter.groupId = inputGroupByField[parameter.id] || "context";
+  });
+  conditionFields.forEach((field) => {
+    const inputId = field.id.replace(/^input\./, "");
+    field.groupId = inputGroupByField[inputId] || "derived";
+  });
+
+  const resultGroupMap = {
+    "温度与覆盖": "context",
+    "场合": "context",
+    "身体边界": "goal-boundaries",
+    "服装版型": "personal",
+    "配色": "personal",
+    "身材与脸型适配": "personal",
+    "候选排序": "preference",
+    "排除条件": "goal-boundaries",
+    "结果说明": "goal-boundaries"
+  };
+  resultFields.forEach((field) => {
+    field.groupId = resultGroupMap[field.group] || "personal";
+  });
+
+  const fieldMappings = [
+    {
+      inputId: "context.temperatureRange",
+      conditionFields: ["input.context.temperatureRange"],
+      resultFields: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.material"],
+      illustrationFields: ["illustration.layerCount", "illustration.layers"]
+    },
+    {
+      inputId: "context.occasion",
+      conditionFields: ["input.context.occasion"],
+      resultFields: ["requirements.formalityMin", "requirements.material"],
+      illustrationFields: ["illustration.layers"]
+    },
+    {
+      inputId: "personal.body",
+      conditionFields: ["input.body.heightPresence", "input.body.legRatio", "input.body.waistDefinition", "input.body.shoulderHipBalance"],
+      resultFields: ["requirements.line", "requirements.waist", "preferences.family"],
+      illustrationFields: ["illustration.silhouette", "illustration.waist", "illustration.line"]
+    },
+    {
+      inputId: "personal.face",
+      conditionFields: ["input.face.shape"],
+      resultFields: ["requirements.neckline", "requirements.faceEffect"],
+      illustrationFields: ["illustration.neckline", "illustration.layers"]
+    },
+    {
+      inputId: "personal.appearance",
+      conditionFields: ["input.appearance.skinTemperature", "input.appearance.skinValue", "input.appearance.skinChroma", "input.appearance.hairTemperature", "input.appearance.hairValue", "input.appearance.hairChroma", "input.appearance.eyeTemperature", "input.appearance.eyeValue", "input.appearance.eyeChroma"],
+      resultFields: ["requirements.colorTemperature", "requirements.colorContrast", "requirements.colorChroma", "requirements.palettePlanId"],
+      illustrationFields: ["illustration.layers"]
+    },
+    {
+      inputId: "preference.style",
+      conditionFields: ["input.preference.style", "input.preference.formality", "input.preference.trendDirection", "input.preference.trendIntensity"],
+      resultFields: ["preferences.family", "requirements.silhouette", "requirements.detail", "requirements.trend"],
+      illustrationFields: ["illustration.silhouette", "illustration.layers"]
+    },
+    {
+      inputId: "goal-boundaries",
+      conditionFields: ["input.goal.endpoint", "input.goal.direction", "input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
+      resultFields: ["requirements.waist", "requirements.line", "requirements.colorContrastMax", "requirements.coverage", "requirements.movement", "requirements.texture", "candidate.bottomType"],
+      illustrationFields: ["illustration.waist", "illustration.line", "illustration.layers"]
+    }
+  ];
+
   const operatorDictionary = {
     actions: {
       SET: "设置为",
@@ -1386,6 +1498,7 @@
     colorTemperatureBands,
     defaultInput,
     defaultRuleSet: {
+      schemaVersion: "2.0.0",
       meta: {
         version: "1.2.0",
         status: "published",
@@ -1393,6 +1506,8 @@
         note: "V1.2 动态潮流方向、规则总览与统一工作台"
       },
       operatorDictionary,
+      inputGroups,
+      fieldMappings,
       conditionFields,
       resultFields,
       parameters,

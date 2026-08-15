@@ -42,29 +42,37 @@ async function choose(page, pathName, value) {
     await demo.page.evaluate(() => localStorage.clear());
     await demo.page.reload({ waitUntil: "networkidle" });
 
-    assert(await demo.page.locator("#inputTabs button").count() === 7, "案例页输入没有按七组展示");
-    assert(await demo.page.locator(".impact-link-row").count() >= 8, "案例页缺少本次生效的输入结果关系");
-    assert(await demo.page.locator(".analysis-trace-toolbar").count() === 0, "本次影响仍保留重复工具栏");
-    const impactHeight = await demo.page.locator(".impact-link-row").first().evaluate((element) => element.getBoundingClientRect().height);
-    assert(impactHeight <= 38, `本次影响单行仍然过高：${impactHeight}px`);
+    assert(await demo.page.locator("#inputTabs button").count() === 4, "案例页输入没有按四组展示");
+    assert(await demo.page.locator(".analysis-surface").count() === 0, "案例页仍保留独立本次影响区域");
     assert(await demo.page.locator(".candidate-card").count() === 3, "默认输入没有生成三个完整方案");
+    assert(await demo.page.locator(".outfit-illustration").count() === 3, "候选方案没有生成简易效果图");
 
     // Every input group must be renderable and persist a canonical value.
-    for (const group of ["context", "color", "body", "face", "preference", "goal", "boundaries"]) {
+    for (const group of ["context", "personal", "preference", "goal-boundaries"]) {
       await demo.page.locator(`button[data-group="${group}"]`).click();
       assert(await demo.page.locator("#inputContent").innerText(), `${group} 输入组没有内容`);
     }
-    await demo.page.locator('button[data-group="color"]').click();
+    await demo.page.locator('button[data-group="personal"]').click();
     await choose(demo.page, "appearance.skinValue", "4");
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().appearance.skinValue === 4), "颜色输入没有写入规范化字段");
-    await demo.page.locator('button[data-group="body"]').click();
     await choose(demo.page, "body.legRatio", "0");
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().body.legRatio === 0), "身体输入没有写入规范化字段");
-    await demo.page.locator('button[data-group="goal"]').click();
+    const defaultIllustration = await demo.page.locator(".candidate-card").first().locator(".illustration-svg").innerHTML();
+    await choose(demo.page, "face.shape", "long");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().face.shape === "long"), "脸型输入没有写入规范化字段");
+    const faceIllustration = await demo.page.locator(".candidate-card").first().locator(".illustration-svg").innerHTML();
+    assert(defaultIllustration !== faceIllustration, "脸型变化没有改变效果图中的领口表现");
+    const beforeColor = await demo.page.evaluate(() => window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished()).candidates.map((candidate) => candidate.palette?.name));
+    await choose(demo.page, "appearance.skinTemperature", "0");
+    const afterColor = await demo.page.evaluate(() => window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished()).candidates.map((candidate) => candidate.palette?.name));
+    assert(JSON.stringify(beforeColor) !== JSON.stringify(afterColor), "切换外观色温没有改变候选配色");
+    const beforeGoalIllustrations = await demo.page.locator(".candidate-card .illustration-svg").evaluateAll((elements) => elements.map((element) => element.innerHTML));
+    await demo.page.locator('button[data-group="goal-boundaries"]').click();
     await demo.page.locator('select[data-input-path="goal.endpoint"]').selectOption("waist");
     await demo.page.locator('select[data-input-path="goal.direction"]').selectOption("strengthen");
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().goal.endpoint === "waist"), "目标输入没有写入规范化字段");
-    await demo.page.locator('button[data-group="boundaries"]').click();
+    const waistIllustrations = await demo.page.locator(".candidate-card .illustration-svg").evaluateAll((elements) => elements.map((element) => element.innerHTML));
+    assert(waistIllustrations.some((svg, index) => svg !== beforeGoalIllustrations[index]), "目标变化没有改变效果图中的腰线表现");
     await demo.page.locator('input[data-input-boolean="boundaries.rejectDefinedWaist"]').check({ force: true });
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().boundaries.rejectDefinedWaist === true), "边界输入没有写入规范化字段");
     const boundaryResult = await demo.page.evaluate(() => {
@@ -77,21 +85,8 @@ async function choose(page, pathName, value) {
 
     await demo.page.locator(".detail-button").first().click();
     const detailText = await demo.page.locator("#candidateDetailContent").innerText();
-    assert(detailText.includes("完整穿着单品") && detailText.includes("怎么验证") && !detailText.includes("undefined"), "方案详情没有消费完整候选契约");
+    assert(detailText.includes("简易效果图") && detailText.includes("完整穿着单品") && detailText.includes("怎么验证") && !detailText.includes("undefined"), "方案详情没有消费完整候选契约");
     await demo.page.locator("[data-close-dialog]").click();
-
-    const traceTarget = await demo.page.evaluate(() => {
-      const result = window.GarmentRuleEngine.run(window.GarmentPrototypeData.defaultInput, window.GarmentRuleEngine.Store.loadPublished());
-      return result.insights.find((insight) => insight.candidateIds.length > 0 && insight.candidateIds.length < result.candidates.length)?.ruleId || null;
-    });
-    if (traceTarget) {
-      const traceRow = demo.page.locator(`.impact-link-row[data-rule-id="${traceTarget}"]`).first();
-      await traceRow.hover();
-      const relatedCount = await demo.page.locator(".candidate-card.is-related").count();
-      assert(relatedCount > 0 && relatedCount < 3, "规则高亮仍然把所有候选标记为相关");
-      await traceRow.click();
-      assert(await demo.page.locator(".candidate-card.is-dimmed").count() > 0, "规则高亮没有弱化无关候选");
-    }
 
     const paletteState = await demo.page.evaluate(() => {
       const result = window.GarmentRuleEngine.run(window.GarmentPrototypeData.defaultInput, window.GarmentRuleEngine.Store.loadPublished());
@@ -109,16 +104,15 @@ async function choose(page, pathName, value) {
     const afterTrend = await demo.page.locator(".candidate-card h3").allInnerTexts();
     assert(JSON.stringify(beforeTrend) !== JSON.stringify(afterTrend), "切换潮流方向只改变文案，没有改变服装组合");
     assert(afterTrend[0].includes("工装") || afterTrend[0].includes("多口袋"), "轻机能层次没有落实到具体服装");
-    assert((await demo.page.locator("#analysisTrace").innerText()).includes("轻机能层次"), "本次影响没有显示潮流方向的实际结果");
     assert((await demo.page.locator(".trend-input-summary").innerText()).includes("城市机能") || (await demo.page.locator(".trend-input-summary").innerText()).includes("功能细节"), "潮流输入缺少核心理念摘要");
     await choose(demo.page, "preference.trendDirection", "none");
     assert(await demo.page.locator('button[data-input-path="preference.trendIntensity"]').count() === 0, "不限定潮流时仍显示表达强度");
 
     await choose(demo.page, "preference.style", "street");
     assert((await demo.page.locator(".candidate-card").first().innerText()).includes("街头"), "风格方向没有改变服装路线");
-    await demo.page.locator('button[data-group="face"]').click();
+    await demo.page.locator('button[data-group="personal"]').click();
     await choose(demo.page, "face.shape", "long");
-    assert((await demo.page.locator("#analysisTrace").innerText()).includes("领口"), "脸型没有进入结果关系");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished()).candidates.some((candidate) => candidate.neckline)), "脸型没有进入候选方案契约");
     await demo.page.locator('button[data-group="context"]').click();
     await choose(demo.page, "context.temperatureRange", "24_30");
     const warmText = await demo.page.locator(".candidate-card").first().innerText();
@@ -132,12 +126,15 @@ async function choose(page, pathName, value) {
     assert(desktopMetrics.scrollWidth <= desktopMetrics.clientWidth + 1, "案例页桌面端横向溢出");
     assert(demo.errors.length === 0, demo.errors.join("\n"));
     await demo.page.screenshot({ path: path.join(outputDir, "garment-v12-case-1440.png"), fullPage: true });
-    report.push({ page: "case-1440", metrics: desktopMetrics, impactHeight, palettes: paletteState.map((item) => item.name) });
+    report.push({ page: "case-1440", metrics: desktopMetrics, illustrations: await demo.page.locator(".outfit-illustration").count(), palettes: paletteState.map((item) => item.name) });
 
     const rules = await openPage(browser, `${baseUrl}rules.html`, { width: 1440, height: 900 });
     await rules.page.evaluate(() => localStorage.clear());
     await rules.page.reload({ waitUntil: "networkidle" });
     assert(await rules.page.locator("#overviewView").isVisible(), "规则管理没有默认显示规则总览");
+    assert(await rules.page.locator("#schemaSummary .schema-summary-group").count() === 4, "规则管理没有展示与案例页一致的四组字段架构");
+    const schemaText = await rules.page.locator("#schemaSummary").innerText();
+    assert(schemaText.includes("body.legRatio") && schemaText.includes("推荐层数"), "规则管理共享字段映射不完整");
     const ruleChecks = await rules.page.evaluate(() => {
       const engine = window.GarmentRuleEngine;
       const data = window.GarmentPrototypeData.defaultRuleSet;

@@ -110,6 +110,8 @@
     normalized.trendDirections ||= clone(DATA.defaultRuleSet.trendDirections || []);
     normalized.conditionFields ||= clone(DATA.defaultRuleSet.conditionFields || []);
     normalized.resultFields ||= clone(DATA.defaultRuleSet.resultFields || []);
+    normalized.inputGroups ||= clone(DATA.defaultRuleSet.inputGroups || []);
+    normalized.fieldMappings ||= clone(DATA.defaultRuleSet.fieldMappings || []);
     normalized.operatorDictionary ||= clone(DATA.defaultRuleSet.operatorDictionary || {});
     normalized.tests ||= [];
     const trendParameter = normalized.parameters.find((item) => item.id === "preference.trendDirection");
@@ -632,6 +634,7 @@
     const line = decision.requirements.line || bottom.attributes.lineDirection || familyMeta.line;
     const unknownColor = [derived.color?.temperature, derived.color?.contrast, derived.color?.chroma].some((item) => !item || item.value === null);
     const palette = resolvePalette(ruleSet, palettePlanId || decision.requirements.palettePlanId);
+    const boundPalette = bindPaletteToGarments(palette, outer.attributes.outerKind);
     const nameParts = [top.name, outer.attributes.outerKind === "none" ? null : outer.name, bottom.name].filter(Boolean);
     const components = [top, outer.attributes.outerKind === "none" ? null : outer, bottom].filter(Boolean).map((component) => clone(component));
     const relevantRule = (trace) => {
@@ -674,7 +677,8 @@
       colorContrast: decision.requirements.colorContrast,
       colorChroma: decision.requirements.colorChroma,
       palettePlanId: palette?.id || null,
-      palette: bindPaletteToGarments(palette, outer.attributes.outerKind),
+      palette: boundPalette,
+      illustration: buildIllustration(top, outer, bottom, decision, boundPalette, family),
       styleName: decision.requirements.styleName || "未限定风格",
       silhouette: decision.requirements.silhouette || familyMeta.line,
       detail: decision.requirements.detail || "与风格匹配的细节",
@@ -732,6 +736,57 @@
       garment: item.role === "nearFace" ? "上装" : item.role === "main" && outerKind !== "none" ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
     }));
     return { ...palette, roles };
+  }
+
+  function buildIllustration(top, outer, bottom, decision, palette, family) {
+    const roles = palette?.roles || [];
+    const colorFor = (garment, fallback) => {
+      const role = roles.find((item) => item.garment === garment);
+      return { hex: role?.hex || fallback, colorName: role?.colorName || "基础色" };
+    };
+    const outerKind = outer?.attributes?.outerKind || "none";
+    const bottomType = bottom?.attributes?.bottomType || "trouser";
+    const topColor = colorFor("上装", "#dedbd1");
+    const outerColor = colorFor("外层", "#a8b1af");
+    const bottomColor = colorFor("下装", "#4c5961");
+    return {
+      type: "outfit-schematic",
+      layerCount: decision.requirements.layerCount || 1,
+      silhouette: decision.requirements.silhouette || family || "straight",
+      waist: decision.requirements.waist || bottom?.attributes?.waistPosition || "natural",
+      line: decision.requirements.line || bottom?.attributes?.lineDirection || "balanced",
+      neckline: decision.requirements.neckline || top?.attributes?.neckline || "regular",
+      layers: [
+        {
+          id: "top",
+          kind: "top",
+          type: "top",
+          visible: true,
+          sleeve: decision.requirements.sleeve || top?.attributes?.sleeve || "regular",
+          color: topColor.hex,
+          colorName: topColor.colorName
+        },
+        {
+          id: "outer",
+          kind: "outer",
+          type: outerKind,
+          visible: outerKind !== "none",
+          length: outerKind === "warm" ? "long" : "short",
+          color: outerColor.hex,
+          colorName: outerColor.colorName
+        },
+        {
+          id: "bottom",
+          kind: "bottom",
+          type: bottomType,
+          bottomType,
+          visible: true,
+          coverage: decision.requirements.coverage || bottom?.attributes?.coverage || "regular",
+          color: bottomColor.hex,
+          colorName: bottomColor.colorName
+        }
+      ]
+    };
   }
 
   function buildExpectedEffect(requirements, palette) {

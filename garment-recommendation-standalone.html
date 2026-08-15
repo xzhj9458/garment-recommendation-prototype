@@ -337,9 +337,9 @@ button {
 
 .demo-top-grid {
   display: grid;
-  grid-template-columns: minmax(400px, 0.88fr) minmax(560px, 1.12fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-  min-height: 340px;
+  min-height: 0;
 }
 
 .surface {
@@ -451,7 +451,7 @@ button {
 
 .input-tabs {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: transparent;
   padding: 0 2px 0;
 }
@@ -484,9 +484,42 @@ button {
 
 .input-content {
   min-height: 240px;
-  max-height: 290px;
+  max-height: 440px;
   overflow: auto;
   padding: 12px 16px;
+}
+
+.input-section {
+  padding: 0 0 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.input-section:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+
+.input-section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.input-section-heading strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.input-section-heading span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.input-section--face {
+  max-width: 620px;
 }
 
 /* Modern iOS-style Pill Segment Controls */
@@ -1003,6 +1036,30 @@ button {
   gap: 8px;
 }
 
+.outfit-illustration {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-height: 170px;
+  padding: 8px 8px 4px;
+  margin: 4px 0 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #f1f4f1;
+}
+
+.illustration-svg {
+  display: block;
+  width: min(100%, 148px);
+  height: 170px;
+}
+
+.illustration-caption {
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+}
+
 .candidate-card-meta {
   display: flex;
   align-items: center;
@@ -1421,6 +1478,78 @@ button {
 
 .overview-legend .is-light i,
 .is-light .impact-dot { background: #88948b; }
+
+.schema-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.schema-summary-group {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.schema-summary-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.schema-summary-head strong {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.schema-summary-head span {
+  min-height: 26px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.schema-summary-fields,
+.schema-summary-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.schema-summary-fields code,
+.schema-summary-results span {
+  padding: 2px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-soft);
+  background: var(--surface);
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.schema-summary-fields code {
+  color: var(--green-dark);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.schema-summary-results {
+  margin-top: 7px;
+}
+
+.schema-summary-illustration {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.schema-summary-results small {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 9px;
+}
 
 .overview-matrix-wrap {
   width: 100%;
@@ -2487,6 +2616,9 @@ button {
   .candidate-grid {
     grid-template-columns: 1fr;
   }
+  .schema-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -2567,6 +2699,10 @@ button {
     display: none !important;
   }
 
+  .schema-summary {
+    grid-template-columns: 1fr;
+  }
+
   .overview-mobile-list {
     display: block;
   }
@@ -2640,7 +2776,7 @@ button {
   </header>
 
   <main class="demo-main">
-    <section class="demo-top-grid" aria-label="本次条件与分析方向">
+    <section class="demo-top-grid" aria-label="本次输入条件">
       <section class="surface input-surface">
         <div class="surface-header">
           <div>
@@ -2657,20 +2793,6 @@ button {
         <div class="input-content" id="inputContent"></div>
       </section>
 
-      <section class="surface analysis-surface">
-        <div class="surface-header analysis-header">
-          <div>
-            <p class="section-kicker">02 本次影响</p>
-            <h2>输入会改变什么</h2>
-          </div>
-          <div class="analysis-header-right">
-            <span class="impact-hint" title="点击或悬停影响行可联动高亮对应方案">点击行联动高亮</span>
-            <span class="calculation-state" id="calculationState">已更新</span>
-          </div>
-        </div>
-
-        <div class="analysis-trace-list" id="analysisTrace"></div>
-      </section>
     </section>
 
     <section class="recommendation-section" aria-labelledby="recommendationTitle">
@@ -3458,6 +3580,118 @@ button {
     ...derivedFieldDefinitions
   ];
 
+  // The case runner and the rules workbench share these stable group ids.
+  // Labels can change without changing the input/result field contract.
+  const inputGroups = [
+    {
+      id: "context",
+      name: "场景条件",
+      order: 1,
+      description: "先确定温度与使用场合，决定穿着层数和正式程度。",
+      fields: ["context.temperatureRange", "context.occasion"]
+    },
+    {
+      id: "personal",
+      name: "个人特征",
+      order: 2,
+      description: "外观色彩、身材情况和脸型是并列事实，不把身材归入脸型。",
+      fields: [
+        "appearance.skinTemperature", "appearance.skinValue", "appearance.skinChroma",
+        "appearance.hairTemperature", "appearance.hairValue", "appearance.hairChroma",
+        "appearance.eyeTemperature", "appearance.eyeValue", "appearance.eyeChroma",
+        "body.heightPresence", "body.legRatio", "body.waistDefinition", "body.shoulderHipBalance",
+        "face.shape"
+      ]
+    },
+    {
+      id: "preference",
+      name: "风格偏好",
+      order: 3,
+      description: "表达用户想要的风格、正式程度和潮流参与方式。",
+      fields: ["preference.style", "preference.formality", "preference.trendDirection", "preference.trendIntensity"]
+    },
+    {
+      id: "goal-boundaries",
+      name: "本次目标与边界",
+      order: 4,
+      description: "本次想调整的方向与不可接受条件，边界优先级高于偏好。",
+      fields: [
+        "goal.endpoint", "goal.direction",
+        "boundaries.rejectSkirt", "boundaries.rejectDefinedWaist", "boundaries.rejectHighContrast",
+        "boundaries.strictCoverage", "boundaries.movementFriendly", "boundaries.sensitiveTexture"
+      ]
+    }
+  ];
+
+  const inputGroupByField = Object.fromEntries(inputGroups.flatMap((group) => group.fields.map((field) => [field, group.id])));
+  parameters.forEach((parameter) => {
+    parameter.groupId = inputGroupByField[parameter.id] || "context";
+  });
+  conditionFields.forEach((field) => {
+    const inputId = field.id.replace(/^input\./, "");
+    field.groupId = inputGroupByField[inputId] || "derived";
+  });
+
+  const resultGroupMap = {
+    "温度与覆盖": "context",
+    "场合": "context",
+    "身体边界": "goal-boundaries",
+    "服装版型": "personal",
+    "配色": "personal",
+    "身材与脸型适配": "personal",
+    "候选排序": "preference",
+    "排除条件": "goal-boundaries",
+    "结果说明": "goal-boundaries"
+  };
+  resultFields.forEach((field) => {
+    field.groupId = resultGroupMap[field.group] || "personal";
+  });
+
+  const fieldMappings = [
+    {
+      inputId: "context.temperatureRange",
+      conditionFields: ["input.context.temperatureRange"],
+      resultFields: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.material"],
+      illustrationFields: ["illustration.layerCount", "illustration.layers"]
+    },
+    {
+      inputId: "context.occasion",
+      conditionFields: ["input.context.occasion"],
+      resultFields: ["requirements.formalityMin", "requirements.material"],
+      illustrationFields: ["illustration.layers"]
+    },
+    {
+      inputId: "personal.body",
+      conditionFields: ["input.body.heightPresence", "input.body.legRatio", "input.body.waistDefinition", "input.body.shoulderHipBalance"],
+      resultFields: ["requirements.line", "requirements.waist", "preferences.family"],
+      illustrationFields: ["illustration.silhouette", "illustration.waist", "illustration.line"]
+    },
+    {
+      inputId: "personal.face",
+      conditionFields: ["input.face.shape"],
+      resultFields: ["requirements.neckline", "requirements.faceEffect"],
+      illustrationFields: ["illustration.neckline", "illustration.layers"]
+    },
+    {
+      inputId: "personal.appearance",
+      conditionFields: ["input.appearance.skinTemperature", "input.appearance.skinValue", "input.appearance.skinChroma", "input.appearance.hairTemperature", "input.appearance.hairValue", "input.appearance.hairChroma", "input.appearance.eyeTemperature", "input.appearance.eyeValue", "input.appearance.eyeChroma"],
+      resultFields: ["requirements.colorTemperature", "requirements.colorContrast", "requirements.colorChroma", "requirements.palettePlanId"],
+      illustrationFields: ["illustration.layers"]
+    },
+    {
+      inputId: "preference.style",
+      conditionFields: ["input.preference.style", "input.preference.formality", "input.preference.trendDirection", "input.preference.trendIntensity"],
+      resultFields: ["preferences.family", "requirements.silhouette", "requirements.detail", "requirements.trend"],
+      illustrationFields: ["illustration.silhouette", "illustration.layers"]
+    },
+    {
+      inputId: "goal-boundaries",
+      conditionFields: ["input.goal.endpoint", "input.goal.direction", "input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
+      resultFields: ["requirements.waist", "requirements.line", "requirements.colorContrastMax", "requirements.coverage", "requirements.movement", "requirements.texture", "candidate.bottomType"],
+      illustrationFields: ["illustration.waist", "illustration.line", "illustration.layers"]
+    }
+  ];
+
   const operatorDictionary = {
     actions: {
       SET: "设置为",
@@ -4095,6 +4329,7 @@ button {
     colorTemperatureBands,
     defaultInput,
     defaultRuleSet: {
+      schemaVersion: "2.0.0",
       meta: {
         version: "1.2.0",
         status: "published",
@@ -4102,6 +4337,8 @@ button {
         note: "V1.2 动态潮流方向、规则总览与统一工作台"
       },
       operatorDictionary,
+      inputGroups,
+      fieldMappings,
       conditionFields,
       resultFields,
       parameters,
@@ -4231,6 +4468,8 @@ button {
     normalized.trendDirections ||= clone(DATA.defaultRuleSet.trendDirections || []);
     normalized.conditionFields ||= clone(DATA.defaultRuleSet.conditionFields || []);
     normalized.resultFields ||= clone(DATA.defaultRuleSet.resultFields || []);
+    normalized.inputGroups ||= clone(DATA.defaultRuleSet.inputGroups || []);
+    normalized.fieldMappings ||= clone(DATA.defaultRuleSet.fieldMappings || []);
     normalized.operatorDictionary ||= clone(DATA.defaultRuleSet.operatorDictionary || {});
     normalized.tests ||= [];
     const trendParameter = normalized.parameters.find((item) => item.id === "preference.trendDirection");
@@ -4753,6 +4992,7 @@ button {
     const line = decision.requirements.line || bottom.attributes.lineDirection || familyMeta.line;
     const unknownColor = [derived.color?.temperature, derived.color?.contrast, derived.color?.chroma].some((item) => !item || item.value === null);
     const palette = resolvePalette(ruleSet, palettePlanId || decision.requirements.palettePlanId);
+    const boundPalette = bindPaletteToGarments(palette, outer.attributes.outerKind);
     const nameParts = [top.name, outer.attributes.outerKind === "none" ? null : outer.name, bottom.name].filter(Boolean);
     const components = [top, outer.attributes.outerKind === "none" ? null : outer, bottom].filter(Boolean).map((component) => clone(component));
     const relevantRule = (trace) => {
@@ -4795,7 +5035,8 @@ button {
       colorContrast: decision.requirements.colorContrast,
       colorChroma: decision.requirements.colorChroma,
       palettePlanId: palette?.id || null,
-      palette: bindPaletteToGarments(palette, outer.attributes.outerKind),
+      palette: boundPalette,
+      illustration: buildIllustration(top, outer, bottom, decision, boundPalette, family),
       styleName: decision.requirements.styleName || "未限定风格",
       silhouette: decision.requirements.silhouette || familyMeta.line,
       detail: decision.requirements.detail || "与风格匹配的细节",
@@ -4853,6 +5094,57 @@ button {
       garment: item.role === "nearFace" ? "上装" : item.role === "main" && outerKind !== "none" ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
     }));
     return { ...palette, roles };
+  }
+
+  function buildIllustration(top, outer, bottom, decision, palette, family) {
+    const roles = palette?.roles || [];
+    const colorFor = (garment, fallback) => {
+      const role = roles.find((item) => item.garment === garment);
+      return { hex: role?.hex || fallback, colorName: role?.colorName || "基础色" };
+    };
+    const outerKind = outer?.attributes?.outerKind || "none";
+    const bottomType = bottom?.attributes?.bottomType || "trouser";
+    const topColor = colorFor("上装", "#dedbd1");
+    const outerColor = colorFor("外层", "#a8b1af");
+    const bottomColor = colorFor("下装", "#4c5961");
+    return {
+      type: "outfit-schematic",
+      layerCount: decision.requirements.layerCount || 1,
+      silhouette: decision.requirements.silhouette || family || "straight",
+      waist: decision.requirements.waist || bottom?.attributes?.waistPosition || "natural",
+      line: decision.requirements.line || bottom?.attributes?.lineDirection || "balanced",
+      neckline: decision.requirements.neckline || top?.attributes?.neckline || "regular",
+      layers: [
+        {
+          id: "top",
+          kind: "top",
+          type: "top",
+          visible: true,
+          sleeve: decision.requirements.sleeve || top?.attributes?.sleeve || "regular",
+          color: topColor.hex,
+          colorName: topColor.colorName
+        },
+        {
+          id: "outer",
+          kind: "outer",
+          type: outerKind,
+          visible: outerKind !== "none",
+          length: outerKind === "warm" ? "long" : "short",
+          color: outerColor.hex,
+          colorName: outerColor.colorName
+        },
+        {
+          id: "bottom",
+          kind: "bottom",
+          type: bottomType,
+          bottomType,
+          visible: true,
+          coverage: decision.requirements.coverage || bottom?.attributes?.coverage || "regular",
+          color: bottomColor.hex,
+          colorName: bottomColor.colorName
+        }
+      ]
+    };
   }
 
   function buildExpectedEffect(requirements, palette) {
@@ -5364,13 +5656,10 @@ button {
   };
 
   const tabs = [
-    { id: "context", label: "穿着条件" },
-    { id: "color", label: "整体色彩" },
-    { id: "body", label: "身材情况" },
-    { id: "face", label: "脸型" },
-    { id: "preference", label: "穿着偏好" },
-    { id: "goal", label: "本次偏好" },
-    { id: "boundaries", label: "拒绝与边界" }
+    { id: "context", label: "场景条件" },
+    { id: "personal", label: "个人特征" },
+    { id: "preference", label: "风格偏好" },
+    { id: "goal-boundaries", label: "本次目标与边界" }
   ];
 
   const scaleLabels = {
@@ -5475,17 +5764,19 @@ button {
       }
     });
 
-    $("#analysisTrace").addEventListener("click", (event) => {
-      const row = event.target.closest(".impact-link-row");
-      if (!row) return;
-      const ruleId = row.dataset.ruleId;
-      state.highlightRuleId = state.highlightRuleId === ruleId ? null : ruleId;
-      renderAnalysisHighlights();
-      renderCandidateHighlights();
-    });
-
-    $("#analysisTrace").addEventListener("mouseenter", handleTraceHover, true);
-    $("#analysisTrace").addEventListener("mouseleave", handleTraceLeave, true);
+    const analysisTrace = $("#analysisTrace");
+    if (analysisTrace) {
+      analysisTrace.addEventListener("click", (event) => {
+        const row = event.target.closest(".impact-link-row");
+        if (!row) return;
+        const ruleId = row.dataset.ruleId;
+        state.highlightRuleId = state.highlightRuleId === ruleId ? null : ruleId;
+        renderAnalysisHighlights();
+        renderCandidateHighlights();
+      });
+      analysisTrace.addEventListener("mouseenter", handleTraceHover, true);
+      analysisTrace.addEventListener("mouseleave", handleTraceLeave, true);
+    }
 
     $("[data-close-dialog]").addEventListener("click", () => $("#candidateDialog").close());
     $("#candidateDialog").addEventListener("click", (event) => {
@@ -5510,7 +5801,6 @@ button {
     renderConditionSnapshot();
     renderInputTabs();
     renderInputs();
-    renderAnalysis(result);
     renderViewModeBar();
     renderCandidates(result);
 
@@ -5549,7 +5839,7 @@ button {
     const occasionLabel = translateValue(c.occasion) || "待确认";
     const styleLabel = translateValue(p.style) || "未限定";
     const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
-    const boundaryCount = (b.forbiddenCategories?.length || 0) + (b.bodyBoundaries?.length || 0);
+    const boundaryCount = Object.values(b).filter(Boolean).length;
 
     $("#conditionSnapshot").innerHTML = `
       <div class="snapshot-inner">
@@ -5557,8 +5847,8 @@ button {
         <div class="snapshot-badges">
           <button type="button" class="snapshot-chip" data-jump-group="context" title="点击修改气温与场合">${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击修改风格与潮流">${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="goal" title="点击修改本次偏好">${g.endpoint && g.endpoint !== "unknown" ? translateValue(g.endpoint) : "保持原样"}</button>
-          <button type="button" class="snapshot-chip ${boundaryCount ? "is-active" : ""}" data-jump-group="boundaries" title="点击修改禁忌边界">${boundaryCount ? `${boundaryCount}项禁忌` : "无禁忌"}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="点击修改本次目标">${g.endpoint && g.endpoint !== "unknown" ? translateValue(g.endpoint) : "保持原样"}</button>
+          <button type="button" class="snapshot-chip ${boundaryCount ? "is-active" : ""}" data-jump-group="goal-boundaries" title="点击修改拒绝与边界">${boundaryCount ? `${boundaryCount}项边界` : "无边界"}</button>
         </div>
       </div>
     `;
@@ -5583,28 +5873,36 @@ button {
         ${renderParameterScale("context.temperatureRange", "近期气温范围", temperature)}
         ${renderParameterScale("context.occasion", "使用场合", occasion)}
       </div>`;
-    } else if (group === "color") {
-      const fields = [
+    } else if (group === "personal") {
+      const appearanceFields = [
         ["skin", "肤色"], ["hair", "发色"], ["eye", "眼睛颜色"]
       ];
-      content.innerHTML = `<div class="appearance-matrix-wrap">${fields.map(([part, label]) => `
-        <div class="appearance-row-card">
-          <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
-          <div class="appearance-row-scales">
-            ${renderParameterScale(`appearance.${part}Temperature`, "冷暖", parameter(`appearance.${part}Temperature`))}
-            ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`))}
-            ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`))}
+      content.innerHTML = `
+        <div class="input-section">
+          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的冷暖、明度和彩度</span></div>
+          <div class="appearance-matrix-wrap">${appearanceFields.map(([part, label]) => `
+            <div class="appearance-row-card">
+              <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
+              <div class="appearance-row-scales">
+                ${renderParameterScale(`appearance.${part}Temperature`, "冷暖", parameter(`appearance.${part}Temperature`))}
+                ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`))}
+                ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`))}
+              </div>
+            </div>`).join("")}</div>
+        </div>
+        <div class="input-section">
+          <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
+          <div class="field-stack-grid">
+            ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
+            ${renderParameterScale("body.legRatio", "腿身比例", parameter("body.legRatio"))}
+            ${renderParameterScale("body.waistDefinition", "腰线明显程度", parameter("body.waistDefinition"))}
+            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"))}
           </div>
-        </div>`).join("")}</div>`;
-    } else if (group === "body") {
-      content.innerHTML = `<div class="field-stack-grid">
-        ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
-        ${renderParameterScale("body.legRatio", "腿身比例", parameter("body.legRatio"))}
-        ${renderParameterScale("body.waistDefinition", "腰线明显程度", parameter("body.waistDefinition"))}
-        ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"))}
-      </div>`;
-    } else if (group === "face") {
-      content.innerHTML = `<div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型轮廓", parameter("face.shape"))}</div>`;
+        </div>
+        <div class="input-section input-section--face">
+          <div class="input-section-heading"><strong>脸型</strong><span>只影响领口、发型和近脸线条提示，不承担身材判断</span></div>
+          <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型轮廓", parameter("face.shape"))}</div>
+        </div>`;
     } else if (group === "preference") {
       const activeTrend = (state.ruleSet.trendDirections || []).find((item) => item.value === state.input.preference.trendDirection);
       const styleOptions = parameter("preference.style");
@@ -5617,14 +5915,9 @@ button {
         ${state.input.preference.trendDirection !== "none" ? renderOptionScale("preference.trendIntensity", "潮流表达强度", state.input.preference.trendIntensity, parameter("preference.trendIntensity").options) : ""}
         ${activeTrend ? `<div class="trend-input-summary" style="grid-column:1 / -1;"><div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div><p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p><p>${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p></div>` : ""}
       </div>`;
-    } else if (group === "goal") {
+    } else if (group === "goal-boundaries") {
       const endpoint = parameter("goal.endpoint");
       const direction = parameter("goal.direction");
-      content.innerHTML = `<div class="field-stack-grid">
-        ${renderParameterSelect("goal.endpoint", "本次重点调整什么", endpoint)}
-        ${renderParameterSelect("goal.direction", "希望如何调整", direction)}
-      </div>`;
-    } else if (group === "boundaries") {
       const boundaryFields = [
         ["rejectSkirt", "拒绝裙装", "排除所有裙装下装"],
         ["rejectDefinedWaist", "拒绝明显收腰", "排除明确腰位或高腰表达"],
@@ -5633,7 +5926,18 @@ button {
         ["movementFriendly", "行动不能受限", "抬手、行走和坐下保持便利"],
         ["sensitiveTexture", "避免粗糙触感", "排除粗糙贴肤表面"]
       ];
-      content.innerHTML = `<div class="checkbox-grid">${boundaryFields.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div>`;
+      content.innerHTML = `
+        <div class="input-section">
+          <div class="input-section-heading"><strong>本次目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
+          <div class="field-stack-grid">
+            ${renderParameterSelect("goal.endpoint", "本次重点调整什么", endpoint)}
+            ${renderParameterSelect("goal.direction", "希望如何调整", direction)}
+          </div>
+        </div>
+        <div class="input-section">
+          <div class="input-section-heading"><strong>拒绝与边界</strong><span>明确不可接受的方案条件，优先级高于风格偏好</span></div>
+          <div class="checkbox-grid">${boundaryFields.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div>
+        </div>`;
     }
   }
 
@@ -5748,6 +6052,7 @@ button {
   function renderAnalysis(result) {
     const trace = result.trace || [];
     const traceContainer = $("#analysisTrace");
+    if (!traceContainer) return;
 
     if (!trace.length) {
       traceContainer.innerHTML = `<div class="analysis-empty"><p>暂无影响计算结果</p></div>`;
@@ -5940,6 +6245,73 @@ button {
       || null;
   }
 
+  function renderIllustration(illustration, candidate) {
+    const model = illustration || {};
+    const layers = model.layers || [];
+    const colorFor = (kind, fallback) => {
+      const role = (candidate.palette?.roles || []).find((item) => item.garment === kind);
+      return escapeHtml(role?.hex || fallback);
+    };
+    const topLayer = layers.find((layer) => layer.kind === "top") || {};
+    const outerLayer = layers.find((layer) => layer.kind === "outer") || {};
+    const bottomLayer = layers.find((layer) => layer.kind === "bottom") || {};
+    const topColor = colorFor("上装", topLayer.color || "#dedbd1");
+    const outerColor = colorFor("外层", outerLayer.color || "#a8b1af");
+    const bottomColor = colorFor("下装", bottomLayer.color || "#4c5961");
+    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none";
+    const bottomType = bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
+    const sleeve = topLayer.sleeve || candidate.sleeve || "long";
+    const neckline = model.neckline || candidate.neckline || "regular";
+    const waist = model.waist || candidate.waist || "natural";
+    const line = model.line || candidate.line || "balanced";
+    const necklineText = String(neckline);
+    const isOpenNeckline = neckline === "open" || necklineText.includes("开阔") || necklineText.includes("开放");
+    const isSoftNeckline = neckline === "softCurve" || necklineText.includes("柔和") || necklineText.includes("曲线");
+    const armPath = sleeve === "short"
+      ? `<path d="M92 64 L76 91 M128 64 L144 91" fill="none" stroke="${topColor}" stroke-width="13" stroke-linecap="round"/>`
+      : sleeve === "threeQuarter"
+        ? `<path d="M92 64 L73 106 M128 64 L147 106" fill="none" stroke="${topColor}" stroke-width="13" stroke-linecap="round"/>`
+        : `<path d="M92 64 L73 123 M128 64 L147 123" fill="none" stroke="${topColor}" stroke-width="13" stroke-linecap="round"/>`;
+    const necklinePath = isOpenNeckline
+      ? `<path d="M96 78 L110 92 L124 78" fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`
+      : isSoftNeckline
+        ? `<path d="M96 80 Q110 96 124 80" fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`
+        : `<path d="M98 80 Q110 88 122 80" fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`;
+    const waistY = waist === "raised" ? 108 : waist === "defined" ? 126 : 143;
+    const waistMark = waist === "defined"
+      ? `<path d="M84 ${waistY} L136 ${waistY}" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`
+      : waist === "raised"
+        ? `<path d="M87 ${waistY} L133 ${waistY}" stroke="#ffffff" stroke-opacity="0.58" stroke-width="2" stroke-dasharray="4 3"/>`
+        : "";
+    const lineMark = line === "continuous"
+      ? `<path d="M110 96 L110 154" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2"/>`
+      : line === "sectioned"
+        ? `<path d="M87 116 L133 116 M87 138 L133 138" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2"/>`
+        : "";
+    const bottomShape = bottomType === "skirt"
+      ? `<path d="M78 159 L142 159 L157 235 Q110 248 63 235 Z" fill="${bottomColor}"/>`
+      : bottomType === "short"
+        ? `<path d="M80 158 L140 158 L145 206 L114 206 L110 178 L106 206 L75 206 Z" fill="${bottomColor}"/>`
+        : `<path d="M82 158 L138 158 L136 236 L111 236 L108 178 L104 236 L79 236 Z" fill="${bottomColor}"/>`;
+    return `
+      <div class="outfit-illustration" data-illustration-type="${escapeHtml(model.type || "outfit-schematic")}">
+        <svg class="illustration-svg" viewBox="0 0 220 260" role="img" aria-label="${escapeHtml(candidate.title || "穿搭方案效果图")}">
+          <circle cx="110" cy="37" r="18" fill="#e8d2c1"/>
+          <path d="M93 55 L127 55 L143 92 L137 158 L83 158 L77 92 Z" fill="${topColor}"/>
+          ${armPath}
+          ${outerVisible ? `<path d="M88 62 L70 91 L78 166 L142 166 L150 91 L132 62 L125 80 L95 80 Z" fill="${outerColor}" opacity="0.92"/>` : ""}
+          ${bottomShape}
+          <path d="M100 235 L100 248 M120 235 L120 248" stroke="#39434a" stroke-width="7" stroke-linecap="round"/>
+          <path d="M94 250 L105 250 M115 250 L126 250" stroke="#39434a" stroke-width="5" stroke-linecap="round"/>
+          ${necklinePath}
+          ${waistMark}
+          ${lineMark}
+        </svg>
+        <span class="illustration-caption">${escapeHtml(model.layerCount || candidate.layerCount || 1)}层 · ${escapeHtml(model.silhouette || candidate.silhouette || "整体轮廓")} · ${escapeHtml(translateValue(sleeve))}</span>
+      </div>
+    `;
+  }
+
   function renderCandidateCard(cand, index, result) {
     const palette = cand.palette || {};
     const roles = palette.roles || [];
@@ -5962,7 +6334,7 @@ button {
     const familyLabel = familyMap[cand.family] || cand.family || "利落结构";
 
     // Badge and rationale come from the candidate contract instead of card position.
-    const featureBadge = index === 0 ? "基准推荐" : (cand.differenceSummary || "候选方案");
+    const featureBadge = index === 0 ? "基准推荐" : "差异方案";
     const featureClass = index === 0 ? "is-primary" : "is-alt";
 
     const diffRationale = cand.expectedEffect || "按当前输入生成候选组合。";
@@ -5982,6 +6354,8 @@ button {
             ${roles.map((r) => `<span style="background:${escapeHtml(r.hex || "#ccc")};"></span>`).join("")}
           </div>
         </div>
+
+        ${renderIllustration(cand.illustration, cand)}
 
         <h3 class="candidate-title" title="${escapeHtml(cand.name || "")}">
           <span class="candidate-name">${escapeHtml(cand.name || `方案 ${index + 1}`)}</span>
@@ -6164,6 +6538,11 @@ button {
     `).join("");
 
     $("#candidateDetailContent").innerHTML = `
+      <section class="dialog-section dialog-illustration-section">
+        <h3>简易效果图</h3>
+        ${renderIllustration(cand.illustration, cand)}
+      </section>
+
       <section class="dialog-section">
         <h3>完整穿着单品</h3>
         <div class="dialog-garments">${garmentsHtml}</div>
