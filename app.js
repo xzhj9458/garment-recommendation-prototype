@@ -180,21 +180,36 @@
     const c = state.input.context || {};
     const b = state.input.boundaries || {};
     const g = state.input.goal || {};
+    const a = state.input.appearance || {};
+    const body = state.input.body || {};
+    const face = state.input.face || {};
 
-    const tempLabel = c.temperatureRange ? `${c.temperatureRange.replace("_", "-")}°C` : "气温适中";
+    const tempLabel = c.temperatureRange ? `${c.temperatureRange.replace("_", "-")}°C` : "适中气温";
     const occasionLabel = translateValue(c.occasion) || "待确认";
+    const skinToneLabel = a.skinTemperature !== undefined ? scaleLabels.hue[a.skinTemperature] || "标准" : "自然";
+    const bodyPropLabel = body.legRatio !== undefined ? (body.legRatio === 2 ? "长腿" : body.legRatio === 0 ? "偏长身" : "匀称") : "标准比例";
+    const faceLabel = translateValue(face.shape) || "标准脸";
     const styleLabel = translateValue(p.style) || "未限定";
     const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
-    const boundaryCount = Object.values(b).filter(Boolean).length;
+    const goalLabel = g.endpoint && g.endpoint !== "unknown" ? `${translateValue(g.endpoint)}${g.direction === "strengthen" ? "强化" : "调整"}` : "保持原样";
+    const boundaryList = [];
+    if (b.rejectSkirt) boundaryList.push("拒裙");
+    if (b.rejectDefinedWaist) boundaryList.push("拒收腰");
+    if (b.rejectHighContrast) boundaryList.push("拒高对比");
+    if (b.strictCoverage) boundaryList.push("严覆盖");
+    if (b.movementFriendly) boundaryList.push("易活动");
+    if (b.sensitiveTexture) boundaryList.push("亲肤");
+    const boundaryLabel = boundaryList.length ? boundaryList.slice(0, 2).join("·") + (boundaryList.length > 2 ? `等${boundaryList.length}项` : "") : "无边界";
 
     $("#conditionSnapshot").innerHTML = `
       <div class="snapshot-inner">
         <span class="snapshot-label">已选条件</span>
         <div class="snapshot-badges">
-          <button type="button" class="snapshot-chip" data-jump-group="context" title="点击修改气温与场合">${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击修改风格与潮流">${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="点击修改本次目标">${g.endpoint && g.endpoint !== "unknown" ? translateValue(g.endpoint) : "保持原样"}</button>
-          <button type="button" class="snapshot-chip ${boundaryCount ? "is-active" : ""}" data-jump-group="goal-boundaries" title="点击修改拒绝与边界">${boundaryCount ? `${boundaryCount}项边界` : "无边界"}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温与场合">场景: ${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底色与体型脸型">特征: ${escapeHtml(skinToneLabel)}调 · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="本次目标：优先调整方向">目标: ${escapeHtml(goalLabel)}</button>
+          <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="身体与穿着边界">边界: ${escapeHtml(boundaryLabel)}</button>
         </div>
       </div>
     `;
@@ -217,43 +232,43 @@
       const occasion = parameter("context.occasion");
       content.innerHTML = `<div class="input-form-compact">
         ${renderParameterScale("context.temperatureRange", "近期气温范围", temperature)}
-        ${renderParameterScale("context.occasion", "使用场合", occasion)}
+        ${renderParameterScale("context.occasion", "使用场合要求", occasion)}
       </div>`;
     } else if (group === "personal") {
       const appearanceFields = [
-        ["skin", "肤色"], ["hair", "发色"], ["eye", "眼睛颜色"]
+        ["skin", "肤色"], ["hair", "发色"], ["eye", "瞳色"]
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的冷暖倾向、明度和彩度</span></div>
+          <div class="input-section-heading"><strong>底色与色彩</strong><span>根据肤色、发色与瞳色分析冷暖色调、明度与彩度</span></div>
           <div class="appearance-matrix-wrap">${appearanceFields.map(([part, label]) => `
             <div class="appearance-row-card">
               <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
               <div class="appearance-row-scales">
-                ${renderParameterScale(`appearance.${part}Temperature`, "冷暖倾向", parameter(`appearance.${part}Temperature`), "inline-range")}
+                ${renderParameterScale(`appearance.${part}Temperature`, "色调", parameter(`appearance.${part}Temperature`), "inline-range")}
                 ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`), "inline-range")}
                 ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`), "inline-range")}
               </div>
             </div>`).join("")}</div>
         </div>
         <div class="input-section">
-          <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
+          <div class="input-section-heading"><strong>身体轮廓与比例</strong><span>身体纵向比例与横向轮廓特征</span></div>
           <div class="field-stack-grid field-stack-grid--ranges">
-            ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"), "inline-range")}
-            ${renderParameterScale("body.legRatio", "上下身比例", parameter("body.legRatio"), "inline-range")}
-            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度", parameter("body.waistDefinition"), "inline-range")}
-            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"), "inline-range")}
+            ${renderParameterScale("body.heightPresence", "纵向高度", parameter("body.heightPresence"), "inline-range")}
+            ${renderParameterScale("body.legRatio", "腿身分布", parameter("body.legRatio"), "inline-range")}
+            ${renderParameterScale("body.waistDefinition", "腰线特征", parameter("body.waistDefinition"), "inline-range")}
+            ${renderParameterScale("body.shoulderHipBalance", "横向轮廓", parameter("body.shoulderHipBalance"), "inline-range")}
           </div>
         </div>
         <div class="input-section input-section--face">
-          <div class="input-section-heading"><strong>脸型</strong><span>只影响领口、发型和近脸线条提示，不承担身材判断</span></div>
-          <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型轮廓", parameter("face.shape"))}</div>
+          <div class="input-section-heading"><strong>脸型轮廓</strong><span>影响领口方向与近脸修饰</span></div>
+          <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型特征", parameter("face.shape"))}</div>
         </div>`;
     } else if (group === "preference") {
       const styleOptions = parameter("preference.style");
       const formalityOptions = parameter("preference.formality");
       const trendOptions = [{ value: "none", label: "不限定" }, ...(state.ruleSet.trendDirections || []).filter((item) => item.enabled !== false).map((item) => ({ value: item.value, label: item.name }))];
-      content.innerHTML = `<div class="field-stack-grid--preference">
+      content.innerHTML = `<div class="preference-flow-grid field-stack-grid--preference">
         ${renderParameterScale("preference.style", "风格方向", styleOptions, "choice-flow")}
         ${renderParameterScale("preference.formality", "正式程度偏好", formalityOptions)}
         ${renderTrendDirectionScale("preference.trendDirection", "潮流方向", state.input.preference.trendDirection, trendOptions)}

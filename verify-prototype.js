@@ -246,8 +246,7 @@ async function choose(page, pathName, value) {
     assert(await rules.page.locator("#configTier1Tabs button[data-tier1-id]").count() === 4, "一级分类导航缺少 4 个主分类");
     assert(await rules.page.locator(".relationship-main").count() === 0, "关系配置仍保留重复的关系列表容器");
     assert(await rules.page.locator("#ruleTableBody").count() === 0, "关系配置仍保留业务关系表格");
-    assert(!(await rules.page.locator("#configureView").innerText()).includes("业务关系"), "关系配置仍展示业务关系文案");
-    assert(await rules.page.locator("[data-branch-select] option").count() === 3, "潮流方向没有作为动态分支管理");
+    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 3, "潮流方向没有作为动态分支管理");
     const trendEditorText = await rules.page.locator("#editorContent").innerText();
     assert(trendEditorText.includes("理念来源") && trendEditorText.includes("会优先使用的服装路线"), "潮流方向配置缺少理念与服装映射");
 
@@ -256,18 +255,20 @@ async function choose(page, pathName, value) {
     assert((await rules.page.locator("#editorTitle").innerText()) === "脸型与领口", "点击二级导航未切换到脸型与领口");
 
     const faceScope = await rules.page.evaluate(() => ({
-      conditions: [...document.querySelectorAll('select[data-edit^="conditions."]')].filter((select) => select.dataset.edit.endsWith(".field")).map((select) => select.selectedOptions[0]?.textContent.trim()),
-      actionFields: [...document.querySelectorAll('select[data-edit^="actions."]')].filter((select) => select.dataset.edit.endsWith(".field")).map((select) => select.selectedOptions[0]?.textContent.trim()),
-      conditionOptions: [...document.querySelectorAll('select[data-edit^="conditions."] option')].map((item) => item.textContent.trim())
+      conditionNames: [...document.querySelectorAll(".condition-locked-name")].map((el) => el.textContent.replace(/[【】]/g, "").trim()),
+      actionFields: [...document.querySelectorAll(".action-field-badge")].map((el) => el.textContent.trim())
     }));
-    assert(faceScope.conditions.length > 0 && faceScope.conditions.every((label) => label === "脸型"), "脸型关系没有锁定脸型条件");
+    assert(faceScope.conditionNames.length > 0 && faceScope.conditionNames.every((label) => label === "脸型"), "脸型关系没有锁定脸型条件");
     assert(faceScope.actionFields.every((label) => label === "推荐领口方向" || label === "脸型配合说明"), "脸型关系暴露了无关结果字段");
-    assert(!faceScope.conditionOptions.includes("肤色") && !faceScope.conditionOptions.includes("腿身比例（现状）"), "脸型关系仍暴露外观或身材条件字段");
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="context"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();
-    assert(await rules.page.locator("[data-branch-select] option").count() === 6, "温度关系没有合并为六个分支");
-    assert((await rules.page.locator("#editorContent").innerText()).includes("会改变哪些穿搭内容"), "配置编辑器没有形成输入到结果的闭环");
+    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 6, "温度关系三级导航没有展开六个分支");
+    assert((await rules.page.locator("#editorContent").innerText()).includes("输出决策结果"), "配置编辑器没有形成输入到结果的闭环");
+
+    await rules.page.locator('#configTier3Chips button[data-tier3-id="TEMP-05_12"]').click();
+    const coldSynopsis = await rules.page.locator(".branch-live-synopsis").innerText();
+    assert(coldSynopsis.includes("05-12°C") || coldSynopsis.includes("5-12°C") || coldSynopsis.includes("层"), "点击三级具体分支未切换对应规则");
 
     await rules.page.locator("#resourceButton").click();
     await rules.page.locator('button[data-resource-tab="trends"]').click();

@@ -238,6 +238,26 @@
       });
     }
 
+    const tier3Nav = $("#configTier3Chips");
+    if (tier3Nav) {
+      tier3Nav.addEventListener("click", (event) => {
+        const addBtn = event.target.closest("[data-add-branch-tier3]");
+        if (addBtn) {
+          duplicateRule();
+          return;
+        }
+        const chip = event.target.closest("button[data-tier3-id]");
+        if (!chip) return;
+        const business = businessRelationById(state.selectedId);
+        const relation = activeAtomicRelation(business);
+        if (relation) {
+          state.branchSelection[relation.id] = chip.dataset.tier3Id;
+        }
+        renderRelationPicker();
+        renderEditor();
+      });
+    }
+
     $("#editorContent").addEventListener("change", handleEditorChange);
     $("#editorContent").addEventListener("click", handleEditorClick);
 
@@ -584,15 +604,34 @@
       }).join("");
     }
 
+    const allRels = businessRelations();
     const tier2Nav = $("#configTier2Chips");
     if (tier2Nav) {
-      const allRels = businessRelations();
       tier2Nav.innerHTML = currentCat.relations.map((relItem) => {
         const fullRel = allRels.find((r) => r.id === relItem.id);
         const isActive = relItem.id === state.selectedId;
         const branchCount = fullRel?.branchCount || 0;
         return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${branchCount}个分支</small></button>`;
       }).join("");
+    }
+
+    const tier3Nav = $("#configTier3Chips");
+    if (tier3Nav) {
+      const business = businessRelationById(state.selectedId);
+      const relation = activeAtomicRelation(business);
+      const branches = relation?.rules || (relation?.rule ? [relation.rule] : []);
+      const activeBranch = activeRule(relation);
+
+      tier3Nav.innerHTML = branches.map((branch) => {
+        const isActive = branch.id === activeBranch?.id;
+        const isEnabled = branch.enabled !== false;
+        const summary = ruleBranchSummary(branch, relation?.type);
+        return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn ${isActive ? "is-active" : ""} ${isEnabled ? "" : "is-disabled"}" data-tier3-id="${escapeHtml(branch.id)}" title="${escapeHtml(branch.name)}: ${escapeHtml(summary)}">
+          <span class="chip-status-dot ${isEnabled ? "is-active" : ""}"></span>
+          <span>${escapeHtml(branch.name)}</span>
+          <small>${escapeHtml(summary)}</small>
+        </button>`;
+      }).join("") + `<button type="button" class="config-tier3-add-btn" data-add-branch-tier3 title="新增分支">＋ 新增分支</button>`;
     }
   }
 
@@ -614,53 +653,21 @@
     const editable = activeRule(relation);
     editable.analysis ||= { conclusion: editable.name, direction: editable.reason || "" };
     const memberSelector = business.mappingMembers.length > 1 ? renderMemberSelector(business, relation) : "";
-    const branchBar = relation.rules?.length ? renderBranchBar(relation, editable) : "";
     const editableRelation = { ...relation, rule: editable };
-    $("#editorContent").innerHTML = memberSelector + branchBar + renderMappingEditor(editableRelation, business) + renderCalculationDetails(business);
+    $("#editorContent").innerHTML = memberSelector + renderMappingEditor(editableRelation, business) + renderCalculationDetails(business);
   }
 
   function renderMemberSelector(business, relation) {
     return `<section class="member-selector"><label><span>配置内容</span><select data-member-select>${business.mappingMembers.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === relation.id ? "selected" : ""}>${escapeHtml(item.rule.name)}</option>`).join("")}</select></label></section>`;
   }
 
-  function renderBranchBar(relation, editable) {
-    const branches = relation.rules || [];
-    return `
-      <section class="branch-bar-section">
-        <div class="branch-bar-header">
-          <div class="branch-bar-label">
-            <span>匹配分支概览</span>
-            <strong>共 ${branches.length} 个分支</strong>
-          </div>
-          <button type="button" class="text-button" id="addBranchBtn" title="新增匹配分支">＋ 新增分支</button>
-        </div>
-        <div class="branch-segmented-bar" role="tablist" aria-label="分支切换">
-          ${branches.map((rule) => {
-            const isActive = rule.id === editable.id;
-            const isEnabled = rule.enabled !== false;
-            const summary = ruleBranchSummary(rule, relation.type);
-            return `
-              <button type="button" role="tab" aria-selected="${isActive}" class="branch-chip ${isActive ? "is-active" : ""} ${isEnabled ? "is-enabled" : "is-disabled"}" data-branch-chip="${escapeHtml(rule.id)}" title="${escapeHtml(rule.name)}">
-                <span class="chip-status-dot ${isEnabled ? "is-active" : ""}"></span>
-                <strong class="chip-name">${escapeHtml(rule.name)}</strong>
-                <small class="chip-summary">${escapeHtml(summary)}</small>
-              </button>
-            `;
-          }).join("")}
-        </div>
-        <select data-branch-select hidden>
-          ${branches.map((rule) => `<option value="${escapeHtml(rule.id)}" ${rule.id === editable.id ? "selected" : ""}>${escapeHtml(rule.name)}</option>`).join("")}
-        </select>
-      </section>
-    `;
-  }
-
   function ruleBranchSummary(rule, type) {
+    if (!rule) return "默认处理";
     if (type === "trend") return rule.coreIdea?.slice(0, 16) || "潮流表达";
     if (type === "outfit") return rule.result?.silhouette || "款式组合";
     const actions = rule.actions || [];
     if (!actions.length) return "默认处理";
-    return actions.slice(0, 2).map((a) => `${resultDefinition(a.field)?.name || a.field}: ${a.value}`).join(" · ");
+    return actions.slice(0, 3).map((a) => `${resultDefinition(a.field)?.name || a.field}: ${a.value}`).join(" · ");
   }
 
   function renderEditorBase(relation) {
@@ -685,7 +692,20 @@
     const resultFields = scopedFields(state.ruleSet.resultFields, business.scope?.result);
     const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule, resultFields);
 
+    const outputsList = (business.outputs || []).map((o) => `<span class="scope-pill">${escapeHtml(o)}</span>`).join("");
+    const liveSynopsis = ruleBranchSummary(rule, relation.type);
+
     return `
+      <section class="relation-scope-banner">
+        <span class="scope-label">控制输出维度：</span>
+        <div class="scope-pill-list">${outputsList || `<span class="scope-pill">全套穿着方案</span>`}</div>
+      </section>
+
+      <section class="branch-live-synopsis">
+        <span class="synopsis-label">当前【${escapeHtml(rule.name)}】匹配结果：</span>
+        <strong class="synopsis-content">${escapeHtml(liveSynopsis)}</strong>
+      </section>
+
       ${renderEditorBase(relation)}
       <article class="natural-rule-card">
         <section class="rule-clause rule-clause--when">
@@ -705,7 +725,7 @@
         <section class="rule-clause rule-clause--then">
           <div class="clause-heading">
             <span class="clause-prefix">THEN</span>
-            <strong>执行穿搭结果处理 · 会改变哪些穿搭内容</strong>
+            <strong>输出决策结果 · 决定具体指标与要求</strong>
           </div>
           ${stepTwo}
         </section>
@@ -713,9 +733,9 @@
         <section class="rule-clause rule-clause--why">
           <div class="clause-heading">
             <span class="clause-prefix">WHY</span>
-            <strong>规则制定理由与业务依据</strong>
+            <strong>业务依据与设计原理说明</strong>
           </div>
-          ${textareaField("补充说明与设计原理", "reason", rule.reason || "")}
+          ${textareaField("设计理由与穿搭逻辑", "reason", rule.reason || "")}
         </section>
       </article>
       ${renderSharedInfluence(business)}
@@ -746,32 +766,38 @@
 
   function renderConditionRow(condition, index, definitions) {
     const definition = conditionDefinition(condition.field);
-    return `<div class="condition-row">
-      <span class="clause-sub-tag">IF</span>
-      ${groupedSelect("输入或分析项", `conditions.${index}.field`, condition.field, definitions)}
-      ${selectField("判断逻辑", `conditions.${index}.operator`, condition.operator, [["eq", "等于 (eq)"], ["neq", "不等于 (neq)"], ["gt", "高于 (gt)"], ["gte", "不低于 (gte)"], ["lt", "低于 (lt)"], ["lte", "不高于 (lte)"]])}
-      ${typedValueField("设定值", `conditions.${index}.value`, condition.value, definition)}
-      <button class="icon-button is-danger" type="button" data-remove-condition="${index}" title="删除条件" aria-label="删除条件">×</button>
+    const fieldName = definition?.name || condition.field;
+    const opText = condition.operator === "neq" ? "不等于" : condition.operator === "gt" ? "高于" : condition.operator === "gte" ? "不低于" : condition.operator === "lt" ? "低于" : condition.operator === "lte" ? "不高于" : "等于";
+    return `<div class="natural-condition-row">
+      <span class="clause-tag">IF</span>
+      <span class="condition-prefix-label">当</span>
+      <strong class="condition-locked-name">【${escapeHtml(fieldName)}】</strong>
+      <span class="condition-op-badge">${escapeHtml(opText)}</span>
+      <div class="condition-val-control">${typedValueField("", `conditions.${index}.value`, condition.value, definition)}</div>
+      <span class="condition-suffix-label">时</span>
+      ${index > 0 ? `<button class="icon-button is-danger" type="button" data-remove-condition="${index}" title="删除条件" aria-label="删除条件">×</button>` : ""}
     </div>`;
   }
 
   function renderDecisionActions(rule, definitions) {
     return `
       <div class="action-heading">
-        <strong>结果动作列表</strong>
-        <button type="button" class="text-button" data-add-action>＋ 添加动作处理</button>
+        <strong>输出决策项列表</strong>
+        <button type="button" class="secondary-button action-add-btn" data-add-action>＋ 添加输出决策项</button>
       </div>
-      <div class="action-list">
+      <div class="natural-action-list">
         ${(rule.actions || []).map((action, index) => {
           const definition = resultDefinition(action.field);
-          return `<div class="action-row">
-            <span class="clause-sub-tag is-then">SET</span>
-            ${selectField("作用方式", `actions.${index}.type`, action.type, [["SET", "强制设定为 (SET)"], ["REQUIRE", "必须满足 (REQUIRE)"], ["FORBID", "排除该值 (FORBID)"], ["FILTER", "过滤该项 (FILTER)"], ["BOOST", "提升优先级 (BOOST)"], ["ADD", "增加候选 (ADD)"]])}
-            ${groupedSelect("影响内容", `actions.${index}.field`, action.field, definitions)}
-            ${typedValueField("设定具体值", `actions.${index}.value`, action.value, definition)}
-            <button class="icon-button is-danger" type="button" data-remove-action="${index}" title="删除处理" aria-label="删除处理">×</button>
+          const fieldName = definition?.name || action.field;
+          return `<div class="natural-action-row">
+            <span class="action-field-badge">${escapeHtml(fieldName)}</span>
+            <span class="action-arrow" aria-hidden="true">➔</span>
+            <div class="action-value-control">
+              ${typedValueField("", `actions.${index}.value`, action.value, definition)}
+            </div>
+            <button class="icon-button is-danger" type="button" data-remove-action="${index}" title="删除该输出项" aria-label="删除该输出项">×</button>
           </div>`;
-        }).join("") || `<p class="muted-copy">暂无动作，点击上方添加处理动作。</p>`}
+        }).join("") || `<p class="muted-copy">暂无动作，点击上方“＋ 添加输出决策项”。</p>`}
       </div>
     `;
   }
@@ -929,8 +955,10 @@
     if (event.target.closest("[data-add-action]") && relation.type === "decision") {
       editable.actions ||= [];
       const allowed = scopedFields(state.ruleSet.resultFields, business.scope?.result);
-      const first = allowed[0];
-      editable.actions.push({ type: "SET", field: first?.id || "requirements.material", value: first?.options?.[0]?.[0] ?? "" });
+      const existingFields = new Set(editable.actions.map(a => a.field));
+      const unassigned = allowed.find(f => !existingFields.has(f.id)) || allowed[0] || state.ruleSet.resultFields[0];
+      const defaultVal = unassigned?.options?.[0]?.[0] ?? (unassigned?.valueType === "boolean" ? true : unassigned?.valueType === "number" ? 1 : "");
+      editable.actions.push({ type: "SET", field: unassigned?.id || "requirements.material", value: defaultVal });
       markDirty();
       renderEditor();
       return;
