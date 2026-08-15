@@ -189,7 +189,7 @@
       return [
         {
           id: `appearance.${part}Temperature`,
-          name: `${labels[part]}冷暖`,
+          name: `${labels[part]}冷暖倾向`,
           group: "外观色彩",
           type: "scale",
           required: false,
@@ -237,7 +237,7 @@
     },
     {
       id: "body.legRatio",
-      name: "腿身比例（现状）",
+      name: "上下身比例",
       group: "身材比例",
       type: "scale",
       required: false,
@@ -253,7 +253,7 @@
     },
     {
       id: "body.waistDefinition",
-      name: "腰部曲线明显度（现状）",
+      name: "腰部曲线明显度",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -269,7 +269,7 @@
     },
     {
       id: "body.shoulderHipBalance",
-      name: "肩胯轮廓关系（现状）",
+      name: "肩胯轮廓关系",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -713,7 +713,7 @@
     { id: "requirements.texture", name: "贴肤触感", group: "身体边界", options: [["regular", "常规"], ["smooth", "避免粗糙"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.waist", name: "推荐服装腰位", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.line", name: "服装线条走向", group: "服装版型", options: [["balanced", "自然线条"], ["continuous", "纵向连贯"], ["sectioned", "分段层次"]], actions: ["SET"] },
-    { id: "requirements.colorTemperature", name: "服装色温", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
+    { id: "requirements.colorTemperature", name: "服装冷暖倾向", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
     { id: "requirements.colorContrast", name: "配色明度对比", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
     { id: "requirements.colorContrastMax", name: "配色对比上限", group: "配色", options: [["低", "不高于低"], ["中等", "不高于中等"], ["高", "不限制"]], actions: ["SET"] },
     { id: "requirements.colorChroma", name: "配色彩度", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
@@ -726,7 +726,7 @@
   ];
 
   const derivedFieldDefinitions = [
-    ["derived.color.temperature.label", "整体色温", ["冷", "中间偏冷", "中间", "中间偏暖", "暖"]],
+    ["derived.color.temperature.label", "整体冷暖倾向", ["冷", "中间偏冷", "中间", "中间偏暖", "暖"]],
     ["derived.color.contrast.label", "外观明度对比", ["低", "中等", "高"]],
     ["derived.color.chroma.label", "整体彩度", ["低", "中等", "高"]],
     ["derived.body.slenderness.label", "整体修长表现", ["小巧", "中等", "修长"]],
@@ -993,7 +993,7 @@
     })),
     ...colorTemperatureBands.map((band, index) => ({
       id: `COLOR-TEMP-${index}`,
-      name: `${band.label}服装色温倾向`,
+      name: `${band.label}服装冷暖倾向`,
       group: "色彩",
       enabled: true,
       kind: "soft",

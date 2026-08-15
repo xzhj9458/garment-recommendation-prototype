@@ -82,7 +82,7 @@ async function choose(page, pathName, value) {
     const inlineRangeState = await demo.page.evaluate(() => ({
       count: document.querySelectorAll(".appearance-matrix-wrap .range-form-item--inline").length,
       rowHeights: [...document.querySelectorAll(".appearance-matrix-wrap .range-inline-row")].map((item) => item.getBoundingClientRect().height),
-      hasLegacyLabel: document.querySelector(".appearance-matrix-wrap")?.innerText.includes("冷暖"),
+      hasLegacyLabel: [...document.querySelectorAll(".appearance-matrix-wrap .range-inline-label")].some((item) => item.textContent.trim() === "冷暖"),
       radioCount: document.querySelectorAll(".appearance-matrix-wrap .range-step[role=radio]").length,
       checkedCount: document.querySelectorAll(".appearance-matrix-wrap .range-step[aria-checked=true]").length
     }));
@@ -141,21 +141,36 @@ async function choose(page, pathName, value) {
         display: getComputedStyle(stack).display,
         direction: getComputedStyle(stack).flexDirection,
         styleButtons: document.querySelectorAll('[data-input-path="preference.style"]').length,
-        trendCards: document.querySelectorAll('[data-input-path="preference.trendDirection"].trend-option-card').length
+        trendCards: document.querySelectorAll('[data-input-path="preference.trendDirection"].trend-option-card').length,
+        styleColumns: getComputedStyle(document.querySelector(".option-scale--choice-flow .pill-segment-control")).gridTemplateColumns.split(" ").length,
+        trendColumns: getComputedStyle(document.querySelector(".trend-option-list")).gridTemplateColumns.split(" ").length,
+        trendDescriptions: document.querySelectorAll(".trend-option-card small").length
       };
     });
     assert(preferenceLayout.display === "flex" && preferenceLayout.direction === "column", "风格偏好没有改为通栏单列流");
     assert(preferenceLayout.styleButtons >= 5 && preferenceLayout.trendCards >= 4, "风格偏好通栏选项没有完整渲染");
+    assert(preferenceLayout.styleColumns === 4 && preferenceLayout.trendColumns === 4, "风格和潮流选项没有使用统一的四列网格");
+    assert(preferenceLayout.trendDescriptions === 0, "潮流方向按钮仍包含输入区说明文案");
     assert(await demo.page.locator('button[data-input-path="preference.trendDirection"]').count() >= 4, "潮流方向没有读取动态资料库");
     assert(await demo.page.locator('button[data-input-path="preference.trendIntensity"]').count() === 2, "选定潮流后没有表达强度");
+    const summaryBeforeTrend = await demo.page.evaluate(() => ({
+      snapshotHeight: document.querySelector("#conditionSnapshot").getBoundingClientRect().height,
+      tabsTop: document.querySelector("#inputTabs").getBoundingClientRect().top,
+      panelHeight: document.querySelector(".demo-column-input").getBoundingClientRect().height
+    }));
     const beforeTrend = await demo.page.locator(".candidate-card h3").allInnerTexts();
     await choose(demo.page, "preference.trendDirection", "utilityLayering");
     await choose(demo.page, "preference.trendIntensity", "clear");
+    const summaryAfterTrend = await demo.page.evaluate(() => ({
+      snapshotHeight: document.querySelector("#conditionSnapshot").getBoundingClientRect().height,
+      tabsTop: document.querySelector("#inputTabs").getBoundingClientRect().top,
+      panelHeight: document.querySelector(".demo-column-input").getBoundingClientRect().height
+    }));
+    assert(Math.abs(summaryBeforeTrend.snapshotHeight - summaryAfterTrend.snapshotHeight) <= 1 && Math.abs(summaryBeforeTrend.tabsTop - summaryAfterTrend.tabsTop) <= 1 && Math.abs(summaryBeforeTrend.panelHeight - summaryAfterTrend.panelHeight) <= 1, "已选条件文案变化导致左侧模块高度跳动");
     const afterTrend = await demo.page.locator(".candidate-card h3").allInnerTexts();
     assert(JSON.stringify(beforeTrend) !== JSON.stringify(afterTrend), "切换潮流方向只改变文案，没有改变服装组合");
     assert(afterTrend[0].includes("工装") || afterTrend[0].includes("多口袋"), "轻机能层次没有落实到具体服装");
-    assert((await demo.page.locator(".trend-input-summary").innerText()).includes("城市机能") || (await demo.page.locator(".trend-input-summary").innerText()).includes("功能细节"), "潮流输入缺少核心理念摘要");
-    assert((await demo.page.locator(".trend-input-summary").innerText()).includes("优先服装路线"), "潮流输入缺少优先服装路线");
+    assert(await demo.page.locator(".trend-input-summary").count() === 0, "潮流输入仍显示不属于条件选择的说明摘要");
     await choose(demo.page, "preference.trendDirection", "none");
     assert(await demo.page.locator('button[data-input-path="preference.trendIntensity"]').count() === 0, "不限定潮流时仍显示表达强度");
 

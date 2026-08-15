@@ -36,7 +36,7 @@
       id: "color",
       name: "颜色搭配",
       fields: [
-        { id: "temperature", name: "色温" },
+        { id: "temperature", name: "冷暖倾向" },
         { id: "contrast", name: "明度对比" },
         { id: "chroma", name: "彩度" },
         { id: "palette", name: "配色方案" },
@@ -54,8 +54,8 @@
   const businessDefinitions = [
     { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期温度"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
     { id: "occasion", name: "场合要求", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
-    { id: "color", name: "整体色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装色温", "明度对比", "彩度", "配色方案"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
-    { id: "body", name: "身材与比例", topics: ["身材与比例"], inputs: ["身高表现", "腿身比例", "腰线", "肩胯关系"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
+    { id: "color", name: "整体色彩", topics: ["整体色彩"], inputs: ["肤色", "发色", "眼睛颜色"], outputs: ["服装冷暖倾向", "明度对比", "彩度", "配色方案"], overview: { color: { temperature: "strong", contrast: "strong", chroma: "medium", palette: "strong", placement: "medium" } } },
+    { id: "body", name: "身材与比例", topics: ["身材与比例"], inputs: ["身高表现", "上下身比例", "腰部曲线明显度", "肩胯轮廓关系"], outputs: ["外轮廓", "上下长度", "腰位", "线条方向", "服装量感"], overview: { style: { silhouette: "medium", length: "strong", waist: "strong", volume: "medium", details: "light" } } },
     { id: "face", name: "脸型与领口", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: { neckline: "strong" } } },
     { id: "style", name: "风格方向", topics: ["风格方向"], inputs: ["风格方向"], outputs: ["外轮廓", "服装量感", "款式细节", "表面纹理"], overview: { style: { silhouette: "strong", volume: "strong", details: "strong" } } },
     { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { wear: { formality: "strong" }, style: { silhouette: "medium", details: "medium" } } },
@@ -340,7 +340,7 @@
     const names = {
       TEMP: "近期温度与穿着层次",
       OCCASION: "场合与穿着要求",
-      "COLOR-TEMP": "整体色温与服装色温",
+      "COLOR-TEMP": "整体冷暖倾向与服装冷暖倾向",
       "COLOR-CONTRAST": "明度对比与配色层次",
       "COLOR-CHROMA": "整体彩度与服装彩度",
       "FACE-SHAPE": "脸型与领口方向",

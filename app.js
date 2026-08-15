@@ -161,8 +161,7 @@
     const targets = [
       $("#candidateGrid"),
       $("#candidateTableView"),
-      $(".candidate-mobile-compare"),
-      $("#conditionSnapshot")
+      $(".candidate-mobile-compare")
     ];
     targets.forEach((el) => {
       if (!el) return;
@@ -226,12 +225,12 @@
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的色温、明度和彩度</span></div>
+          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的冷暖倾向、明度和彩度</span></div>
           <div class="appearance-matrix-wrap">${appearanceFields.map(([part, label]) => `
             <div class="appearance-row-card">
               <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
               <div class="appearance-row-scales">
-                ${renderParameterScale(`appearance.${part}Temperature`, "色温", parameter(`appearance.${part}Temperature`), "inline-range")}
+                ${renderParameterScale(`appearance.${part}Temperature`, "冷暖倾向", parameter(`appearance.${part}Temperature`), "inline-range")}
                 ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`), "inline-range")}
                 ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`), "inline-range")}
               </div>
@@ -240,10 +239,10 @@
         <div class="input-section">
           <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
           <div class="field-stack-grid field-stack-grid--ranges">
-            ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
-            ${renderParameterScale("body.legRatio", "腿身比例（现状）", parameter("body.legRatio"))}
-            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度（现状）", parameter("body.waistDefinition"))}
-            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系（现状）", parameter("body.shoulderHipBalance"))}
+            ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"), "inline-range")}
+            ${renderParameterScale("body.legRatio", "上下身比例", parameter("body.legRatio"), "inline-range")}
+            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度", parameter("body.waistDefinition"), "inline-range")}
+            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"), "inline-range")}
           </div>
         </div>
         <div class="input-section input-section--face">
@@ -251,7 +250,6 @@
           <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型轮廓", parameter("face.shape"))}</div>
         </div>`;
     } else if (group === "preference") {
-      const activeTrend = (state.ruleSet.trendDirections || []).find((item) => item.value === state.input.preference.trendDirection);
       const styleOptions = parameter("preference.style");
       const formalityOptions = parameter("preference.formality");
       const trendOptions = [{ value: "none", label: "不限定" }, ...(state.ruleSet.trendDirections || []).filter((item) => item.enabled !== false).map((item) => ({ value: item.value, label: item.name }))];
@@ -260,7 +258,6 @@
         ${renderParameterScale("preference.formality", "正式程度偏好", formalityOptions)}
         ${renderTrendDirectionScale("preference.trendDirection", "潮流方向", state.input.preference.trendDirection, trendOptions)}
         ${state.input.preference.trendDirection !== "none" ? renderOptionScale("preference.trendIntensity", "潮流表达强度", state.input.preference.trendIntensity, parameter("preference.trendIntensity").options) : ""}
-        ${activeTrend ? renderTrendSummary(activeTrend) : ""}
       </div>`;
     } else if (group === "goal-boundaries") {
       const endpoint = parameter("goal.endpoint");
@@ -299,7 +296,6 @@
     const selected = normalized.find((option) => String(option.value) === String(value)) || normalized[0];
     const [minLabel, maxLabel] = rangeEndpointLabels(path, normalized);
     const isInline = variant === "inline-range";
-    const isEndpoint = String(value) === String(normalized[0]?.value) || String(value) === String(normalized[normalized.length - 1]?.value);
     const rangeMarkup = `<div class="range-scale" role="radiogroup" aria-label="${escapeHtml(label)}">
       <span class="range-endpoint" aria-hidden="true">${escapeHtml(minLabel)}</span>
       <div class="range-track">
@@ -311,9 +307,8 @@
       <span class="range-endpoint" aria-hidden="true">${escapeHtml(maxLabel)}</span>
     </div>`;
     if (isInline) {
-      const currentMarkup = isEndpoint ? "" : `<span class="range-current" title="当前：${escapeHtml(selected?.label || "需确认")}">${escapeHtml(selected?.label || "需确认")}</span>`;
       return `<div class="form-item range-form-item range-form-item--inline">
-        <div class="range-inline-row"><span class="range-inline-label">${escapeHtml(label)}</span>${rangeMarkup}${currentMarkup}</div>
+        <div class="range-inline-row"><span class="range-inline-label">${escapeHtml(label)}</span>${rangeMarkup}</div>
       </div>`;
     }
     return `<div class="form-item range-form-item">
@@ -325,10 +320,10 @@
   function rangeEndpointLabels(path, options) {
     const overrides = {
       body: {
-        heightPresence: ["偏矮", "偏高"],
-        legRatio: ["腿短", "腿长"],
+        heightPresence: ["小巧", "高挑"],
+        legRatio: ["上身偏长", "下身偏长"],
         waistDefinition: ["不明显", "明显"],
-        shoulderHipBalance: ["偏胯", "偏肩"]
+        shoulderHipBalance: ["肩部偏明显", "胯部偏明显"]
       }
     };
     const [scope, field] = path.split(".");
@@ -346,24 +341,12 @@
 
   function renderTrendDirectionScale(path, label, value, options) {
     const normalized = options.map((option) => Array.isArray(option) ? { value: option[0], label: option[1] } : option);
-    const directions = state.ruleSet.trendDirections || [];
     return `<div class="form-item option-scale--trend-flow">
-      <div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(normalized.find((option) => String(option.value) === String(value))?.label || "不限定")}</strong></div>
+      <div class="form-item-header"><label>${escapeHtml(label)}</label></div>
       <div class="trend-option-list">
-        ${normalized.map((option) => {
-          const trend = directions.find((item) => item.value === option.value);
-          return `<button type="button" class="trend-option-card ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}">
-            <strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(trend?.reference || (option.value === "none" ? "保持经典稳妥路线" : "潮流方向"))}</small>
-          </button>`;
-        }).join("")}
+        ${normalized.map((option) => `<button type="button" class="trend-option-card ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" aria-pressed="${String(option.value) === String(value) ? "true" : "false"}"><strong>${escapeHtml(option.label)}</strong></button>`).join("")}
       </div>
     </div>`;
-  }
-
-  function renderTrendSummary(activeTrend) {
-    const familyLabels = { straight: "简洁直线", tailored: "利落结构", soft: "柔和收放", relaxed: "自然留量", street: "街头箱型", retro: "复古收放" };
-    const families = (activeTrend.result?.families || []).map((family) => familyLabels[family] || family);
-    return `<div class="trend-input-summary"><div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div><p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p><p class="trend-route"><span>优先服装路线</span>${families.map((family) => `<b>${escapeHtml(family)}</b>`).join("")}</p><p class="trend-influence-list">${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p></div>`;
   }
 
   function renderParameterSelect(path, label, definition) {

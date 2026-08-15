@@ -350,7 +350,9 @@ button {
 .demo-column-input {
   position: sticky;
   top: calc(var(--header-height) + 14px);
+  height: calc(100vh - var(--header-height) - 28px);
   max-height: calc(100vh - var(--header-height) - 28px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -366,6 +368,7 @@ button {
 .input-surface {
   position: static;
   max-height: none;
+  min-height: 0;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -446,18 +449,24 @@ button {
 }
 
 .condition-snapshot {
-  padding: 6px 14px 4px;
+  height: 58px;
+  box-sizing: border-box;
+  padding: 6px 14px;
   background: transparent;
+  overflow: hidden;
 }
 
 .snapshot-inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 4px 8px;
+  height: 44px;
 }
 
 .snapshot-label {
+  align-self: start;
+  padding-top: 3px;
   color: var(--green-dark);
   font-size: 10px;
   font-weight: 700;
@@ -465,12 +474,18 @@ button {
 }
 
 .snapshot-badges {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 20px;
+  min-width: 0;
   gap: 4px 6px;
 }
 
 .snapshot-chip {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   padding: 2px 8px;
   border: 1px solid var(--green-border);
   border-radius: var(--radius-pill);
@@ -478,6 +493,8 @@ button {
   background: var(--surface);
   font-size: 10px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: all 120ms ease;
 }
 
@@ -730,7 +747,7 @@ button {
 
 .range-inline-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   gap: 5px;
   min-height: 32px;
@@ -787,6 +804,10 @@ button {
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.range-form-item--inline .range-current {
+  display: none;
 }
 
 .range-endpoint {
@@ -849,23 +870,24 @@ button {
 }
 
 .option-scale--choice-flow .pill-segment-control {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 0;
   background: transparent;
 }
 
 .option-scale--choice-flow .pill-segment-control button {
-  flex: 1 1 84px;
+  width: 100%;
+  min-width: 0;
   min-height: 32px;
   padding: 5px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
   background: var(--surface-muted);
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .option-scale--choice-flow .pill-segment-control button.is-active {
@@ -876,18 +898,20 @@ button {
 
 .trend-option-list {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
 .trend-option-card {
   min-width: 0;
+  min-height: 32px;
   display: grid;
-  gap: 2px;
-  padding: 8px 10px;
+  place-items: center;
+  padding: 5px 6px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--surface-muted);
-  text-align: left;
+  text-align: center;
 }
 
 .trend-option-card:hover,
@@ -897,14 +921,16 @@ button {
 }
 
 .trend-option-card strong {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text);
-  font-size: 11px;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .trend-option-card small {
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.35;
+  display: none;
 }
 
 .trend-route {
@@ -2968,6 +2994,7 @@ button {
 
   .demo-column-input {
     position: static;
+    height: auto;
     max-height: none;
   }
 
@@ -3045,6 +3072,7 @@ button {
 
   .input-surface {
     position: static;
+    height: auto;
     max-height: none;
   }
 
@@ -3427,7 +3455,7 @@ button {
       return [
         {
           id: `appearance.${part}Temperature`,
-          name: `${labels[part]}冷暖`,
+          name: `${labels[part]}冷暖倾向`,
           group: "外观色彩",
           type: "scale",
           required: false,
@@ -3475,7 +3503,7 @@ button {
     },
     {
       id: "body.legRatio",
-      name: "腿身比例（现状）",
+      name: "上下身比例",
       group: "身材比例",
       type: "scale",
       required: false,
@@ -3491,7 +3519,7 @@ button {
     },
     {
       id: "body.waistDefinition",
-      name: "腰部曲线明显度（现状）",
+      name: "腰部曲线明显度",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -3507,7 +3535,7 @@ button {
     },
     {
       id: "body.shoulderHipBalance",
-      name: "肩胯轮廓关系（现状）",
+      name: "肩胯轮廓关系",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -3951,7 +3979,7 @@ button {
     { id: "requirements.texture", name: "贴肤触感", group: "身体边界", options: [["regular", "常规"], ["smooth", "避免粗糙"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.waist", name: "推荐服装腰位", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.line", name: "服装线条走向", group: "服装版型", options: [["balanced", "自然线条"], ["continuous", "纵向连贯"], ["sectioned", "分段层次"]], actions: ["SET"] },
-    { id: "requirements.colorTemperature", name: "服装色温", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
+    { id: "requirements.colorTemperature", name: "服装冷暖倾向", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
     { id: "requirements.colorContrast", name: "配色明度对比", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
     { id: "requirements.colorContrastMax", name: "配色对比上限", group: "配色", options: [["低", "不高于低"], ["中等", "不高于中等"], ["高", "不限制"]], actions: ["SET"] },
     { id: "requirements.colorChroma", name: "配色彩度", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
@@ -3964,7 +3992,7 @@ button {
   ];
 
   const derivedFieldDefinitions = [
-    ["derived.color.temperature.label", "整体色温", ["冷", "中间偏冷", "中间", "中间偏暖", "暖"]],
+    ["derived.color.temperature.label", "整体冷暖倾向", ["冷", "中间偏冷", "中间", "中间偏暖", "暖"]],
     ["derived.color.contrast.label", "外观明度对比", ["低", "中等", "高"]],
     ["derived.color.chroma.label", "整体彩度", ["低", "中等", "高"]],
     ["derived.body.slenderness.label", "整体修长表现", ["小巧", "中等", "修长"]],
@@ -4231,7 +4259,7 @@ button {
     })),
     ...colorTemperatureBands.map((band, index) => ({
       id: `COLOR-TEMP-${index}`,
-      name: `${band.label}服装色温倾向`,
+      name: `${band.label}服装冷暖倾向`,
       group: "色彩",
       enabled: true,
       kind: "soft",
@@ -6220,8 +6248,7 @@ button {
     const targets = [
       $("#candidateGrid"),
       $("#candidateTableView"),
-      $(".candidate-mobile-compare"),
-      $("#conditionSnapshot")
+      $(".candidate-mobile-compare")
     ];
     targets.forEach((el) => {
       if (!el) return;
@@ -6285,12 +6312,12 @@ button {
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的色温、明度和彩度</span></div>
+          <div class="input-section-heading"><strong>外观色彩</strong><span>用于判断近脸颜色的冷暖倾向、明度和彩度</span></div>
           <div class="appearance-matrix-wrap">${appearanceFields.map(([part, label]) => `
             <div class="appearance-row-card">
               <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
               <div class="appearance-row-scales">
-                ${renderParameterScale(`appearance.${part}Temperature`, "色温", parameter(`appearance.${part}Temperature`), "inline-range")}
+                ${renderParameterScale(`appearance.${part}Temperature`, "冷暖倾向", parameter(`appearance.${part}Temperature`), "inline-range")}
                 ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`), "inline-range")}
                 ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`), "inline-range")}
               </div>
@@ -6299,10 +6326,10 @@ button {
         <div class="input-section">
           <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
           <div class="field-stack-grid field-stack-grid--ranges">
-            ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
-            ${renderParameterScale("body.legRatio", "腿身比例（现状）", parameter("body.legRatio"))}
-            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度（现状）", parameter("body.waistDefinition"))}
-            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系（现状）", parameter("body.shoulderHipBalance"))}
+            ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"), "inline-range")}
+            ${renderParameterScale("body.legRatio", "上下身比例", parameter("body.legRatio"), "inline-range")}
+            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度", parameter("body.waistDefinition"), "inline-range")}
+            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"), "inline-range")}
           </div>
         </div>
         <div class="input-section input-section--face">
@@ -6310,7 +6337,6 @@ button {
           <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型轮廓", parameter("face.shape"))}</div>
         </div>`;
     } else if (group === "preference") {
-      const activeTrend = (state.ruleSet.trendDirections || []).find((item) => item.value === state.input.preference.trendDirection);
       const styleOptions = parameter("preference.style");
       const formalityOptions = parameter("preference.formality");
       const trendOptions = [{ value: "none", label: "不限定" }, ...(state.ruleSet.trendDirections || []).filter((item) => item.enabled !== false).map((item) => ({ value: item.value, label: item.name }))];
@@ -6319,7 +6345,6 @@ button {
         ${renderParameterScale("preference.formality", "正式程度偏好", formalityOptions)}
         ${renderTrendDirectionScale("preference.trendDirection", "潮流方向", state.input.preference.trendDirection, trendOptions)}
         ${state.input.preference.trendDirection !== "none" ? renderOptionScale("preference.trendIntensity", "潮流表达强度", state.input.preference.trendIntensity, parameter("preference.trendIntensity").options) : ""}
-        ${activeTrend ? renderTrendSummary(activeTrend) : ""}
       </div>`;
     } else if (group === "goal-boundaries") {
       const endpoint = parameter("goal.endpoint");
@@ -6358,7 +6383,6 @@ button {
     const selected = normalized.find((option) => String(option.value) === String(value)) || normalized[0];
     const [minLabel, maxLabel] = rangeEndpointLabels(path, normalized);
     const isInline = variant === "inline-range";
-    const isEndpoint = String(value) === String(normalized[0]?.value) || String(value) === String(normalized[normalized.length - 1]?.value);
     const rangeMarkup = `<div class="range-scale" role="radiogroup" aria-label="${escapeHtml(label)}">
       <span class="range-endpoint" aria-hidden="true">${escapeHtml(minLabel)}</span>
       <div class="range-track">
@@ -6370,9 +6394,8 @@ button {
       <span class="range-endpoint" aria-hidden="true">${escapeHtml(maxLabel)}</span>
     </div>`;
     if (isInline) {
-      const currentMarkup = isEndpoint ? "" : `<span class="range-current" title="当前：${escapeHtml(selected?.label || "需确认")}">${escapeHtml(selected?.label || "需确认")}</span>`;
       return `<div class="form-item range-form-item range-form-item--inline">
-        <div class="range-inline-row"><span class="range-inline-label">${escapeHtml(label)}</span>${rangeMarkup}${currentMarkup}</div>
+        <div class="range-inline-row"><span class="range-inline-label">${escapeHtml(label)}</span>${rangeMarkup}</div>
       </div>`;
     }
     return `<div class="form-item range-form-item">
@@ -6384,10 +6407,10 @@ button {
   function rangeEndpointLabels(path, options) {
     const overrides = {
       body: {
-        heightPresence: ["偏矮", "偏高"],
-        legRatio: ["腿短", "腿长"],
+        heightPresence: ["小巧", "高挑"],
+        legRatio: ["上身偏长", "下身偏长"],
         waistDefinition: ["不明显", "明显"],
-        shoulderHipBalance: ["偏胯", "偏肩"]
+        shoulderHipBalance: ["肩部偏明显", "胯部偏明显"]
       }
     };
     const [scope, field] = path.split(".");
@@ -6405,24 +6428,12 @@ button {
 
   function renderTrendDirectionScale(path, label, value, options) {
     const normalized = options.map((option) => Array.isArray(option) ? { value: option[0], label: option[1] } : option);
-    const directions = state.ruleSet.trendDirections || [];
     return `<div class="form-item option-scale--trend-flow">
-      <div class="form-item-header"><label>${escapeHtml(label)}</label><strong>${escapeHtml(normalized.find((option) => String(option.value) === String(value))?.label || "不限定")}</strong></div>
+      <div class="form-item-header"><label>${escapeHtml(label)}</label></div>
       <div class="trend-option-list">
-        ${normalized.map((option) => {
-          const trend = directions.find((item) => item.value === option.value);
-          return `<button type="button" class="trend-option-card ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}">
-            <strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(trend?.reference || (option.value === "none" ? "保持经典稳妥路线" : "潮流方向"))}</small>
-          </button>`;
-        }).join("")}
+        ${normalized.map((option) => `<button type="button" class="trend-option-card ${String(option.value) === String(value) ? "is-active" : ""}" data-input-path="${escapeHtml(path)}" data-input-value="${escapeHtml(option.value)}" data-value="${escapeHtml(option.value)}" aria-pressed="${String(option.value) === String(value) ? "true" : "false"}"><strong>${escapeHtml(option.label)}</strong></button>`).join("")}
       </div>
     </div>`;
-  }
-
-  function renderTrendSummary(activeTrend) {
-    const familyLabels = { straight: "简洁直线", tailored: "利落结构", soft: "柔和收放", relaxed: "自然留量", street: "街头箱型", retro: "复古收放" };
-    const families = (activeTrend.result?.families || []).map((family) => familyLabels[family] || family);
-    return `<div class="trend-input-summary"><div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div><p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p><p class="trend-route"><span>优先服装路线</span>${families.map((family) => `<b>${escapeHtml(family)}</b>`).join("")}</p><p class="trend-influence-list">${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p></div>`;
   }
 
   function renderParameterSelect(path, label, definition) {
