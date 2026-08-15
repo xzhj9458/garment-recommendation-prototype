@@ -1,0 +1,178 @@
+const fs = require("fs");
+const path = require("path");
+const { chromium } = require("../../../frontend/node_modules/playwright");
+
+const baseUrl = process.env.GARMENT_PROTOTYPE_URL || "http://127.0.0.1:4177/";
+const outputDir = path.resolve(__dirname, "../../../tmp");
+fs.mkdirSync(outputDir, { recursive: true });
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+async function metrics(page) {
+  return page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+    scrollHeight: document.documentElement.scrollHeight,
+    clientHeight: document.documentElement.clientHeight
+  }));
+}
+
+async function openPage(browser, url, viewport) {
+  const page = await browser.newPage({ viewport });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  await page.goto(url, { waitUntil: "networkidle" });
+  return { page, errors };
+}
+
+async function choose(page, pathName, value) {
+  await page.locator(`button[data-input-path="${pathName}"][data-value="${value}"]`).click();
+}
+
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const report = [];
+  try {
+    const demo = await openPage(browser, `${baseUrl}index.html`, { width: 1440, height: 900 });
+    await demo.page.evaluate(() => localStorage.clear());
+    await demo.page.reload({ waitUntil: "networkidle" });
+
+    assert(await demo.page.locator("#inputTabs button").count() === 7, "案例页输入没有按七组展示");
+    assert(await demo.page.locator(".impact-link-row").count() >= 8, "案例页缺少本次生效的输入结果关系");
+    assert(await demo.page.locator(".analysis-trace-toolbar").count() === 0, "本次影响仍保留重复工具栏");
+    const impactHeight = await demo.page.locator(".impact-link-row").first().evaluate((element) => element.getBoundingClientRect().height);
+    assert(impactHeight <= 38, `本次影响单行仍然过高：${impactHeight}px`);
+    assert(await demo.page.locator(".candidate-card").count() === 3, "默认输入没有生成三个完整方案");
+
+    const paletteState = await demo.page.evaluate(() => {
+      const result = window.GarmentRuleEngine.run(window.GarmentPrototypeData.defaultInput, window.GarmentRuleEngine.Store.loadPublished());
+      return result.candidates.map((candidate) => ({ name: candidate.palette?.name, contrast: candidate.colorContrast, chroma: candidate.colorChroma }));
+    });
+    assert(new Set(paletteState.map((item) => item.name)).size >= 2, "完整方案没有形成不同配色路线");
+    assert(paletteState.every((item) => item.contrast === "中等" && item.chroma === "中等"), "候选配色与分析强度不一致");
+
+    await demo.page.locator('button[data-group="preference"]').click();
+    assert(await demo.page.locator('button[data-input-path="preference.trendDirection"]').count() >= 4, "潮流方向没有读取动态资料库");
+    assert(await demo.page.locator('button[data-input-path="preference.trendIntensity"]').count() === 2, "选定潮流后没有表达强度");
+    const beforeTrend = await demo.page.locator(".candidate-card h3").allInnerTexts();
+    await choose(demo.page, "preference.trendDirection", "utilityLayering");
+    await choose(demo.page, "preference.trendIntensity", "clear");
+    const afterTrend = await demo.page.locator(".candidate-card h3").allInnerTexts();
+    assert(JSON.stringify(beforeTrend) !== JSON.stringify(afterTrend), "切换潮流方向只改变文案，没有改变服装组合");
+    assert(afterTrend[0].includes("工装") || afterTrend[0].includes("多口袋"), "轻机能层次没有落实到具体服装");
+    assert((await demo.page.locator("#analysisTrace").innerText()).includes("轻机能层次"), "本次影响没有显示潮流方向的实际结果");
+    assert((await demo.page.locator(".trend-input-summary").innerText()).includes("城市机能") || (await demo.page.locator(".trend-input-summary").innerText()).includes("功能细节"), "潮流输入缺少核心理念摘要");
+    await choose(demo.page, "preference.trendDirection", "none");
+    assert(await demo.page.locator('button[data-input-path="preference.trendIntensity"]').count() === 0, "不限定潮流时仍显示表达强度");
+
+    await choose(demo.page, "preference.style", "street");
+    assert((await demo.page.locator(".candidate-card").first().innerText()).includes("街头"), "风格方向没有改变服装路线");
+    await demo.page.locator('button[data-group="face"]').click();
+    await choose(demo.page, "face.shape", "long");
+    assert((await demo.page.locator("#analysisTrace").innerText()).includes("领口"), "脸型没有进入结果关系");
+    await demo.page.locator('button[data-group="context"]').click();
+    await choose(demo.page, "context.temperatureRange", "24_30");
+    const warmText = await demo.page.locator(".candidate-card").first().innerText();
+    assert(warmText.includes("短袖") && warmText.includes("无外层"), "温度没有改变袖长与外层");
+
+    const demoNavCenter = await demo.page.locator(".page-nav").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.left + rect.width / 2;
+    });
+    const desktopMetrics = await metrics(demo.page);
+    assert(desktopMetrics.scrollWidth <= desktopMetrics.clientWidth + 1, "案例页桌面端横向溢出");
+    assert(demo.errors.length === 0, demo.errors.join("\n"));
+    await demo.page.screenshot({ path: path.join(outputDir, "garment-v12-case-1440.png"), fullPage: true });
+    report.push({ page: "case-1440", metrics: desktopMetrics, impactHeight, palettes: paletteState.map((item) => item.name) });
+
+    const rules = await openPage(browser, `${baseUrl}rules.html`, { width: 1440, height: 900 });
+    await rules.page.evaluate(() => localStorage.clear());
+    await rules.page.reload({ waitUntil: "networkidle" });
+    assert(await rules.page.locator("#overviewView").isVisible(), "规则管理没有默认显示规则总览");
+    assert(!(await rules.page.locator("#configureView").isVisible()), "规则配置与总览仍然同时挤在主工作区");
+    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 10, "规则总览没有展示十类业务关系");
+    assert(await rules.page.locator("#overviewMatrix thead tr").count() === 2, "规则总览没有使用两层结果表头");
+    assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("穿着框架") && (await rules.page.locator("#overviewMatrix thead").innerText()).includes("服装样式") && (await rules.page.locator("#overviewMatrix thead").innerText()).includes("颜色搭配"), "规则总览结果大类表头不完整");
+    assert(!(await rules.page.locator("#overviewMatrix thead").innerText()).includes("候选处理"), "规则总览仍把候选处理作为横向字段");
+    assert(await rules.page.locator("#overviewMatrix .overview-impact-cell.is-strong").count() > 0, "规则总览没有展示直接影响色块");
+    const overviewNames = await rules.page.locator("#overviewMatrix tbody th > span").allInnerTexts();
+    const expectedOrder = ["温度与层次", "场合要求", "整体色彩", "身材与比例", "脸型与领口", "风格方向", "正式程度", "潮流方向", "本次偏好", "拒绝与边界"];
+    assert(JSON.stringify(overviewNames) === JSON.stringify(expectedOrder), `规则总览排序不正确：${overviewNames.join("、")}`);
+    assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("层数") && await rules.page.locator('#overviewMatrix tr:has(th span:text-is("温度与层次")) .overview-impact-cell.is-strong').count() >= 4, "总览没有展示温度对穿着框架的具体影响");
+
+    const rulesNavCenter = await rules.page.locator(".page-nav").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.left + rect.width / 2;
+    });
+    assert(Math.abs(demoNavCenter - rulesNavCenter) <= 1, "两个页面的顶部导航没有对齐");
+
+    await rules.page.locator('button[data-overview-target="trend"]').first().click();
+    assert(await rules.page.locator("#configureView").isVisible(), "总览关系不能跳转到规则配置");
+    assert((await rules.page.locator("#editorTitle").innerText()) === "潮流方向", "总览没有定位到对应的潮流配置");
+    assert(await rules.page.locator("#relationSelect").inputValue() === "trend", "关系配置没有同步当前关系选择器");
+    assert(await rules.page.locator("#relationSelect option").count() === 10, "关系配置缺少完整的关系导航");
+    assert(await rules.page.locator(".relationship-main").count() === 0, "关系配置仍保留重复的关系列表容器");
+    assert(await rules.page.locator("#ruleTableBody").count() === 0, "关系配置仍保留业务关系表格");
+    assert(!(await rules.page.locator("#configureView").innerText()).includes("业务关系"), "关系配置仍展示业务关系文案");
+    assert(await rules.page.locator("[data-branch-select] option").count() === 3, "潮流方向没有作为动态分支管理");
+    const trendEditorText = await rules.page.locator("#editorContent").innerText();
+    assert(trendEditorText.includes("理念来源") && trendEditorText.includes("会优先使用的服装路线"), "潮流方向配置缺少理念与服装映射");
+
+    await rules.page.locator("#relationSelect").selectOption("temperature");
+    assert(await rules.page.locator("[data-branch-select] option").count() === 6, "温度关系没有合并为六个分支");
+    assert((await rules.page.locator("#editorContent").innerText()).includes("会改变哪些穿搭内容"), "配置编辑器没有形成输入到结果的闭环");
+    await rules.page.locator("#backToOverview").click();
+    assert(await rules.page.locator("#overviewView").isVisible(), "关系配置无法返回关系总览");
+
+    await rules.page.locator("#resourceButton").click();
+    await rules.page.locator('button[data-resource-tab="trends"]').click();
+    assert(await rules.page.locator(".trend-resource-card").count() === 3, "基础资料没有独立的潮流方向库");
+    const relaxedCard = rules.page.locator(".trend-resource-card").filter({ has: rules.page.locator('input[value="松弛剪裁"]') });
+    const relaxedName = relaxedCard.locator('input[data-resource-path="name"]');
+    await relaxedName.fill("松弛精裁");
+    await relaxedName.press("Tab");
+    await rules.page.locator("[data-close-resource]").click();
+
+    await rules.page.locator("#publishButton").click();
+    await rules.page.locator("[data-confirm-ok]").click();
+    await rules.page.waitForTimeout(150);
+    assert((await rules.page.locator("#ruleSetVersion").innerText()).includes("1.2.1"), "V1.2 规则修改没有成功发布");
+
+    const rulesMetrics = await metrics(rules.page);
+    assert(rulesMetrics.scrollWidth <= rulesMetrics.clientWidth + 1, "规则页桌面端横向溢出");
+    assert(rules.errors.length === 0, rules.errors.join("\n"));
+    await rules.page.screenshot({ path: path.join(outputDir, "garment-v12-config-1440.png"), fullPage: true });
+    report.push({ page: "rules-1440", metrics: rulesMetrics, navCenter: rulesNavCenter, rows: overviewNames.length });
+
+    await rules.page.goto(`${baseUrl}index.html`, { waitUntil: "networkidle" });
+    await rules.page.locator("#resetInputButton").click();
+    await rules.page.locator('button[data-group="preference"]').click();
+    assert((await rules.page.locator('button[data-input-path="preference.trendDirection"]').allInnerTexts()).includes("松弛精裁"), "潮流方向修改没有同步到案例运行页");
+    assert((await rules.page.locator("#ruleVersion").innerText()).includes("1.2.1"), "案例运行页没有同步发布版本");
+
+    const mobile = await openPage(browser, `${baseUrl}index.html`, { width: 390, height: 844 });
+    const mobileMetrics = await metrics(mobile.page);
+    assert(mobileMetrics.scrollWidth <= mobileMetrics.clientWidth + 1, "案例页移动端横向溢出");
+    assert(mobile.errors.length === 0, mobile.errors.join("\n"));
+    await mobile.page.screenshot({ path: path.join(outputDir, "garment-v12-case-mobile.png"), fullPage: true });
+
+    const rulesMobile = await openPage(browser, `${baseUrl}rules.html`, { width: 390, height: 844 });
+    const rulesMobileMetrics = await metrics(rulesMobile.page);
+    assert(rulesMobileMetrics.scrollWidth <= rulesMobileMetrics.clientWidth + 1, "规则页移动端页面级横向溢出");
+    assert(rulesMobile.errors.length === 0, rulesMobile.errors.join("\n"));
+    await rulesMobile.page.screenshot({ path: path.join(outputDir, "garment-v12-rules-mobile.png"), fullPage: true });
+    report.push({ page: "mobile", caseMetrics: mobileMetrics, rulesMetrics: rulesMobileMetrics });
+
+    console.log(JSON.stringify({ ok: true, report }, null, 2));
+  } finally {
+    await browser.close();
+  }
+})().catch((error) => {
+  console.error(error.stack || error.message);
+  process.exit(1);
+});

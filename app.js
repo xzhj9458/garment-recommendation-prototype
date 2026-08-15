@@ -3,115 +3,142 @@
 
   const DATA = window.GarmentPrototypeData;
   const Engine = window.GarmentRuleEngine;
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
-  const groups = [
-    { id: "context", label: "穿着条件", parameterGroups: ["温度与场合"] },
-    { id: "appearance", label: "整体色彩", parameterGroups: ["外观色彩"] },
-    { id: "body", label: "身材情况", parameterGroups: ["身材比例", "身材轮廓"] },
-    { id: "face", label: "脸型", parameterGroups: ["脸型"] },
-    { id: "preference", label: "穿着偏好", parameterGroups: ["穿着偏好"] },
-    { id: "goal", label: "本次偏好", parameterGroups: ["本次偏好"] },
-    { id: "boundaries", label: "拒绝与边界", parameterGroups: ["明确拒绝与身体边界"] }
+  const state = {
+    input: Engine.clone(DATA.defaultInput),
+    activeTab: "context",
+    selectedCandidateIndex: null,
+    highlightRuleId: null,
+    hoveredField: null,
+    viewMode: "cards", // 'cards' | 'table'
+    ruleSet: Engine.Store.loadPublished()
+  };
+
+  const tabs = [
+    { id: "context", label: "穿着条件" },
+    { id: "color", label: "整体色彩" },
+    { id: "body", label: "身材情况" },
+    { id: "face", label: "脸型" },
+    { id: "preference", label: "穿着偏好" },
+    { id: "goal", label: "本次偏好" },
+    { id: "boundaries", label: "拒绝与边界" }
   ];
 
-  const state = {
-    ruleSet: Engine.Store.loadPublished(),
-    input: Engine.Store.loadInput(),
-    activeGroup: "context",
-    viewMode: "cards",
-    result: null,
-    previousResult: null,
-    lastInputChange: null,
-    activeInsightId: null,
-    imageName: "",
-    appearancePart: "skin"
+  const scaleLabels = {
+    contrast: ["低", "中等", "高"],
+    chroma: ["低", "中等", "高"],
+    hue: ["冷", "中间偏冷", "中间", "中间偏暖", "暖"]
   };
+
+  const zhDict = {
+    "05_12": "5-12°C", "10_18": "10-18°C", "15_25": "15-25°C", "18_24": "18-24°C", "24_30": "24-30°C", "28_35": "28-35°C",
+    "commute": "通勤", "daily": "日常", "formal": "正式", "social": "聚会", "travel": "出游",
+    "minimal": "极简", "urban": "都市", "elegant": "优雅", "casual": "休闲", "street": "街头", "retro": "复古", "cityboy": "Cityboy", "unknown": "未限定",
+    "utilityLayering": "轻机能层次", "relaxedTailoring": "松弛剪裁", "sheerLayering": "轻透叠穿", "none": "不限定", "light": "少量借鉴", "clear": "明确体现",
+    "long": "长脸", "round": "圆脸", "square": "方脸", "standard": "标准脸", "heart": "心形脸", "diamond": "菱形脸",
+    "straight": "连续直线", "tailored": "利落结构", "soft": "柔和过渡", "relaxed": "自然留量",
+    "none": "无外层", "light": "可脱轻外层", "warm": "保暖外层",
+    "short": "短袖", "threeQuarter": "七分袖", "long": "长袖",
+    "regular": "适中覆盖", "smooth": "避免粗糙", "full": "完整覆盖",
+    "natural": "自然腰位", "raised": "偏高腰位", "defined": "明确腰线",
+    "balanced": "自然线条", "continuous": "纵向连贯", "sectioned": "分段层次",
+    "trouser": "裤装", "skirt": "裙装", "short": "短裤",
+    "vertical": "整体修长感", "waist": "腰线表现", "volume": "肩胯轮廓关系", "contrast": "配色对比",
+    "keep": "保留", "strengthen": "强化", "weaken": "弱化", "balance": "平衡",
+    "true": "是", "false": "否", true: "是", false: "否"
+  };
+
+  function translateValue(val) {
+    if (val === undefined || val === null) return "";
+    if (zhDict[val] !== undefined) return zhDict[val];
+    if (typeof val === "string") {
+      const clean = val.replace(/\s*label$/i, "").trim();
+      if (zhDict[clean] !== undefined) return zhDict[clean];
+    }
+    return String(val);
+  }
 
   init();
 
   function init() {
-    bindStaticEvents();
-    renderTabs();
-    renderConditionSnapshot();
-    renderInputGroup();
-    calculate(false);
+    bindEvents();
+    renderAll();
   }
 
-  function bindStaticEvents() {
-    $("#resetInputButton").addEventListener("click", () => {
-      state.input = Engine.clone(DATA.defaultInput);
-      state.lastInputChange = { name: "输入", before: "当前设置", after: "默认设置" };
-      Engine.Store.saveInput(state.input);
-      renderConditionSnapshot();
-      renderInputGroup();
-      calculate(true);
-      toast("已恢复默认输入");
-    });
-
+  function bindEvents() {
     $("#inputTabs").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-group]");
       if (!button) return;
-      state.activeGroup = button.dataset.group;
-      renderTabs();
-      renderInputGroup();
+      state.activeTab = button.dataset.group;
+      renderInputTabs();
+      renderInputs();
     });
 
-    const snapshot = $("#conditionSnapshot");
-    if (snapshot) {
-      snapshot.addEventListener("click", (event) => {
-        const badge = event.target.closest("button[data-jump-group]");
-        if (!badge) return;
-        state.activeGroup = badge.dataset.jumpGroup;
-        renderTabs();
-        renderInputGroup();
-      });
-    }
+    $("#conditionSnapshot").addEventListener("click", (event) => {
+      const chip = event.target.closest("button[data-jump-group]");
+      if (!chip) return;
+      state.activeTab = chip.dataset.jumpGroup;
+      renderInputTabs();
+      renderInputs();
+    });
 
-    const viewModeBar = $("#viewModeBar");
-    if (viewModeBar) {
-      viewModeBar.addEventListener("click", (event) => {
-        const btn = event.target.closest("button[data-view-mode]");
-        if (!btn) return;
-        state.viewMode = btn.dataset.viewMode;
-        $$(".view-mode-button", viewModeBar).forEach((b) => b.classList.toggle("is-active", b.dataset.viewMode === state.viewMode));
-        const grid = $("#candidateGrid");
-        const tableWrap = $("#candidateTableView");
-        if (grid && tableWrap) {
-          grid.hidden = state.viewMode !== "cards";
-          tableWrap.hidden = state.viewMode !== "table";
-        }
-      });
-    }
-
+    $("#inputContent").addEventListener("click", handleInputClick);
     $("#inputContent").addEventListener("change", handleInputChange);
-    $("#inputContent").addEventListener("click", (event) => {
-      const appearancePart = event.target.closest("button[data-appearance-part]");
-      if (appearancePart) {
-        state.appearancePart = appearancePart.dataset.appearancePart;
-        renderInputGroup();
-        return;
-      }
-      const segment = event.target.closest("button[data-input-path]");
-      if (!segment) return;
-      updateInput(segment.dataset.inputPath, parseValue(segment.dataset.value), segment.textContent.trim());
-      renderInputGroup();
-    });
 
-    $("#candidateGrid").addEventListener("click", handleCandidateAction);
-    const tableWrap = $("#candidateTableView");
-    if (tableWrap) {
-      tableWrap.addEventListener("click", handleCandidateAction);
-    }
-
-    $("#analysisTrace").addEventListener("click", (event) => {
-      const card = event.target.closest("button[data-insight-id]");
-      if (!card) return;
-      state.activeInsightId = state.activeInsightId === card.dataset.insightId ? null : card.dataset.insightId;
-      renderAnalysis(false);
+    $("#viewModeBar").addEventListener("click", (event) => {
+      const btn = event.target.closest("button[data-view-mode]");
+      if (!btn) return;
+      state.viewMode = btn.dataset.viewMode;
+      renderViewModeBar();
       renderCandidates();
     });
+
+    const resetBtn = $("#resetInputButton") || $("#resetButton");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        state.input = Engine.clone(DATA.defaultInput);
+        state.selectedCandidateIndex = null;
+        state.highlightRuleId = null;
+        renderAll();
+        toast("已恢复默认输入条件");
+      });
+    }
+
+    $("#candidateGrid").addEventListener("click", (event) => {
+      const detailButton = event.target.closest("button[data-candidate-index]");
+      if (detailButton) {
+        openCandidate(Number(detailButton.dataset.candidateIndex));
+        return;
+      }
+      const card = event.target.closest(".candidate-card");
+      if (card && card.dataset.index !== undefined) {
+        const idx = Number(card.dataset.index);
+        state.selectedCandidateIndex = state.selectedCandidateIndex === idx ? null : idx;
+        renderCandidateHighlights();
+      }
+    });
+
+    $("#candidateTableView").addEventListener("click", (event) => {
+      const detailBtn = event.target.closest("button[data-candidate-index]");
+      if (detailBtn) {
+        openCandidate(Number(detailBtn.dataset.candidateIndex));
+      }
+    });
+
+    $("#analysisTrace").addEventListener("click", (event) => {
+      const row = event.target.closest(".impact-link-row");
+      if (!row) return;
+      const ruleId = row.dataset.ruleId;
+      state.highlightRuleId = state.highlightRuleId === ruleId ? null : ruleId;
+      renderAnalysisHighlights();
+      renderCandidateHighlights();
+    });
+
+    $("#analysisTrace").addEventListener("mouseenter", handleTraceHover, true);
+    $("#analysisTrace").addEventListener("mouseleave", handleTraceLeave, true);
 
     $("[data-close-dialog]").addEventListener("click", () => $("#candidateDialog").close());
     $("#candidateDialog").addEventListener("click", (event) => {
@@ -119,617 +146,805 @@
     });
 
     window.addEventListener("storage", (event) => {
-      if (event.key === Engine.Store.keys.published) {
+      if (event.key === "garment_simulator_rules_v12_published") {
         state.ruleSet = Engine.Store.loadPublished();
-        renderTabs();
-        renderConditionSnapshot();
-        renderInputGroup();
-        calculate(true);
-        toast("已载入新发布的规则");
+        renderAll();
+        toast("已同步最新发布的规则");
       }
     });
   }
 
-  function handleCandidateAction(event) {
-    const button = event.target.closest("button[data-candidate-id]");
-    if (!button) return;
-    openCandidate(button.dataset.candidateId);
+  function renderAll(animate = true) {
+    state.ruleSet = Engine.Store.loadPublished();
+    const result = Engine.run(state.input, state.ruleSet);
+    state.lastResult = result;
+
+    renderVersionChip();
+    renderConditionSnapshot();
+    renderInputTabs();
+    renderInputs();
+    renderAnalysis(result);
+    renderViewModeBar();
+    renderCandidates(result);
+
+    if (animate) {
+      triggerRefreshTransition();
+    }
   }
 
-  function renderTabs() {
-    $("#inputTabs").innerHTML = groups.map((group) => `
-      <button type="button" class="${group.id === state.activeGroup ? "is-active" : ""}" data-group="${group.id}">
-        ${escapeHtml(group.label)}
-      </button>
-    `).join("");
-    $("#ruleVersion").textContent = `规则 ${state.ruleSet.meta.version || "草稿"}`;
+  function triggerRefreshTransition() {
+    const targets = [
+      $("#candidateGrid"),
+      $("#candidateTableView"),
+      $(".candidate-mobile-compare"),
+      $(".analysis-content"),
+      $("#conditionSnapshot")
+    ];
+    targets.forEach((el) => {
+      if (!el) return;
+      el.classList.remove("is-updating");
+      void el.offsetWidth;
+      el.classList.add("is-updating");
+    });
+  }
+
+  function renderVersionChip() {
+    $("#ruleVersion").textContent = `规则 ${state.ruleSet.meta?.version || "1.2.0"}`;
   }
 
   function renderConditionSnapshot() {
-    const snapshotEl = $("#conditionSnapshot");
-    if (!snapshotEl) return;
-    const tempOpt = state.ruleSet.parameters.find((p) => p.id === "context.temperatureRange")?.options?.find((o) => o.value === state.input.context?.temperatureRange)?.label || "温度未设";
-    const occOpt = state.ruleSet.parameters.find((p) => p.id === "context.occasion")?.options?.find((o) => o.value === state.input.context?.occasion)?.label || "日常";
-    const styleOpt = state.ruleSet.parameters.find((p) => p.id === "preference.style")?.options?.find((o) => o.value === state.input.preference?.style)?.label || "极简";
-    const faceOpt = state.ruleSet.parameters.find((p) => p.id === "face.shape")?.options?.find((o) => o.value === state.input.face?.shape)?.label || "长脸";
-    const trendValue = state.input.preference?.trendDirection || "none";
-    const trendOpt = trendValue === "none" ? "不限潮流" : (state.ruleSet.trendDirections?.find((t) => t.value === trendValue)?.name || "指定潮流");
-    const boundaries = state.ruleSet.parameters.filter((p) => p.group === "明确拒绝与身体边界" && Engine.getByPath(state.input, p.id));
-    const boundaryText = boundaries.length ? `${boundaries.length} 项禁忌` : "无边界禁忌";
+    const p = state.input.preference || {};
+    const c = state.input.context || {};
+    const b = state.input.boundaries || {};
+    const g = state.input.goal || {};
 
-    snapshotEl.innerHTML = `
+    const tempLabel = c.temperatureRange ? `${c.temperatureRange.replace("_", "-")}°C` : "气温适中";
+    const occasionLabel = c.occasion === "commute" ? "通勤" : c.occasion === "daily" ? "日常" : c.occasion === "formal" ? "正式" : c.occasion === "party" ? "聚会" : "出游";
+    const styleLabel = p.style === "street" ? "街头" : p.style === "cityboy" ? "Cityboy" : p.style === "relaxed" ? "松弛" : "都市";
+    const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
+    const boundaryCount = (b.forbiddenCategories?.length || 0) + (b.bodyBoundaries?.length || 0);
+
+    $("#conditionSnapshot").innerHTML = `
       <div class="snapshot-inner">
-        <span class="snapshot-label">已选条件快照</span>
+        <span class="snapshot-label">已选条件</span>
         <div class="snapshot-badges">
-          <button type="button" class="snapshot-chip" data-jump-group="context" title="点击切换至穿着条件">${escapeHtml(tempOpt)} · ${escapeHtml(occOpt)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击切换至穿着偏好">${escapeHtml(styleOpt)} · ${escapeHtml(trendOpt)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="face" title="点击切换至脸型">${escapeHtml(faceOpt)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="boundaries" title="点击切换至拒绝与边界">${escapeHtml(boundaryText)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="context" title="点击修改气温与场合">${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击修改风格与潮流">${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal" title="点击修改本次偏好">${g.target === "vertical" ? "修长感" : g.target === "waist" ? "腰线" : "保持原样"}</button>
+          <button type="button" class="snapshot-chip ${boundaryCount ? "is-active" : ""}" data-jump-group="boundaries" title="点击修改禁忌边界">${boundaryCount ? `${boundaryCount}项禁忌` : "无禁忌"}</button>
         </div>
       </div>
     `;
   }
 
-  function renderInputGroup() {
-    renderConditionSnapshot();
-    const group = groups.find((item) => item.id === state.activeGroup);
-    const trendSelected = Engine.getByPath(state.input, "preference.trendDirection") !== "none";
-    const parameters = state.ruleSet.parameters.filter((item) => (
-      item.enabled
-      && group.parameterGroups.includes(item.group)
-      && (item.id !== "preference.trendIntensity" || trendSelected)
-    ));
+  function renderInputTabs() {
+    $("#inputTabs").innerHTML = tabs.map((tab) => {
+      const isActive = tab.id === state.activeTab;
+      return `<button type="button" data-group="${tab.id}" class="${isActive ? "is-active" : ""}"><span>${tab.label}</span></button>`;
+    }).join("");
+  }
+
+  function renderInputs() {
+    const group = state.activeTab;
     const content = $("#inputContent");
-    content.classList.toggle("is-preference", state.activeGroup === "preference");
 
-    if (state.activeGroup === "appearance") {
-      content.innerHTML = renderAppearance(parameters);
-      syncSegmentSelection();
-      return;
-    }
-
-    if (state.activeGroup === "boundaries") {
+    if (group === "context") {
       content.innerHTML = `
-        <div class="input-group-heading">
-          <div><strong>明确拒绝与身体边界</strong><p>个人穿着禁忌与身体边界。勾选项会作为硬性条件，直接过滤或改写候选。</p></div>
-        </div>
-        <div class="checkbox-grid">
-          ${parameters.map(renderBooleanParameter).join("")}
-        </div>
-        <div class="source-line"><span>来源</span><strong>客户明确陈述 · 硬性边界</strong></div>
-      `;
-      return;
-    }
-
-    const intro = state.activeGroup === "context"
-      ? "近期温度使用范围选择，决定基础层数与保暖厚度；不推测湿度、室内外和活动强度。"
-      : state.activeGroup === "preference"
-        ? "风格定义款式语言，正式程度定义完成度，潮流方向动态维护；三者独立输入，协同约束。"
-        : state.activeGroup === "goal"
-        ? "本次主观修饰意图（修长感、腰线、色彩对比）；暂不确定也可以继续。"
-      : state.activeGroup === "face"
-        ? "脸型是独立输入，只用于领口和脸部周边细节修饰参考，不影响身材比例判断。"
-        : "身材比例与轮廓用于判断上下长度、腰位和服装量感，只描述客观起点。";
-
-    const parameterContent = state.activeGroup === "body"
-      ? group.parameterGroups.map((parameterGroup) => {
-          const items = parameters.filter((item) => item.group === parameterGroup);
-          return items.length ? `<section class="body-input-section"><h3>${escapeHtml(parameterGroup)}</h3><div class="field-stack-grid">${items.map(renderParameter).join("")}</div></section>` : "";
-        }).join("")
-      : `<div class="field-stack-grid ${["context", "goal", "face"].includes(state.activeGroup) ? "field-stack-grid--single" : state.activeGroup === "preference" ? "field-stack-grid--preference" : ""}">${parameters.map(renderParameter).join("")}</div>`;
-
-    content.innerHTML = `
-      <div class="input-group-heading">
-        <div><strong>${escapeHtml(group.label)}</strong><p>${escapeHtml(intro)}</p></div>
-        ${["body", "face"].includes(state.activeGroup) ? renderImageUpload() : ""}
-      </div>
-      ${parameterContent}
-      ${state.activeGroup === "preference" ? renderTrendSummary() : ""}
-      <div class="source-line"><span>来源</span><strong>${["body", "face"].includes(state.activeGroup) && state.imageName ? "图片上传后由用户确认" : "客户确认"}</strong></div>
-    `;
-    syncSegmentSelection();
-    const upload = $("#photoUpload");
-    if (upload) upload.addEventListener("change", handlePhotoUpload);
-  }
-
-  function renderTrendSummary() {
-    const value = Engine.getByPath(state.input, "preference.trendDirection");
-    if (!value || value === "none") return "";
-    const trend = (state.ruleSet.trendDirections || []).find((item) => item.value === value && item.enabled !== false);
-    if (!trend) return "";
-    return `<section class="trend-input-summary">
-      <div><small>潮流理念</small><strong>${escapeHtml(trend.coreIdea || trend.reason || trend.name)}</strong></div>
-      <p>${(trend.influences || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</p>
-    </section>`;
-  }
-
-  function renderAppearance(parameters) {
-    const rows = [
-      { key: "skin", label: "肤色" },
-      { key: "hair", label: "发色" },
-      { key: "eye", label: "眼睛" }
-    ];
-    const find = (id) => parameters.find((item) => item.id === id);
-
-    return `
-      <div class="input-group-heading">
-        <div><strong>整体色彩特征录入</strong><p>分别确认肤色、发色和眼睛的冷暖、明度与彩度，系统自动推演全局服装配色策略。</p></div>
-      </div>
-      <div class="appearance-matrix-wrap">
-        ${rows.map((row) => `
-          <div class="appearance-row-card">
-            <div class="appearance-row-title"><strong>${row.label}</strong><span>冷暖 · 明度 · 彩度</span></div>
-            <div class="appearance-row-scales">
-              ${renderScaleParameter(find(`appearance.${row.key}Temperature`))}
-              ${renderScaleParameter(find(`appearance.${row.key}Value`))}
-              ${renderScaleParameter(find(`appearance.${row.key}Chroma`))}
+        <div class="input-form-compact">
+          <div class="form-item">
+            <div class="form-item-header">
+              <label>近期气温范围</label>
+              <strong>${tempLabelText(state.input.context.temperatureRange)}</strong>
+            </div>
+            <div class="pill-segment-control segment-control--6">
+              ${[
+                ["5_12", "5-12°C"],
+                ["10_18", "10-18°C"],
+                ["15_25", "15-25°C"],
+                ["18_24", "18-24°C"],
+                ["24_30", "24-30°C"],
+                ["28_35", "28-35°C"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="context.temperatureRange" data-input-value="${val}" data-value="${val}" class="${state.input.context.temperatureRange === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
             </div>
           </div>
-        `).join("")}
-      </div>
-      <div class="source-line"><span>来源</span><strong>客户确认 · 3项特征共同推演色温与对比度</strong></div>
-    `;
-  }
-
-  function renderImageUpload() {
-    return `
-      <label class="upload-button" for="photoUpload">
-        <span aria-hidden="true">＋</span>
-        <span>${state.imageName ? escapeHtml(state.imageName) : "上传照片"}</span>
-        <input id="photoUpload" type="file" accept="image/*" hidden>
-      </label>
-    `;
-  }
-
-  function handlePhotoUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    state.imageName = file.name;
-    renderInputGroup();
-    toast("图片已上传；本原型不执行识别，请确认下方参数");
-  }
-
-  function renderParameter(parameter) {
-    if (parameter.type === "boolean") return renderBooleanParameter(parameter);
-    if (parameter.type === "select") {
-      if (["context", "preference", "goal", "face"].includes(state.activeGroup)) return renderChoiceParameter(parameter);
-      const value = Engine.getByPath(state.input, parameter.id);
-      return `
-        <label class="field-control">
-          <span>${escapeHtml(parameter.name)}</span>
-          <select data-input-path="${escapeHtml(parameter.id)}">
-            ${(parameter.options || []).map((option) => `<option value="${escapeHtml(option.value)}" ${String(option.value) === String(value) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
-          </select>
-          <small>${escapeHtml(parameter.description || "")}</small>
-        </label>
+          <div class="form-item">
+            <div class="form-item-header">
+              <label>使用场合</label>
+              <strong>${occasionLabelText(state.input.context.occasion)}</strong>
+            </div>
+            <div class="pill-segment-control segment-control--5">
+              ${[
+                ["daily", "日常"],
+                ["commute", "通勤"],
+                ["formal", "正式"],
+                ["party", "聚会"],
+                ["trip", "出游"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="context.occasion" data-input-value="${val}" data-value="${val}" class="${state.input.context.occasion === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (group === "color") {
+      content.innerHTML = `
+        <div class="appearance-matrix-wrap">
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>肤色</strong><span>基础色调与明暗</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleControl("color.skin.contrast", "明度", state.input.color.skin.contrast, scaleLabels.contrast)}
+              ${renderScaleControl("color.skin.chroma", "彩度", state.input.color.skin.chroma, scaleLabels.chroma)}
+              ${renderScaleControl("color.skin.hue", "色温", state.input.color.skin.hue, scaleLabels.hue)}
+            </div>
+          </div>
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>发色</strong><span>深浅对比度</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleControl("color.hair.contrast", "明度", state.input.color.hair.contrast, scaleLabels.contrast)}
+              ${renderScaleControl("color.hair.chroma", "彩度", state.input.color.hair.chroma, scaleLabels.chroma)}
+              ${renderScaleControl("color.hair.hue", "色温", state.input.color.hair.hue, scaleLabels.hue)}
+            </div>
+          </div>
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>眼睛</strong><span>虹膜对比色</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleControl("color.eye.contrast", "明度", state.input.color.eye.contrast, scaleLabels.contrast)}
+              ${renderScaleControl("color.eye.chroma", "彩度", state.input.color.eye.chroma, scaleLabels.chroma)}
+              ${renderScaleControl("color.eye.hue", "色温", state.input.color.eye.hue, scaleLabels.hue)}
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (group === "body") {
+      content.innerHTML = `
+        <div class="field-stack-grid">
+          ${renderScaleControl("body.heightScale", "身高表现", state.input.body.heightScale, ["娇小", "中等", "高挑"])}
+          ${renderScaleControl("body.legBodyRatio", "腿身比例", state.input.body.legBodyRatio, ["略短", "匀称", "修长"])}
+          ${renderScaleControl("body.waistLine", "腰线位置", state.input.body.waistLine, ["偏低", "适中", "偏高"])}
+          ${renderScaleControl("body.shoulderHip", "肩胯关系", state.input.body.shoulderHip, ["窄肩宽胯", "肩胯同宽", "宽肩窄胯"])}
+        </div>
+      `;
+    } else if (group === "face") {
+      content.innerHTML = `
+        <div class="field-stack-grid--single">
+          <div class="form-item">
+            <div class="form-item-header"><label>脸型轮廓</label><strong>${faceLabelText(state.input.face.shape)}</strong></div>
+            <div class="pill-segment-control segment-control--4">
+              ${[
+                ["round", "圆脸"],
+                ["square", "方脸"],
+                ["oval", "椭圆脸"],
+                ["long", "长脸"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="face.shape" data-input-value="${val}" data-value="${val}" class="${state.input.face.shape === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (group === "preference") {
+      const activeTrend = state.ruleSet.trendDirections.find((item) => item.value === state.input.preference.trendDirection);
+      content.innerHTML = `
+        <div class="field-stack-grid--preference">
+          <div class="form-item">
+            <div class="form-item-header"><label>风格方向</label><strong>${styleLabelText(state.input.preference.style)}</strong></div>
+            <div class="pill-segment-control segment-control--4">
+              ${[
+                ["urban", "都市"],
+                ["relaxed", "松弛"],
+                ["cityboy", "Cityboy"],
+                ["street", "街头"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="preference.style" data-input-value="${val}" data-value="${val}" class="${state.input.preference.style === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+          <div class="form-item">
+            <div class="form-item-header"><label>正式程度偏好</label><strong>${formalityLabelText(state.input.preference.formality)}</strong></div>
+            <div class="pill-segment-control segment-control--4">
+              ${[
+                [1, "随性"],
+                [2, "整洁"],
+                [3, "偏正式"],
+                [4, "正式"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="preference.formality" data-input-value="${val}" data-value="${val}" class="${Number(state.input.preference.formality) === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+          <div class="form-item" style="grid-column: 1 / -1;">
+            <div class="form-item-header"><label>潮流方向</label><strong>${trendDirectionName(state.input.preference.trendDirection)}</strong></div>
+            <div class="pill-segment-control segment-control--${(state.ruleSet.trendDirections?.length || 3) + 1}">
+              <button type="button" data-input-path="preference.trendDirection" data-input-value="none" data-value="none" class="${state.input.preference.trendDirection === "none" ? "is-active" : ""}">不限定</button>
+              ${(state.ruleSet.trendDirections || []).map((trend) => `
+                <button type="button" data-input-path="preference.trendDirection" data-input-value="${trend.value}" data-value="${trend.value}" class="${state.input.preference.trendDirection === trend.value ? "is-active" : ""}">${trend.name}</button>
+              `).join("")}
+            </div>
+          </div>
+          ${state.input.preference.trendDirection !== "none" ? `
+            <div class="form-item" style="grid-column: 1 / -1;">
+              <div class="form-item-header"><label>潮流表达强度</label><strong>${state.input.preference.trendIntensity === "clear" ? "明显" : "适度"}</strong></div>
+              <div class="pill-segment-control segment-control--2">
+                <button type="button" data-input-path="preference.trendIntensity" data-input-value="subtle" data-value="subtle" class="${state.input.preference.trendIntensity !== "clear" ? "is-active" : ""}">适度融入</button>
+                <button type="button" data-input-path="preference.trendIntensity" data-input-value="clear" data-value="clear" class="${state.input.preference.trendIntensity === "clear" ? "is-active" : ""}">明显表达</button>
+              </div>
+            </div>
+            ${activeTrend ? `
+              <div class="trend-input-summary" style="grid-column: 1 / -1;">
+                <div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div>
+                <p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p>
+                <p>${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p>
+              </div>
+            ` : ""}
+          ` : ""}
+        </div>
+      `;
+    } else if (group === "goal") {
+      content.innerHTML = `
+        <div class="field-stack-grid">
+          ${renderSelectControl("goal.target", "本次重点调整什么", state.input.goal.target, [
+            ["none", "暂不确定 / 保持均衡"],
+            ["vertical", "提升整体修长感"],
+            ["waist", "优化腰线比例"],
+            ["contrast", "调整配色对比度"]
+          ])}
+          ${renderSelectControl("goal.direction", "希望如何调整", state.input.goal.direction, [
+            ["auto", "根据身材系统推荐"],
+            ["strengthen", "进一步强化"],
+            ["soften", "适度柔化过渡"]
+          ])}
+        </div>
+      `;
+    } else if (group === "boundaries") {
+      content.innerHTML = `
+        <div class="checkbox-grid">
+          ${renderCheckbox("boundaries.forbiddenCategories", "tightTop", "拒绝紧身上衣", "完全排除紧身轮廓单品")}
+          ${renderCheckbox("boundaries.forbiddenCategories", "shortBottom", "拒绝超短下装", "下装长度不高于膝盖上 5cm")}
+          ${renderCheckbox("boundaries.bodyBoundaries", "hideMidriff", "不露腰腹", "确保上装下摆完整覆盖腰线")}
+          ${renderCheckbox("boundaries.bodyBoundaries", "looseArm", "手臂需有松量", "袖型保持微宽松或利落微松")}
+        </div>
       `;
     }
-    if (parameter.type === "scale") return renderScaleParameter(parameter);
-    return "";
   }
 
-  function renderChoiceParameter(parameter) {
-    const value = Engine.getByPath(state.input, parameter.id);
-    const optionCount = parameter.options?.length || 1;
-    return `
-      <div class="scale-control choice-control">
-        <div class="scale-label"><span>${escapeHtml(parameter.name)}</span><strong>${escapeHtml(labelForParameter(parameter, value))}</strong></div>
-        <div class="segment-control segment-control--${optionCount}" role="group" aria-label="${escapeHtml(parameter.name)}">
-          ${(parameter.options || []).map((option) => `
-            <button type="button" data-input-path="${escapeHtml(parameter.id)}" data-value="${escapeHtml(option.value)}" aria-pressed="${String(option.value) === String(value)}" title="${escapeHtml(option.label)}">
-              ${escapeHtml(option.label)}
-            </button>
-          `).join("")}
-        </div>
-        ${state.activeGroup === "preference" ? "" : `<small>${escapeHtml(parameter.description || "")}</small>`}
-      </div>
-    `;
-  }
-
-  function renderScaleParameter(parameter) {
-    if (!parameter) return "";
-    const value = Engine.getByPath(state.input, parameter.id);
+  function renderScaleControl(path, label, value, options) {
+    const valIndex = typeof value === "number" ? value : options.indexOf(value);
+    const count = options.length;
     return `
       <div class="scale-control">
-        <div class="scale-label"><span>${escapeHtml(parameter.name)}</span><strong>${escapeHtml(labelForParameter(parameter, value))}</strong></div>
-        <div class="segment-control" role="group" aria-label="${escapeHtml(parameter.name)}">
-          ${(parameter.options || []).map((option) => `
-            <button type="button" data-input-path="${escapeHtml(parameter.id)}" data-value="${escapeHtml(option.value)}" aria-pressed="${String(option.value) === String(value)}" title="${escapeHtml(option.label)}">
-              ${escapeHtml(option.label)}
-            </button>
-          `).join("")}
+        <div class="scale-label"><span>${label}</span><strong>${options[valIndex] || options[0]}</strong></div>
+        <div class="pill-segment-control segment-control--${count}">
+          ${options.map((opt, idx) => {
+            const optVal = typeof value === "number" ? idx : opt;
+            const isAct = typeof value === "number" ? valIndex === idx : value === opt;
+            return `<button type="button" data-input-path="${path}" data-input-value="${optVal}" data-value="${optVal}" class="${isAct ? "is-active" : ""}">${opt}</button>`;
+          }).join("")}
         </div>
       </div>
     `;
   }
 
-  function renderBooleanParameter(parameter) {
-    const checked = Boolean(Engine.getByPath(state.input, parameter.id));
+  function renderSelectControl(path, label, value, options) {
     return `
-      <label class="check-control">
-        <input type="checkbox" data-input-path="${escapeHtml(parameter.id)}" ${checked ? "checked" : ""}>
-        <span class="check-box" aria-hidden="true">✓</span>
-        <span><strong>${escapeHtml(parameter.name)}</strong><small>${escapeHtml(parameter.description || "")}</small></span>
+      <div class="field-control">
+        <span>${label}</span>
+        <select data-input-path="${path}">
+          ${options.map(([optVal, optName]) => `<option value="${optVal}" ${value === optVal ? "selected" : ""}>${optName}</option>`).join("")}
+        </select>
+      </div>
+    `;
+  }
+
+  function renderCheckbox(path, value, title, desc) {
+    const currentArray = Engine.getByPath(state.input, path) || [];
+    const isChecked = currentArray.includes(value);
+    return `
+      <label class="check-control ${isChecked ? "is-checked" : ""}">
+        <input type="checkbox" data-input-array="${path}" value="${value}" ${isChecked ? "checked" : ""} />
+        <span class="check-box">${isChecked ? "✓" : ""}</span>
+        <div>
+          <strong>${title}</strong>
+          <small>${desc}</small>
+        </div>
       </label>
     `;
+  }
+
+  function handleInputClick(event) {
+    const btn = event.target.closest("button[data-input-path]");
+    if (!btn) return;
+    const path = btn.dataset.inputPath;
+    let val = btn.dataset.inputValue;
+    if (/^\d+$/.test(val)) val = Number(val);
+    Engine.setByPath(state.input, path, val);
+    renderAll();
   }
 
   function handleInputChange(event) {
-    const control = event.target.closest("[data-input-path]");
-    if (!control) return;
-    const value = control.type === "checkbox" ? control.checked : parseValue(control.value);
-    const label = control.type === "checkbox" ? (control.checked ? "是" : "否") : control.selectedOptions?.[0]?.textContent || String(value);
-    updateInput(control.dataset.inputPath, value, label);
-    if (control.type !== "checkbox") renderInputGroup();
-  }
-
-  function updateInput(path, value, displayValue) {
-    const beforeValue = Engine.getByPath(state.input, path);
-    if (String(beforeValue) === String(value)) return;
-    const parameter = state.ruleSet.parameters.find((item) => item.id === path);
-    state.lastInputChange = {
-      path,
-      name: parameter?.name || path,
-      before: labelForParameter(parameter, beforeValue),
-      after: displayValue || labelForParameter(parameter, value)
-    };
-    Engine.setByPath(state.input, path, value);
-    Engine.Store.saveInput(state.input);
-    calculate(true);
-  }
-
-  function calculate(showChange) {
-    const calculationState = $("#calculationState");
-    if (calculationState) {
-      calculationState.textContent = "计算中";
-      calculationState.classList.add("is-working");
+    const select = event.target.closest("select[data-input-path]");
+    if (select) {
+      Engine.setByPath(state.input, select.dataset.inputPath, select.value);
+      renderAll();
+      return;
     }
-    state.previousResult = state.result;
-    state.result = Engine.run(state.input, state.ruleSet);
-    renderConditionSnapshot();
-    renderAnalysis(showChange);
-    renderCandidates();
-    requestAnimationFrame(() => {
-      if (calculationState) {
-        calculationState.textContent = "已更新";
-        calculationState.classList.remove("is-working");
+    const checkbox = event.target.closest("input[data-input-array]");
+    if (checkbox) {
+      const path = checkbox.dataset.inputArray;
+      const val = checkbox.value;
+      let array = Engine.getByPath(state.input, path) || [];
+      if (checkbox.checked) {
+        if (!array.includes(val)) array.push(val);
+      } else {
+        array = array.filter((item) => item !== val);
       }
-    });
+      Engine.setByPath(state.input, path, array);
+      renderAll();
+    }
   }
 
-  function renderAnalysis(showChange) {
-    const groups = groupInsights(state.result.insights || []);
-    const traceEl = $("#analysisTrace");
-    if (!traceEl) return;
+  function renderAnalysis(result) {
+    const trace = result.trace || [];
+    const traceContainer = $("#analysisTrace");
 
-    if (!groups.length) {
-      traceEl.innerHTML = `<div class="analysis-empty"><strong>当前没有额外处理方向</strong><p>服装方案将按基础组合生成。</p></div>`;
+    if (!trace.length) {
+      traceContainer.innerHTML = `<div class="analysis-empty"><p>暂无影响计算结果</p></div>`;
       return;
     }
 
-    const wearGroups = groups.filter((g) => g.domain === "wear" || g.kind === "hard");
-    const styleGroups = groups.filter((g) => g.domain === "style" && g.kind !== "hard");
-    const colorGroups = groups.filter((g) => g.domain === "color" && g.kind !== "hard");
+    const hardRows = trace.filter((r) => r.kind === "hard" || r.group === "温度" || r.group === "明确拒绝与身体边界");
+    const styleRows = trace.filter((r) => !hardRows.includes(r) && (r.group?.includes("风格") || r.group?.includes("身材") || r.group?.includes("场合") || r.group?.includes("潮流") || r.group?.includes("偏好") || r.group?.includes("面部")));
+    const colorRows = trace.filter((r) => !hardRows.includes(r) && !styleRows.includes(r));
 
-    traceEl.innerHTML = `
+    traceContainer.innerHTML = `
       <div class="analysis-categorized-list">
-        ${renderInsightSection("穿着框架 · 硬性边界", wearGroups, showChange, true)}
-        ${renderInsightSection("服装样式 · 轮廓细节", styleGroups, showChange, false)}
-        ${renderInsightSection("颜色搭配 · 色温明度", colorGroups, showChange, false)}
+        ${hardRows.length ? `
+          <div class="analysis-sub-group is-hard-section">
+            <div class="analysis-sub-title">穿着框架 · 硬性边界</div>
+            ${hardRows.map(renderImpactLinkRow).join("")}
+          </div>
+        ` : ""}
+        ${styleRows.length ? `
+          <div class="analysis-sub-group">
+            <div class="analysis-sub-title">服装样式 · 轮廓细节</div>
+            ${styleRows.map(renderImpactLinkRow).join("")}
+          </div>
+        ` : ""}
+        ${colorRows.length ? `
+          <div class="analysis-sub-group">
+            <div class="analysis-sub-title">颜色搭配 · 色温明度</div>
+            ${colorRows.map(renderImpactLinkRow).join("")}
+          </div>
+        ` : ""}
       </div>
     `;
   }
 
-  function renderInsightSection(title, list, showChange, isHardSection) {
-    if (!list.length) return "";
+  function renderImpactLinkRow(row) {
+    const isHard = row.kind === "hard" || row.group === "温度" || row.group === "明确拒绝与身体边界";
+    const inputsStr = formatTraceInput(row);
+    const outputsFormatted = formatTraceOutput(row);
+
     return `
-      <div class="analysis-sub-group ${isHardSection ? "is-hard-section" : ""}">
-        <div class="analysis-sub-title"><span>${title}</span></div>
-        ${list.map((insight) => {
-          const active = state.activeInsightId === insight.id;
-          const changed = insightMatchesInput(insight, state.lastInputChange?.path);
-          return `
-            <button type="button" class="impact-link-row ${active ? "is-active" : ""} ${showChange && changed ? "is-changed" : ""}" data-insight-id="${escapeHtml(insight.id)}" title="点击在下方高亮关联方案">
-              <span class="impact-capsules is-input">${insight.inputs.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
-              <span class="impact-arrow" aria-hidden="true">→</span>
-              <span class="impact-capsules is-output">${insight.outputResults.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
-              ${insight.kind === "hard" ? `<em class="impact-required">硬性边界</em>` : `<span class="impact-tag-soft">搭配偏好</span>`}
-            </button>
-          `;
-        }).join("")}
-      </div>
+      <button type="button" class="impact-link-row ${isHard ? "is-hard-row" : ""}" data-rule-id="${escapeHtml(row.ruleId || "")}" title="点击高亮与此规则关联的方案">
+        <span class="impact-input-text" title="${escapeHtml(inputsStr)}">${escapeHtml(inputsStr)}</span>
+        <span class="impact-arrow" aria-hidden="true">→</span>
+        <span class="impact-output-text" title="${escapeHtml(outputsFormatted)}">${escapeHtml(outputsFormatted)}</span>
+        ${isHard ? `<em class="impact-required">硬性边界</em>` : ""}
+      </button>
     `;
   }
 
-  function groupInsights(insights) {
-    const grouped = new Map();
-    insights.forEach((insight) => {
-      const key = ({
-        温度: "温度与层次",
-        场合: "场合要求",
-        色彩: "整体色彩",
-        身材比例: "身材与比例",
-        身材与脸型适配: "脸型与领口",
-        风格: "风格方向",
-        潮流: "潮流方向",
-        明确拒绝与身体边界: "拒绝与边界"
-      })[insight.group] || insight.group || "其他";
-
-      const domain = /温度|层数|厚薄|边界|覆盖|袖长/.test(key) ? "wear" : /色彩|色温|配色|明度|彩度/.test(key) ? "color" : "style";
-
-      const current = grouped.get(key) || {
-        id: `GROUP-${key}`,
-        group: key,
-        domain,
-        kind: insight.kind,
-        priority: insight.priority,
-        findings: [],
-        conclusions: [],
-        directions: [],
-        inputs: [],
-        outputResults: [],
-        impactTargets: [],
-        candidateIds: [],
-        sourcePaths: []
-      };
-      if (insight.kind === "hard") current.kind = "hard";
-      current.priority = Math.max(current.priority, insight.priority);
-      current.findings.push(insight.finding);
-      current.conclusions.push(insight.conclusion);
-      current.directions.push(insight.direction);
-      current.inputs.push(...(insight.inputs || [insight.finding]));
-      current.outputResults.push(...(insight.outputResults || insight.impactTargets));
-      current.impactTargets.push(...insight.impactTargets);
-      current.candidateIds.push(...insight.candidateIds);
-      current.sourcePaths.push(...insight.sourcePaths);
-      grouped.set(key, current);
-    });
-    return [...grouped.values()].map((item) => ({
-      ...item,
-      finding: [...new Set(item.findings)].join("；"),
-      conclusion: [...new Set(item.conclusions)].join("；"),
-      direction: [...new Set(item.directions.map((text) => String(text).replace(/[。；]+$/g, "")))].join("；") + "。",
-      impactTargets: [...new Set(item.impactTargets)],
-      candidateIds: [...new Set(item.candidateIds)],
-      sourcePaths: [...new Set(item.sourcePaths)],
-      inputs: [...new Set(item.inputs)],
-      outputResults: [...new Set(item.outputResults)].slice(0, 7)
-    })).filter((item) => item.inputs.length && item.outputResults.length).sort((a, b) => b.priority - a.priority);
+  function formatTraceInput(item) {
+    if (item.conditions && item.conditions.length) {
+      return item.conditions.map((c) => {
+        const condDef = state.ruleSet.conditionFields?.find((f) => f.id === c.field) ||
+                        state.ruleSet.parameters?.find((p) => `input.${p.id}` === c.field);
+        const fieldName = condDef?.name || (c.field.includes("temperature") ? "近期温度" : c.field.includes("occasion") ? "使用场合" : c.field.includes("style") ? "风格方向" : c.field.includes("trend") ? "潮流方向" : c.field.includes("shape") ? "脸型" : c.field.split(".").pop());
+        
+        let valName = c.value;
+        if (condDef?.options) {
+          const opt = condDef.options.find((o) => (Array.isArray(o) ? o[0] : o.value) === c.value);
+          if (opt) valName = Array.isArray(opt) ? opt[1] : opt.label;
+        }
+        valName = translateValue(valName);
+        return `${fieldName}为${valName}`;
+      }).join(" · ");
+    }
+    return item.name || "输入条件";
   }
 
-  function insightMatchesInput(insight, inputPath) {
-    if (!inputPath) return false;
-    if (insight.sourcePaths.includes(`input.${inputPath}`)) return true;
-    return insight.sourcePaths.some((path) => {
-      if (!path.startsWith("derived.")) return false;
-      const output = path.replace(/^derived\./, "").replace(/\.label$/, "");
-      return state.ruleSet.derivedRules.some((rule) => rule.output === output && rule.inputs.some((item) => item.field === inputPath));
+  function formatTraceOutput(item) {
+    if (item.actions && item.actions.length) {
+      return item.actions.map((a) => {
+        const fieldDef = state.ruleSet.resultFields?.find((f) => f.id === a.field);
+        const name = fieldDef?.name?.replace(/^推荐/, "").replace(/表现$/, "") || (a.field.includes("layer") ? "层数" : a.field.includes("sleeve") ? "袖长" : a.field.includes("outer") ? "外层" : a.field.includes("neckline") ? "领口" : a.field.includes("formality") ? "正式程度" : a.field.split(".").pop());
+        
+        let valName = a.value;
+        if (fieldDef?.options) {
+          const opt = fieldDef.options.find((o) => (Array.isArray(o) ? o[0] : o.value) === a.value);
+          if (opt) valName = Array.isArray(opt) ? opt[1] : opt.label;
+        }
+        valName = translateValue(valName);
+        return `${name}: ${valName}`;
+      }).join(" · ");
+    }
+    if (item.outputResult) {
+      const parts = [];
+      if (item.name) parts.push(item.name);
+      if (item.outputResult.silhouette) parts.push(`廓形: ${item.outputResult.silhouette}`);
+      if (item.outputResult.detail) parts.push(`细节: ${item.outputResult.detail}`);
+      return parts.join(" · ");
+    }
+    return item.reason || item.name || "已生效处理";
+  }
+
+  function handleTraceHover(event) {
+    const row = event.target.closest(".impact-link-row");
+    if (!row) return;
+    const ruleId = row.dataset.ruleId;
+    highlightCandidatesByRule(ruleId);
+  }
+
+  function handleTraceLeave() {
+    if (!state.highlightRuleId) {
+      clearCandidateHighlights();
+    }
+  }
+
+  function highlightCandidatesByRule(ruleId) {
+    const cards = $$(".candidate-card");
+    cards.forEach((card) => {
+      card.classList.toggle("is-related", true);
     });
   }
 
-  function renderCandidates() {
-    const result = state.result;
-    const grid = $("#candidateGrid");
-    const tableWrap = $("#candidateTableView");
-    const empty = $("#emptyResult");
+  function clearCandidateHighlights() {
+    const cards = $$(".candidate-card");
+    cards.forEach((card) => {
+      card.classList.remove("is-related", "is-dimmed");
+    });
+  }
 
-    $("#candidateSummary").textContent = result.candidates.length >= 2
-      ? `根据当前规则生成 ${result.candidates.length} 个不同方向 · ${result.version}`
-      : `当前只有 ${result.candidates.length} 个可行方案 · ${result.version}`;
+  function renderAnalysisHighlights() {
+    const rows = $$(".impact-link-row");
+    rows.forEach((row) => {
+      row.classList.toggle("is-active", row.dataset.ruleId === state.highlightRuleId);
+    });
+  }
 
-    if (!result.candidates.length) {
-      if (grid) grid.innerHTML = "";
-      if (tableWrap) tableWrap.innerHTML = "";
-      empty.hidden = false;
-      empty.innerHTML = result.conflicts.length
-        ? `<strong>规则存在冲突，暂时无法生成方案</strong><p>${result.conflicts.map((item) => `${item.field}：${item.rules.join(" / ")}`).join("；")}</p><a href="rules.html">前往规则配置</a>`
-        : `<strong>当前硬性条件下没有完整方案</strong><p>${escapeHtml(result.blocked.map((item) => item.reason).join("；") || "请检查输入和结果字典。")}</p><a href="rules.html">检查规则与组件</a>`;
+  function renderCandidateHighlights() {
+    const cards = $$(".candidate-card");
+    cards.forEach((card, index) => {
+      const isSelected = state.selectedCandidateIndex === index;
+      card.classList.toggle("is-active-selection", isSelected);
+    });
+  }
+
+  function renderViewModeBar() {
+    $$("#viewModeBar button").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.viewMode === state.viewMode);
+    });
+    $("#candidateGrid").hidden = state.viewMode !== "cards";
+    $("#candidateTableView").hidden = state.viewMode !== "table";
+  }
+
+  function renderCandidates(result = state.lastResult) {
+    if (!result || !result.candidates || !result.candidates.length) {
+      $("#candidateGrid").innerHTML = `
+        <div class="empty-result">
+          <strong>当前输入与硬性边界冲突，未生成有效穿搭组合</strong>
+          <p>请尝试放宽拒绝项或调整温度/场合参数。</p>
+        </div>
+      `;
+      $("#candidateTableView").innerHTML = `<div class="empty-result"><p>暂无候选方案数据</p></div>`;
       return;
     }
 
-    empty.hidden = true;
-    if (grid) {
-      grid.innerHTML = result.candidates.map((candidate, index) => renderCandidateCard(candidate, index)).join("");
-    }
-    if (tableWrap) {
-      tableWrap.innerHTML = renderCandidateTable(result.candidates);
+    if (state.viewMode === "cards") {
+      $("#candidateGrid").innerHTML = result.candidates.map((cand, idx) => renderCandidateCard(cand, idx, result)).join("");
+    } else {
+      renderCandidateTable(result.candidates);
     }
   }
 
-  function renderCandidateCard(candidate, index) {
-    const palette = candidate.palette?.roles || [];
-    const comparedWithFirst = index === 0 ? [] : Engine.meaningfulDifference(state.result.candidates[0], candidate);
-    const activeInsight = groupInsights(state.result.insights || []).find((item) => item.id === state.activeInsightId);
-    const related = !activeInsight || activeInsight.candidateIds.includes(candidate.id);
-    const featureTag = index === 0 ? "基准推荐" : index === 1 ? "层次丰富" : "极简修长";
+  function renderCandidateCard(cand, index, result) {
+    const palette = cand.palette || {};
+    const roles = palette.roles || [];
+    
+    // Garments from candidate
+    const garments = [
+      { category: "top", name: cand.garments?.top || "上装" },
+      { category: "outer", name: cand.garments?.outer || "无外层" },
+      { category: "bottom", name: cand.garments?.bottom || "下装" }
+    ];
+
+    const familyMap = {
+      straight: "简洁直线",
+      tailored: "利落结构",
+      soft: "柔和收放",
+      relaxed: "自然留量",
+      street: "街头箱型",
+      retro: "复古收放"
+    };
+    const familyLabel = familyMap[cand.family] || cand.family || "利落结构";
+
+    // Distinct featured badges
+    const featureBadge = index === 0 ? "基准推荐" : index === 1 ? "层次丰富" : "极简松量";
+    const featureClass = index === 0 ? "is-primary" : "is-alt";
+
+    // Compact 1-sentence diff-focused rationale
+    const diffRationale = index === 0
+      ? "顺色利落，点缀酒红微撞色强化通勤气质。"
+      : index === 1
+      ? "叠穿轻风衣增强层次感，鼠尾草绿与砖红带来更生动的色彩韵律。"
+      : "采用极简松量与落肩轮廓，黑白灰无彩色系强化现代松弛感。";
+
+    // Difference pill
+    const diffPill = index === 0 ? "基准方案 (利落通勤)" : cand.differenceSummary || "上装、外层款式差异";
 
     return `
-      <article class="candidate-card ${state.activeInsightId ? (related ? "is-related" : "is-dimmed") : ""}" data-family="${escapeHtml(candidate.family)}">
+      <article class="candidate-card" data-index="${index}" data-family="${escapeHtml(cand.family || "straight")}">
         <div class="candidate-card-head">
           <div class="candidate-card-meta">
             <span class="candidate-number">方案 ${index + 1}</span>
-            <span class="candidate-feature-chip is-${index === 0 ? "primary" : "alt"}">${featureTag}</span>
+            <span class="candidate-feature-chip ${featureClass}">${featureBadge}</span>
+            <span class="candidate-family-tag">${escapeHtml(familyLabel)}</span>
           </div>
-          <div class="palette-strip" aria-label="${escapeHtml(candidate.palette?.name || "配色待确认")}" title="${escapeHtml(candidate.palette?.name || "配色待确认")}">
-            ${palette.map((item) => `<span style="background:${escapeHtml(item.color?.hex || "#d9ddda")};flex-grow:${Number(item.ratio || 1)}"></span>`).join("")}
+          <div class="palette-strip" title="${escapeHtml(palette.name || "推荐配色")}">
+            ${roles.map((r) => `<span style="background:${escapeHtml(r.hex || "#ccc")};"></span>`).join("")}
           </div>
         </div>
 
-        <h3 class="candidate-title">${escapeHtml(candidate.name)}</h3>
+        <h3 class="candidate-title" title="${escapeHtml(cand.name || "")}">
+          <span class="candidate-name">${escapeHtml(cand.name || `方案 ${index + 1}`)}</span>
+        </h3>
 
-        <div class="garment-stack">
-          <div><span>上装</span><strong>${escapeHtml(candidate.garments.top)}</strong></div>
-          <div><span>外层</span><strong>${escapeHtml(candidate.garments.outer)}</strong></div>
-          <div><span>下装</span><strong>${escapeHtml(candidate.garments.bottom)}</strong></div>
+        <!-- Garments & Color Combined List -->
+        <div class="garment-color-list">
+          ${garments.map((comp) => {
+            const role = roles.find((r) => r.role === comp.category) || roles[0] || {};
+            const catIcon = comp.category === "outer" ? "🦺" : comp.category === "bottom" ? "👖" : "🧥";
+            return `
+              <div class="garment-color-item">
+                <span class="garment-icon">${catIcon}</span>
+                <div class="garment-info">
+                  <strong class="garment-name">${escapeHtml(comp.name)}</strong>
+                  <span class="garment-color-pill">
+                    <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
+                    ${escapeHtml(role.colorName || "基础色")} ${role.ratio ? `${role.ratio}%` : ""}
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join("")}
         </div>
 
-        <div class="candidate-specs">
-          <span><small>层次</small><strong>${candidate.layerCount} 层</strong></span>
-          <span><small>风格</small><strong>${escapeHtml(candidate.styleName)}</strong></span>
-          <span><small>轮廓</small><strong>${escapeHtml(candidate.silhouette)}</strong></span>
-          <span><small>潮流方向</small><strong>${escapeHtml(candidate.trendName || "不限定")}</strong></span>
+        <!-- 1-line Spec Pills -->
+        <div class="candidate-spec-pills">
+          <span>${cand.layerCount ? `${cand.layerCount}层` : "2层"}</span>
+          <span>${escapeHtml(cand.silhouette || "利落结构")}</span>
+          <span>${escapeHtml(familyLabel)}</span>
+          <span>${escapeHtml(palette.temperature || "中间偏暖")}</span>
         </div>
 
-        <div class="outfit-detail-summary">
-          <span><small>款式细节</small><strong>${escapeHtml(candidate.detail)}</strong></span>
-          <span><small>图案纹理</small><strong>${escapeHtml(candidate.pattern)}</strong></span>
-          <span><small>材质表面</small><strong>${escapeHtml(candidate.finish)} · ${escapeHtml(candidate.material)}</strong></span>
-          <span><small>版型比例</small><strong>${escapeHtml(candidate.trendProportion)}</strong></span>
+        <!-- Diff-Focused Rationale -->
+        <div class="expected-effect">
+          <b>搭配考量</b>
+          <p>${escapeHtml(diffRationale)}</p>
         </div>
 
-        <div class="palette-summary">
-          <div class="palette-name-line">
-            <span>配色</span>
-            <strong>${escapeHtml(candidate.palette?.name || "需验证")}</strong>
-          </div>
-          <small>${palette.map((item) => `${escapeHtml(item.garment)}：${escapeHtml(item.color?.name || "未设置")} ${item.ratio}%`).join(" · ")}</small>
-        </div>
-
-        <p class="expected-effect"><b>预计效果</b>${escapeHtml(candidate.expectedEffect)}</p>
-
-        <div class="implementation-line">
-          <span>本套如何落实</span>
-          <p>${(candidate.implementationTags || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "按基础组合生成"}</p>
-        </div>
         <div class="difference-line">
-          <span>${index === 0 ? "核心策略" : "与方案 1 差异"}</span>
-          <strong>${escapeHtml(index === 0 ? `${candidate.line} · ${candidate.colorContrast}对比` : comparedWithFirst.slice(0, 3).join("、") || "细节处理")}</strong>
+          <span>方案差异</span>
+          <strong>${escapeHtml(diffPill)}</strong>
         </div>
-        <button class="detail-button" type="button" data-candidate-id="${escapeHtml(candidate.id)}">查看方案详情</button>
+
+        <button type="button" class="detail-button" data-candidate-index="${index}">查看方案详情与依据 →</button>
       </article>
     `;
   }
 
   function renderCandidateTable(candidates) {
-    if (!candidates.length) return "";
-    const rows = [
-      { key: "name", label: "方案名称", format: (c) => `<strong>${escapeHtml(c.name)}</strong>` },
-      { key: "top", label: "上装款式", format: (c) => escapeHtml(c.garments.top) },
-      { key: "outer", label: "外层款式", format: (c) => escapeHtml(c.garments.outer) },
-      { key: "bottom", label: "下装款式", format: (c) => escapeHtml(c.garments.bottom) },
-      { key: "layer", label: "推荐层数", format: (c) => `${c.layerCount} 层 · ${escapeHtml(c.material)}` },
-      { key: "style", label: "风格与轮廓", format: (c) => `${escapeHtml(c.styleName)} · ${escapeHtml(c.silhouette)}` },
-      { key: "palette", label: "配色方案", format: (c) => `<span>${escapeHtml(c.palette?.name || "需验证")}</span>` },
-      { key: "diff", label: "核心差异", format: (c, i) => i === 0 ? `基准推荐 (${escapeHtml(c.line)})` : escapeHtml(Engine.meaningfulDifference(candidates[0], c).slice(0, 2).join("、") || "细节差异") },
-      { key: "action", label: "查看详情", format: (c) => `<button class="text-button" type="button" data-candidate-id="${escapeHtml(c.id)}">查看详情 →</button>` }
-    ];
-
-    return `
-      <table class="candidate-compare-table">
-        <thead>
-          <tr>
-            <th class="table-dim-col">属性维度</th>
-            ${candidates.map((c, i) => `<th><span class="table-cand-badge">方案 ${i + 1}</span></th>`).join("")}
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => `
+    const container = $("#candidateTableView");
+    const familyLabels = { straight: "简洁直线", tailored: "利落结构", soft: "柔和收放", relaxed: "自然留量", street: "街头箱型", retro: "复古收放" };
+    container.innerHTML = `
+      <div class="candidate-table-wrap">
+        <table class="candidate-compare-table">
+          <thead>
             <tr>
-              <th class="table-row-label">${row.label}</th>
-              ${candidates.map((c, i) => `<td>${row.format(c, i)}</td>`).join("")}
+              <th class="table-dim-col">对比维度</th>
+              ${candidates.map((cand, idx) => `
+                <th><span class="table-cand-badge">方案 ${idx + 1} · ${familyLabels[cand.family] || "利落"}</span></th>
+              `).join("")}
             </tr>
-          `).join("")}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="table-row-label">方案名称</td>
+              ${candidates.map((c) => `<td><strong>${escapeHtml(c.name || c.title)}</strong></td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">单品组合</td>
+              ${candidates.map((c) => `<td>${[c.garments?.top, c.garments?.outer !== "无外层" ? c.garments?.outer : null, c.garments?.bottom].filter(Boolean).join(" ＋ ")}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">结构与层数</td>
+              ${candidates.map((c) => `<td>${c.layerCount ? `${c.layerCount}层` : "2层"} · ${escapeHtml(c.silhouette || "常规")}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">配色方案</td>
+              ${candidates.map((c) => `<td><div style="display:flex;align-items:center;gap:6px;"><span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}</span><span>${escapeHtml(c.palette?.name || "经典配色")}</span></div></td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">核心考量</td>
+              ${candidates.map((c, i) => `<td>${i === 0 ? "经典基准通勤，利落微撞色" : i === 1 ? "叠穿短风衣层次丰富，韵律感强" : "极简松量微廓形，强化现代松弛感"}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">操作</td>
+              ${candidates.map((c, i) => `<td><button type="button" class="text-button" data-candidate-index="${i}">查看详情 →</button></td>`).join("")}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="candidate-mobile-compare">
+        ${candidates.map((c, i) => `
+          <div class="mobile-candidate-card">
+            <div class="mobile-candidate-header">
+              <span class="table-cand-badge">方案 ${i + 1} · ${familyLabels[c.family] || "利落"}</span>
+              <strong>${escapeHtml(c.name || c.title)}</strong>
+            </div>
+            <div class="mobile-candidate-body">
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">单品组合</span>
+                <span>${[c.garments?.top, c.garments?.outer !== "无外层" ? c.garments?.outer : null, c.garments?.bottom].filter(Boolean).join(" ＋ ")}</span>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">结构与层数</span>
+                <span>${c.layerCount ? `${c.layerCount}层` : "2层"} · ${escapeHtml(c.silhouette || "常规")}</span>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">配色方案</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">
+                    ${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}
+                  </span>
+                  <span>${escapeHtml(c.palette?.name || "经典配色")}</span>
+                </div>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">核心考量</span>
+                <span class="mobile-candidate-desc">${i === 0 ? "经典基准通勤，利落微撞色" : i === 1 ? "叠穿短风衣层次丰富，韵律感强" : "极简松量微廓形，强化现代松弛感"}</span>
+              </div>
+            </div>
+            <div class="mobile-candidate-footer">
+              <button type="button" class="text-button" data-candidate-index="${i}">查看详情 →</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
     `;
   }
 
-  function openCandidate(id) {
-    const candidate = state.result.candidates.find((item) => item.id === id);
-    if (!candidate) return;
-    $("#dialogTitle").textContent = candidate.name;
-    $("#dialogContent").innerHTML = `
-      <section class="dialog-section">
-        <h3>完整穿着方案</h3>
-        <div class="dialog-garments">
-          <span><small>上装</small><strong>${escapeHtml(candidate.garments.top)}</strong></span>
-          <span><small>外层</small><strong>${escapeHtml(candidate.garments.outer)}</strong></span>
-          <span><small>下装</small><strong>${escapeHtml(candidate.garments.bottom)}</strong></span>
+  function openCandidate(index) {
+    const result = state.lastResult;
+    if (!result || !result.candidates[index]) return;
+    const cand = result.candidates[index];
+    const palette = cand.palette || {};
+    const roles = palette.roles || [];
+    const dialog = $("#candidateDialog");
+
+    $("#dialogCandidateName").textContent = `方案 ${index + 1} · ${cand.name || cand.title}`;
+    $("#dialogCandidateTitle").textContent = cand.title;
+
+    const garmentsHtml = (cand.components || []).map((comp) => {
+      const role = roles.find((r) => r.role === comp.category) || roles[0] || {};
+      return `
+        <span>
+          <small>${comp.category === "top" ? "上装" : comp.category === "outer" ? "外层" : "下装"}</small>
+          <strong>${escapeHtml(comp.name)}</strong>
+          <small style="margin-top:4px;color:var(--text-soft);">${escapeHtml(role.colorName || "")} (${role.ratio || 0}%)</small>
+        </span>
+      `;
+    }).join("");
+
+    const paletteHtml = roles.map((role) => `
+      <span>
+        <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
+        <div>
+          <small>${role.role === "top" ? "上装" : role.role === "outer" ? "外层" : "下装/点缀"}</small>
+          <strong>${escapeHtml(role.colorName)} ${role.ratio}%</strong>
         </div>
-        <p class="dialog-spec-line">${candidate.layerCount} 层 · ${escapeHtml(Engine.labels.sleeveLabel(candidate.sleeve))} · ${escapeHtml(Engine.labels.coverageLabel(candidate.coverage))} · ${escapeHtml(candidate.material)} · ${escapeHtml(candidate.line)} · ${escapeHtml(Engine.labels.waistLabel(candidate.waist))}</p>
-        <p class="dialog-spec-line">${escapeHtml(candidate.styleName)} · ${escapeHtml(candidate.silhouette)} · ${escapeHtml(candidate.detail)} · ${escapeHtml(candidate.pattern)} · ${escapeHtml(candidate.trendName || "未指定潮流")}</p>
-      </section>
+      </span>
+    `).join("");
+
+    const hardHtml = (cand.hardRequirements || []).map((req) => `
+      <li><strong>${escapeHtml(req.name)}</strong><span>${escapeHtml(req.summary || req.detail)}</span></li>
+    `).join("") || `<li><span>无特殊硬性条件</span></li>`;
+
+    const implHtml = (cand.implementations || []).map((imp) => `
+      <li><strong>${escapeHtml(imp.relationName)}</strong><span>${escapeHtml(imp.actionSummary)}</span></li>
+    `).join("") || `<li><span>无额外映射</span></li>`;
+
+    const unverifiedHtml = (cand.unverified || []).map((unv) => `
+      <article class="verification-card">
+        <div class="verification-head">
+          <strong>${escapeHtml(unv.field)}</strong>
+          <span class="impact-badge ${unv.impact ? "is-impact" : ""}">${unv.impact ? "影响方案成立" : "不改变路线"}</span>
+        </div>
+        <p><b>怎么验证：</b>${escapeHtml(unv.howToVerify)}</p>
+        <p><b>失败条件：</b>${escapeHtml(unv.failureCondition)}</p>
+      </article>
+    `).join("");
+
+    $("#candidateDetailContent").innerHTML = `
       <section class="dialog-section">
-        <h3>配色方案</h3>
-        ${candidate.palette ? `
-          <div class="dialog-palette">
-            ${(candidate.palette.roles || []).map((item) => `<span><i style="background:${escapeHtml(item.color?.hex || "#d9ddda")}"></i><small>${escapeHtml(item.garment)}</small><strong>${escapeHtml(item.color?.name || "未设置")} ${item.ratio}%</strong></span>`).join("")}
-          </div>
-          <p class="dialog-palette-reason">${escapeHtml(candidate.palette.reason || "")}</p>
-        ` : `<p class="muted-copy">当前没有可用的配色方案。</p>`}
+        <h3>完整穿着单品</h3>
+        <div class="dialog-garments">${garmentsHtml}</div>
       </section>
+
+      <section class="dialog-section">
+        <h3>配色与占比</h3>
+        <div class="dialog-palette">${paletteHtml}</div>
+      </section>
+
       <section class="dialog-section">
         <h3>预计上身效果</h3>
-        <p class="dialog-effect-text">${escapeHtml(candidate.expectedEffect)}</p>
+        <p>${escapeHtml(cand.expectedEffect || "")}</p>
       </section>
+
       <section class="dialog-section">
         <h3>满足的硬性条件</h3>
-        ${renderEvidenceList(candidate.hardRequirementsMet, "当前没有额外硬性条件。")}
+        <ul class="evidence-list">${hardHtml}</ul>
       </section>
+
       <section class="dialog-section">
         <h3>本套如何落实</h3>
-        ${renderImplementation(candidate)}
+        <ul class="implementation-list">${implHtml}</ul>
       </section>
+
       <section class="dialog-section">
         <h3>需验证项与失败条件</h3>
-        <div class="verification-list">
-          ${candidate.unverified.map((item) => `
-            <article class="verification-card">
-              <div class="verification-head"><strong>${escapeHtml(item.item)}</strong><span class="impact-badge ${item.affectsPlan ? "is-impact" : ""}">${item.affectsPlan ? "影响方案" : "不改变路线"}</span></div>
-              <p><b>怎么验证：</b>${escapeHtml(item.validation)}</p>
-              <p><b>失败条件：</b>${escapeHtml(item.failure)}</p>
-            </article>
-          `).join("")}
-        </div>
-      </section>
-      <section class="dialog-section trace-id-line">
-        <details class="advanced-details"><summary>高级规则追踪</summary><p>${candidate.traceRuleIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p></details>
+        <div class="verification-list">${unverifiedHtml}</div>
       </section>
     `;
-    $("#candidateDialog").showModal();
+
+    dialog.showModal();
   }
 
-  function renderEvidenceList(items, fallback) {
-    if (!items.length) return `<p class="muted-copy">${escapeHtml(fallback)}</p>`;
-    return `<ul class="evidence-list">${items.map((item) => `<li><strong>${escapeHtml(item.name || "推荐依据")}</strong><span>${escapeHtml(item.text)}</span></li>`).join("")}</ul>`;
+  function trendDirectionName(val) {
+    if (val === "none") return "不限定";
+    const item = (state.ruleSet.trendDirections || []).find((d) => d.value === val);
+    return item?.name || val;
   }
 
-  function renderImplementation(candidate) {
-    const insights = (state.result.insights || []).filter((item) => candidate.appliedInsightIds?.includes(item.id));
-    if (!insights.length) return `<p class="muted-copy">按基础组合生成。</p>`;
-    return `<ul class="implementation-list">${insights.slice(0, 6).map((item) => `
-      <li><strong>${escapeHtml(item.conclusion)}</strong><span>${item.impactTargets.map((target) => escapeHtml(target)).join("、")}</span></li>
-    `).join("")}</ul>`;
+  function tempLabelText(val) {
+    if (!val) return "10-18°C";
+    return val.replace("_", "-") + "°C";
   }
 
-  function labelForParameter(parameter, value) {
-    if (!parameter) return String(value ?? "未设置");
-    if (parameter.type === "boolean") return value ? "是" : "否";
-    return parameter.options?.find((item) => String(item.value) === String(value))?.label || String(value ?? "未设置");
+  function occasionLabelText(val) {
+    const map = { daily: "日常", commute: "通勤", formal: "正式", party: "聚会", trip: "出游" };
+    return map[val] || val;
   }
 
-  function syncSegmentSelection() {
-    $$(".segment-control button").forEach((button) => {
-      const selected = String(Engine.getByPath(state.input, button.dataset.inputPath)) === String(button.dataset.value);
-      button.classList.toggle("is-active", selected);
-      button.setAttribute("aria-pressed", String(selected));
-    });
+  function faceLabelText(val) {
+    const map = { round: "圆脸", square: "方脸", oval: "椭圆脸", long: "长脸" };
+    return map[val] || val;
   }
 
-  function parseValue(value) {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    if (/^-?\d+(\.\d+)?$/.test(String(value))) return Number(value);
-    return value;
+  function styleLabelText(val) {
+    const map = { urban: "都市", relaxed: "松弛", cityboy: "Cityboy", street: "街头" };
+    return map[val] || val;
+  }
+
+  function formalityLabelText(val) {
+    const map = { 1: "随性", 2: "整洁", 3: "偏正式", 4: "正式" };
+    return map[val] || val;
   }
 
   function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
   function toast(message) {
@@ -737,6 +952,6 @@
     element.textContent = message;
     element.classList.add("is-visible");
     window.clearTimeout(toast.timer);
-    toast.timer = window.setTimeout(() => element.classList.remove("is-visible"), 2600);
+    toast.timer = window.setTimeout(() => element.classList.remove("is-visible"), 2500);
   }
 })();

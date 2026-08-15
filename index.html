@@ -42,8 +42,10 @@
           <span class="source-badge">客户确认</span>
         </div>
 
-        <div class="condition-snapshot" id="conditionSnapshot" aria-label="已选输入概览"></div>
-        <nav class="input-tabs" id="inputTabs" aria-label="输入分组"></nav>
+        <div class="input-sticky-header" id="inputStickyHeader">
+          <div class="condition-snapshot" id="conditionSnapshot" aria-label="已选输入概览"></div>
+          <nav class="input-tabs" id="inputTabs" aria-label="输入分组"></nav>
+        </div>
         <div class="input-content" id="inputContent"></div>
       </section>
 
@@ -87,12 +89,12 @@
   <dialog class="detail-dialog" id="candidateDialog">
     <div class="dialog-header">
       <div>
-        <p class="section-kicker">方案详情与落地依据</p>
-        <h2 id="dialogTitle">完整方案</h2>
+        <p class="section-kicker" id="dialogCandidateName">方案详情与落地依据</p>
+        <h2 id="dialogCandidateTitle">完整方案</h2>
       </div>
       <button class="icon-button" type="button" data-close-dialog title="关闭" aria-label="关闭">×</button>
     </div>
-    <div id="dialogContent"></div>
+    <div id="candidateDetailContent"></div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

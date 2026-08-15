@@ -8,39 +8,50 @@
   <style>
 :root {
   color-scheme: light;
-  --bg: #f4f6f3;
+  --bg: #f3f6f3;
   --surface: #ffffff;
   --surface-muted: #f8faf8;
-  --surface-strong: #edf1ed;
-  --border: #d7ded8;
-  --border-strong: #bac3bb;
-  --text: #1d2521;
-  --text-soft: #4d5751;
-  --text-muted: #737e77;
+  --surface-strong: #edf2ee;
+  --border: #dbe2dc;
+  --border-subtle: #e6ece7;
+  --border-strong: #b8c4ba;
   
-  --green: #285f4b;
-  --green-dark: #1b4536;
-  --green-soft: #e1ece6;
-  --green-border: #b8d4c7;
+  --text: #19221d;
+  --text-soft: #4a564e;
+  --text-muted: #738077;
+  
+  --green: #255d48;
+  --green-dark: #184233;
+  --green-soft: #e3efe9;
+  --green-border: #b5d5c6;
 
-  --red: #9c3b37;
-  --red-dark: #7a2b27;
-  --red-soft: #f8e8e6;
-  --red-border: #e6bdb9;
+  --red: #9e3935;
+  --red-dark: #7a2824;
+  --red-soft: #fae9e8;
+  --red-border: #e8bfbb;
 
-  --amber: #8a6420;
+  --amber: #8a631e;
   --amber-soft: #f7eedf;
-  --amber-border: #e3cca6;
+  --amber-border: #e6cca4;
 
-  --blue: #375e6d;
-  --blue-soft: #e4edf0;
-  --blue-border: #b9d1d9;
+  --blue: #366072;
+  --blue-soft: #e3edf2;
+  --blue-border: #b8d2de;
 
-  --shadow: 0 4px 20px rgba(27, 43, 34, 0.05);
-  --shadow-lg: 0 16px 40px rgba(22, 38, 29, 0.12);
-  --radius: 6px;
-  --header-height: 56px;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+
+  --shadow-xs: 0 1px 3px rgba(22, 38, 29, 0.04);
+  --shadow-sm: 0 2px 8px rgba(22, 38, 29, 0.06);
+  --shadow-md: 0 6px 20px rgba(22, 38, 29, 0.08);
+  --shadow-lg: 0 16px 44px rgba(22, 38, 29, 0.13);
+
+  --header-height: 54px;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   color: var(--text);
   background: var(--bg);
@@ -121,10 +132,10 @@ button {
   align-items: center;
   gap: 20px;
   padding: 0 24px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 1px 2px rgba(22, 34, 27, 0.03);
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-xs);
 }
 
 .brand {
@@ -139,11 +150,12 @@ button {
   width: 32px;
   height: 32px;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: #fff;
-  background: var(--green);
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
   font-size: 15px;
   font-weight: 700;
+  box-shadow: 0 2px 6px rgba(37, 93, 72, 0.25);
 }
 
 .brand > span:last-child {
@@ -154,6 +166,7 @@ button {
 .brand strong {
   font-size: 14px;
   line-height: 1.2;
+  font-weight: 700;
 }
 
 .brand small {
@@ -177,7 +190,7 @@ button {
   color: var(--text-soft);
   font-weight: 600;
   font-size: 13px;
-  transition: color 150ms ease;
+  transition: all 140ms ease;
 }
 
 .page-nav a::after {
@@ -186,9 +199,10 @@ button {
   bottom: 0;
   left: 14px;
   height: 3px;
+  border-radius: 3px 3px 0 0;
   background: transparent;
   content: "";
-  transition: background 150ms ease;
+  transition: background 140ms ease;
 }
 
 .page-nav a:hover,
@@ -210,11 +224,11 @@ button {
 .version-chip,
 .save-state {
   display: inline-flex;
-  min-height: 30px;
+  min-height: 28px;
   align-items: center;
   padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
   color: var(--text-soft);
   background: var(--surface-muted);
   font-size: 11px;
@@ -233,17 +247,17 @@ button {
   height: 32px;
   flex: 0 0 32px;
   place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   color: var(--text-soft);
   background: var(--surface);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
   transition: all 120ms ease;
 }
 
 .icon-button:hover {
-  border-color: var(--border-strong);
+  border-color: var(--border);
   color: var(--green-dark);
   background: var(--surface-muted);
 }
@@ -258,25 +272,27 @@ button {
 .secondary-button,
 .detail-button,
 .text-button {
-  min-height: 32px;
-  border-radius: 4px;
+  min-height: 30px;
+  border-radius: var(--radius-pill);
   font-weight: 600;
   font-size: 12px;
   transition: all 120ms ease;
 }
 
 .primary-button {
-  padding: 0 14px;
+  padding: 0 16px;
   color: #fff;
-  background: var(--green);
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  box-shadow: 0 2px 6px rgba(37, 93, 72, 0.2);
 }
 
 .primary-button:hover {
-  background: var(--green-dark);
+  box-shadow: 0 4px 12px rgba(37, 93, 72, 0.3);
+  transform: translateY(-1px);
 }
 
 .secondary-button {
-  padding: 0 12px;
+  padding: 0 14px;
   border: 1px solid var(--border);
   color: var(--text-soft);
   background: var(--surface);
@@ -285,11 +301,12 @@ button {
 .secondary-button:hover {
   border-color: var(--green);
   color: var(--green-dark);
+  background: var(--green-soft);
 }
 
 .text-button {
-  min-height: 26px;
-  padding: 0 6px;
+  min-height: 24px;
+  padding: 0 8px;
   color: var(--green);
   background: transparent;
   font-size: 12px;
@@ -297,6 +314,7 @@ button {
 }
 
 .text-button:hover {
+  color: var(--green-dark);
   text-decoration: underline;
 }
 
@@ -313,41 +331,41 @@ button {
    ========================================================= */
 
 .demo-main {
-  width: min(1500px, calc(100% - 32px));
-  margin: 16px auto 36px;
+  width: min(1520px, calc(100% - 32px));
+  margin: 14px auto 30px;
 }
 
 .demo-top-grid {
   display: grid;
-  grid-template-columns: minmax(400px, 0.85fr) minmax(560px, 1.15fr);
+  grid-template-columns: minmax(400px, 0.88fr) minmax(560px, 1.12fr);
   gap: 14px;
-  min-height: 380px;
+  min-height: 340px;
 }
 
 .surface {
   min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .surface-header {
-  min-height: 54px;
+  min-height: 50px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .surface-header h1,
 .surface-header h2,
 .recommendation-heading h2 {
   margin-top: 1px;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.25;
   font-weight: 700;
 }
@@ -355,12 +373,12 @@ button {
 .source-badge,
 .calculation-state {
   flex: 0 0 auto;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
   color: var(--green-dark);
   background: var(--green-soft);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .calculation-state.is-working {
@@ -379,11 +397,18 @@ button {
   font-size: 11px;
 }
 
-/* Condition Snapshot Bar */
+/* Integrated Condition Snapshot Bar */
+.input-sticky-header {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 20;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .condition-snapshot {
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--border);
-  background: #f1f6f3;
+  padding: 6px 14px 4px;
+  background: transparent;
 }
 
 .snapshot-inner {
@@ -396,7 +421,7 @@ button {
 .snapshot-label {
   color: var(--green-dark);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -407,9 +432,9 @@ button {
 }
 
 .snapshot-chip {
-  padding: 2px 7px;
+  padding: 2px 8px;
   border: 1px solid var(--green-border);
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   color: var(--text-soft);
   background: var(--surface);
   font-size: 10px;
@@ -417,7 +442,8 @@ button {
   transition: all 120ms ease;
 }
 
-.snapshot-chip:hover {
+.snapshot-chip:hover,
+.snapshot-chip.is-active {
   border-color: var(--green);
   color: var(--green-dark);
   background: var(--green-soft);
@@ -426,17 +452,17 @@ button {
 .input-tabs {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-muted);
+  background: transparent;
+  padding: 0 2px 0;
 }
 
 .input-tabs button {
   min-width: 0;
-  height: 36px;
+  height: 34px;
   padding: 0 4px;
   overflow: hidden;
   color: var(--text-muted);
-  border-right: 1px solid var(--border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   font-size: 11px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -444,71 +470,98 @@ button {
   transition: all 120ms ease;
 }
 
-.input-tabs button:last-child {
-  border-right: 0;
+.input-tabs button:hover {
+  color: var(--green-dark);
+  background: #eef3ef;
 }
 
-.input-tabs button:hover,
 .input-tabs button.is-active {
   color: var(--green-dark);
   background: var(--surface);
-}
-
-.input-tabs button.is-active {
-  box-shadow: inset 0 -3px 0 var(--green);
+  box-shadow: inset 0 -2px 0 var(--green);
   font-weight: 700;
 }
 
 .input-content {
-  min-height: 270px;
-  max-height: 330px;
+  min-height: 240px;
+  max-height: 290px;
   overflow: auto;
-  padding: 14px 16px 12px;
+  padding: 12px 16px;
 }
 
-.input-group-heading {
-  display: flex;
+/* Modern iOS-style Pill Segment Controls */
+.pill-segment-control {
+  display: grid;
+  padding: 3px;
+  background: #eaf0eb;
+  border-radius: var(--radius-md);
+  gap: 2px;
+}
+
+.segment-control--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.segment-control--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.segment-control--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.segment-control--6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.segment-control--7 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.pill-segment-control button {
   min-width: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 12px;
-}
-
-.input-group-heading strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.input-group-heading p {
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.upload-button {
-  display: inline-flex;
-  max-width: 150px;
   min-height: 28px;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 4px;
-  padding: 0 8px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--green-dark);
-  background: var(--surface-muted);
+  padding: 3px 4px;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--text-soft);
+  background: transparent;
   font-size: 11px;
+  font-weight: 500;
+  line-height: 1.15;
+  transition: all 140ms ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-segment-control button:hover {
+  color: var(--green-dark);
+}
+
+.pill-segment-control button.is-active {
+  color: var(--green-dark);
+  background: var(--surface);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(22, 38, 29, 0.1);
+}
+
+.input-form-compact {
+  display: grid;
+  gap: 10px;
+}
+
+.form-item {
+  display: grid;
+  gap: 4px;
+}
+
+.form-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.form-item-header label {
+  color: var(--text-soft);
   font-weight: 600;
+}
+
+.form-item-header strong {
+  color: var(--green-dark);
+  font-weight: 700;
 }
 
 .field-stack-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px 10px;
 }
 
 .field-stack-grid--single {
@@ -516,6 +569,7 @@ button {
 }
 
 .field-stack-grid--preference {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px 10px;
 }
@@ -524,14 +578,14 @@ button {
 .scale-control {
   display: grid;
   min-width: 0;
-  gap: 5px;
+  gap: 4px;
 }
 
 .field-control > span,
 .scale-label span {
   color: var(--text-soft);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .field-control select,
@@ -542,26 +596,16 @@ button {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   color: var(--text);
   background: var(--surface);
   font-size: 12px;
+  transition: border-color 140ms ease;
 }
 
 .field-control select {
-  height: 32px;
+  height: 30px;
   padding: 0 8px;
-}
-
-.field-control small {
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.35;
-}
-
-.scale-control {
-  padding-bottom: 6px;
-  border-bottom: 1px solid #edf0ec;
 }
 
 .scale-label {
@@ -574,60 +618,19 @@ button {
 .scale-label strong {
   color: var(--green-dark);
   font-size: 11px;
-}
-
-.segment-control {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.segment-control--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.segment-control--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.segment-control--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.segment-control--6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.segment-control--7 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-
-.segment-control button {
-  min-width: 0;
-  min-height: 30px;
-  padding: 3px 2px;
-  overflow-wrap: anywhere;
-  border-right: 1px solid var(--border);
-  color: var(--text-muted);
-  background: var(--surface);
-  font-size: 10px;
-  line-height: 1.15;
-  transition: all 120ms ease;
-}
-
-.segment-control button:last-child {
-  border-right: 0;
-}
-
-.segment-control button:hover,
-.segment-control button.is-active {
-  color: var(--green-dark);
-  background: var(--green-soft);
-}
-
-.segment-control button.is-active {
-  box-shadow: inset 0 -2px 0 var(--green);
   font-weight: 700;
 }
 
 /* Appearance Matrix 3-row layout */
 .appearance-matrix-wrap {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .appearance-row-card {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
@@ -635,12 +638,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .appearance-row-title strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .appearance-row-title span {
@@ -651,7 +654,7 @@ button {
 .appearance-row-scales {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .checkbox-grid {
@@ -665,12 +668,19 @@ button {
   grid-template-columns: 20px minmax(0, 1fr);
   align-items: flex-start;
   gap: 8px;
-  min-height: 50px;
-  padding: 7px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
   cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.check-control:hover,
+.check-control.is-checked {
+  border-color: var(--green-border);
+  background: #f1f7f3;
 }
 
 .check-control input {
@@ -685,7 +695,7 @@ button {
   height: 18px;
   place-items: center;
   border: 1px solid var(--border-strong);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   color: transparent;
   background: var(--surface);
   font-size: 11px;
@@ -708,33 +718,16 @@ button {
 }
 
 .check-control small {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--text-muted);
   font-size: 10px;
-  line-height: 1.3;
-}
-
-.source-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
-.source-line strong {
-  color: var(--text-soft);
 }
 
 .trend-input-summary {
-  margin-top: 8px;
-  padding: 8px 10px;
+  margin-top: 6px;
+  padding: 6px 10px;
   border: 1px solid var(--green-border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: var(--green-soft);
 }
 
@@ -758,19 +751,19 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .trend-input-summary b {
   padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(40, 95, 75, 0.12);
+  border-radius: var(--radius-pill);
+  background: rgba(37, 93, 72, 0.12);
   font-size: 9px;
   font-weight: 600;
 }
 
 /* =========================================================
-   Section 02: Categorized Impact Trace List
+   Section 02: Categorized Impact Trace List (Compact Flow)
    ========================================================= */
 
 .analysis-surface {
@@ -779,21 +772,21 @@ button {
 }
 
 .analysis-trace-list {
-  min-height: 270px;
-  max-height: 340px;
+  min-height: 240px;
+  max-height: 295px;
   overflow: auto;
-  padding: 10px 14px;
+  padding: 8px 12px;
 }
 
 .analysis-categorized-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .analysis-sub-group {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
@@ -803,7 +796,7 @@ button {
 }
 
 .analysis-sub-title {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-size: 10px;
   font-weight: 800;
   color: var(--text-muted);
@@ -826,7 +819,7 @@ button {
   padding: 0 8px;
   margin-bottom: 3px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   text-align: left;
   transition: all 120ms ease;
@@ -849,74 +842,38 @@ button {
   background: #d8eae1;
 }
 
-.impact-link-row.is-changed {
-  animation: flashHighlight 1.2s ease;
-}
-
-@keyframes flashHighlight {
-  0% { background: #fef0cd; border-color: var(--amber); }
-  100% { background: var(--surface); border-color: transparent; }
-}
-
-.impact-capsules {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 3px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.impact-capsules b {
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: var(--text-soft);
-  background: var(--surface-strong);
+.impact-input-text {
   font-size: 10px;
   font-weight: 600;
+  color: var(--text-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
-}
-
-.impact-capsules b {
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: var(--text-soft);
-  background: var(--surface-strong);
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.impact-capsules.is-output b {
-  color: var(--green-dark);
-  background: #e6f0eb;
 }
 
 .impact-arrow {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10px;
   text-align: center;
 }
 
+.impact-output-text {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--green-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .impact-required {
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
   color: var(--red);
   background: var(--red-soft);
   font-size: 9px;
   font-style: normal;
   font-weight: 700;
-  white-space: nowrap;
-}
-
-.impact-tag-soft {
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: var(--text-muted);
-  background: var(--surface-strong);
-  font-size: 9px;
   white-space: nowrap;
 }
 
@@ -927,11 +884,11 @@ button {
 }
 
 /* =========================================================
-   Section 03: Recommendations & Comparison
+   Section 03: Recommendations (High Density & Rounded)
    ========================================================= */
 
 .recommendation-section {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .recommendation-heading {
@@ -939,13 +896,13 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 2px 10px;
+  padding: 0 2px 8px;
 }
 
 .recommendation-heading-controls {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .recommendation-heading-controls p {
@@ -955,53 +912,49 @@ button {
 
 .view-mode-bar {
   display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--surface);
+  padding: 2px;
+  background: #e8eee9;
+  border-radius: var(--radius-pill);
 }
 
 .view-mode-button {
-  padding: 4px 10px;
+  padding: 3px 10px;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
-  border-right: 1px solid var(--border);
+  border-radius: var(--radius-pill);
   transition: all 120ms ease;
-}
-
-.view-mode-button:last-child {
-  border-right: 0;
 }
 
 .view-mode-button:hover,
 .view-mode-button.is-active {
   color: var(--green-dark);
-  background: var(--green-soft);
+  background: var(--surface);
 }
 
 .view-mode-button.is-active {
   font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* Candidate Grid & Card */
+/* High-Density Rounded Candidate Card */
 .candidate-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .candidate-card {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 14px;
-  border: 1px solid var(--border);
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
   border-top: 3px solid var(--green);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow);
-  transition: opacity 150ms ease, transform 150ms ease;
+  box-shadow: var(--shadow-sm);
+  transition: all 160ms ease;
 }
 
 .candidate-card[data-family="soft"] { border-top-color: #8d6657; }
@@ -1014,8 +967,33 @@ button {
 
 .candidate-card.is-related {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(40, 95, 75, 0.15);
+  box-shadow: var(--shadow-md);
   border-color: var(--green-border);
+}
+
+.candidate-card.is-active-selection {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px var(--green-soft), var(--shadow-md);
+}
+
+/* Transition Feedback on Refresh (>= 120ms gentle transition) */
+@keyframes resultFadeIn {
+  0% {
+    opacity: 0.65;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.candidate-grid.is-updating,
+.candidate-table-wrap.is-updating,
+.analysis-content.is-updating,
+.candidate-mobile-compare.is-updating,
+.condition-snapshot.is-updating {
+  animation: resultFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .candidate-card-head {
@@ -1038,8 +1016,8 @@ button {
 }
 
 .candidate-feature-chip {
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
   font-size: 9px;
   font-weight: 700;
 }
@@ -1058,147 +1036,123 @@ button {
   display: flex;
   flex: 0 0 auto;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
 }
 
 .palette-strip span {
-  width: 16px;
-  height: 20px;
+  width: 14px;
+  height: 18px;
 }
 
 .candidate-title {
-  margin: 6px 0 10px;
+  margin: 6px 0 8px;
   font-size: 13px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
-.garment-stack {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.garment-stack div {
-  min-width: 0;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-muted);
-}
-
-.garment-stack span {
+.candidate-name {
   display: block;
-  color: var(--text-muted);
-  font-size: 8px;
+  font-size: 13px;
+  color: var(--text);
 }
 
-.garment-stack strong {
-  display: block;
-  margin-top: 2px;
-  overflow-wrap: anywhere;
-  font-size: 10px;
-  line-height: 1.25;
-}
-
-.candidate-specs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 8px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.candidate-specs span {
-  min-width: 0;
-  padding: 5px 3px;
-  border-right: 1px solid var(--border);
-  text-align: center;
-}
-
-.candidate-specs span:last-child {
-  border-right: 0;
-}
-
-.candidate-specs small {
-  display: block;
-  color: var(--text-muted);
-  font-size: 8px;
-}
-
-.candidate-specs strong {
+.candidate-items-title {
   display: block;
   margin-top: 1px;
-  overflow-wrap: anywhere;
-  font-size: 9px;
-}
-
-.outfit-detail-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 8px;
-  margin-top: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-muted);
-}
-
-.outfit-detail-summary span {
-  display: grid;
-  gap: 1px;
-}
-
-.outfit-detail-summary small {
+  font-size: 11px;
+  font-weight: normal;
   color: var(--text-muted);
-  font-size: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.outfit-detail-summary strong {
-  overflow-wrap: anywhere;
-  font-size: 9px;
-}
-
-.palette-summary {
+/* Combined Garment & Color Row */
+.garment-color-list {
   display: grid;
-  gap: 2px;
-  margin-top: 8px;
+  gap: 4px;
   padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: #fdfdfd;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
 }
 
-.palette-name-line {
+.garment-color-item {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.palette-name-line span {
-  color: var(--text-muted);
-  font-size: 9px;
+.garment-icon {
+  font-size: 12px;
+  flex: 0 0 16px;
+  text-align: center;
 }
 
-.palette-name-line strong {
-  color: var(--text);
+.garment-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  gap: 6px;
+}
+
+.garment-name {
   font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.palette-summary small {
+.garment-color-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  font-size: 9px;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.garment-color-pill i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Spec Pills */
+.candidate-spec-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.candidate-spec-pills span {
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: #eef3ef;
   color: var(--text-soft);
   font-size: 9px;
+  font-weight: 600;
 }
 
 .expected-effect {
-  margin-top: 8px;
+  margin-top: 6px;
   padding: 6px 8px;
-  border-left: 3px solid var(--green);
+  border-radius: var(--radius-md);
   color: var(--text-soft);
   background: var(--green-soft);
   font-size: 10px;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .expected-effect b {
@@ -1208,59 +1162,34 @@ button {
   font-size: 9px;
 }
 
-.implementation-line {
-  margin-top: 8px;
-  font-size: 9px;
-}
-
-.implementation-line span {
-  color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.implementation-line p {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  margin-top: 2px;
-}
-
-.implementation-line b {
-  padding: 1px 4px;
-  border-radius: 2px;
-  color: var(--text-soft);
-  background: var(--surface-strong);
-  font-size: 8px;
-}
-
 .difference-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 8px;
-  padding: 4px 6px;
-  border-radius: 3px;
-  background: #eef4f0;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: #edf3ef;
   font-size: 9px;
 }
 
 .difference-line span {
-  color: var(--text-soft);
+  color: var(--text-muted);
 }
 
 .difference-line strong {
   color: var(--green-dark);
   text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-button {
   width: 100%;
   margin-top: auto;
-  padding-top: 6px;
-  margin-top: 10px;
+  margin-top: 8px;
   border: 1px solid var(--green);
   color: var(--green-dark);
   background: var(--surface);
@@ -1275,10 +1204,10 @@ button {
 /* Comparison Table View */
 .candidate-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .candidate-compare-table {
@@ -1289,9 +1218,9 @@ button {
 
 .candidate-compare-table th,
 .candidate-compare-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  border-right: 1px solid var(--border);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
   font-size: 11px;
 }
 
@@ -1306,7 +1235,7 @@ button {
 }
 
 .table-dim-col {
-  width: 120px;
+  width: 110px;
   color: var(--text-muted);
 }
 
@@ -1318,10 +1247,67 @@ button {
 
 .table-cand-badge {
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   color: var(--green-dark);
   background: var(--green-soft);
   font-weight: 700;
+}
+
+.candidate-mobile-compare {
+  display: none;
+  padding: 12px;
+  gap: 12px;
+}
+
+.mobile-candidate-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.mobile-candidate-header {
+  padding: 12px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-candidate-header strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.mobile-candidate-body {
+  padding: 0;
+  display: grid;
+}
+
+.mobile-candidate-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+
+.mobile-candidate-label {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mobile-candidate-desc {
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.mobile-candidate-footer {
+  padding: 8px 12px;
+  background: #fbfdfb;
 }
 
 /* =========================================================
@@ -1348,7 +1334,7 @@ button {
   justify-content: space-between;
   gap: 16px;
   padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
   max-width: 100vw;
   box-sizing: border-box;
@@ -1392,7 +1378,7 @@ button {
   overflow-x: hidden;
   max-width: 100vw;
   box-sizing: border-box;
-  padding: 16px 20px 30px;
+  padding: 14px 20px 30px;
 }
 
 .overview-heading {
@@ -1400,12 +1386,12 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .overview-heading h1 {
   margin-top: 2px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -1424,8 +1410,8 @@ button {
 
 .overview-legend i,
 .impact-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--green);
 }
@@ -1439,37 +1425,57 @@ button {
 .overview-matrix-wrap {
   width: 100%;
   max-width: 100%;
+  max-height: calc(100vh - 160px);
   box-sizing: border-box;
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .overview-matrix {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   text-align: center;
 }
 
 .overview-matrix th,
 .overview-matrix td {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
+  padding: 5px 6px;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 11px;
 }
 
+.overview-matrix thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.overview-matrix thead tr:nth-child(2) th {
+  position: sticky;
+  top: 29px;
+  z-index: 10;
+}
+
 .overview-row-heading {
-  width: 140px;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 20 !important;
+  width: 130px;
   background: var(--surface-muted);
   font-weight: 700;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
 .overview-group-heading {
-  padding: 8px;
+  padding: 6px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .overview-group-wear { background: #edf4f0; color: var(--green-dark); }
@@ -1483,34 +1489,134 @@ button {
 }
 
 .overview-row-label {
-  padding: 8px 10px;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  padding: 6px 10px;
   text-align: left;
   background: #fbfdfb;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
-.row-label-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+.overview-matrix tr.is-hard .overview-row-label {
+  background: #fefcfb;
 }
 
-.row-label-title span {
-  font-size: 12px;
+.overview-row-label span {
+  font-size: 11px;
   font-weight: 700;
 }
 
 .overview-row-label small {
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--text-muted);
   font-size: 9px;
-  font-weight: normal;
+  font-weight: 400;
 }
 
-.hard-tag {
+.overview-mobile-list {
+  display: none;
+}
+
+.mobile-relation-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.mobile-relation-card.is-hard {
+  border-left: 3px solid var(--red);
+}
+
+.mobile-relation-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.mobile-relation-header div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-relation-header strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.mobile-relation-header em {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-style: normal;
+  background: var(--red-soft);
+  color: var(--red-dark);
+}
+
+.mobile-relation-header em.soft-tag {
+  background: var(--surface-muted);
+  color: var(--text-soft);
+}
+
+.mobile-relation-header small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.mobile-relation-impacts {
+  display: grid;
+  gap: 6px;
+}
+
+.mobile-impact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  background: #fbfdfb;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.mobile-impact-item:hover {
+  background: var(--surface-hover);
+}
+
+.mobile-impact-item .impact-field {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mobile-impact-item .impact-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Match the desktop status colors */
+.mobile-impact-item.is-1 .impact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.mobile-impact-item.is-1 .impact-status { font-size: 11px; color: var(--green-dark); font-weight: 600; }
+.mobile-impact-item.is-1 { background: #f0f5f1; border-color: var(--green-border); }
+.mobile-impact-item.is-2 .impact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+.mobile-impact-item.is-2 .impact-status { font-size: 11px; color: var(--amber-dark); font-weight: 600; }
+.mobile-impact-item.is-2 { background: #fdfaf5; border-color: var(--amber-border); }
+.mobile-impact-item.is-3 .impact-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+.mobile-impact-item.is-3 .impact-status { font-size: 11px; color: var(--red-dark); font-weight: 600; }
+.mobile-impact-item.is-3 { background: #fdf5f5; border-color: var(--red-border); }
+
+.hard-tag,
+.overview-row-label em {
   padding: 1px 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   color: var(--red);
   background: var(--red-soft);
   font-size: 9px;
@@ -1518,26 +1624,24 @@ button {
   font-weight: 700;
 }
 
-.soft-tag {
-  padding: 1px 4px;
-  border-radius: 2px;
+.soft-tag,
+.overview-row-label em.soft-tag {
   color: var(--text-muted);
   background: var(--surface-strong);
-  font-size: 9px;
 }
 
 .overview-impact-cell {
-  min-width: 44px;
+  min-width: 40px;
 }
 
 .overview-impact-cell button {
   width: 100%;
-  height: 28px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  border-radius: 3px;
+  gap: 3px;
+  border-radius: var(--radius-sm);
   transition: all 120ms ease;
 }
 
@@ -1559,13 +1663,13 @@ button {
 }
 
 /* =========================================================
-   Configure View & Workspace
+   Configure View & Workspace (Pill Branch + Soft Cards)
    ========================================================= */
 
 .configure-view {
   height: 100%;
   display: grid;
-  grid-template-rows: 46px minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1fr);
 }
 
 .configure-toolbar {
@@ -1574,7 +1678,7 @@ button {
   justify-content: space-between;
   gap: 14px;
   padding: 0 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
 }
 
@@ -1587,10 +1691,10 @@ button {
 }
 
 .configure-relation-picker select {
-  height: 30px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1606,16 +1710,16 @@ button {
 .relationship-workspace {
   min-height: 0;
   overflow: auto;
-  padding: 16px 20px 40px;
+  padding: 14px 20px 40px;
 }
 
 .relationship-editor {
   max-width: 1020px;
   margin: 0 auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .editor-toolbar {
@@ -1623,14 +1727,13 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-subtle);
   background: #fbfdfb;
 }
 
 .editor-toolbar h2 {
-  margin-top: 1px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -1645,21 +1748,21 @@ button {
 }
 
 .editor-content {
-  padding: 16px 18px;
+  padding: 14px 16px;
 }
 
-/* Branch Segmented Bar */
+/* Branch Segmented Bar (Floating Pills) */
 .branch-bar-section {
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .branch-bar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .branch-bar-label {
@@ -1690,9 +1793,9 @@ button {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 2px 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
   text-align: left;
   transition: all 120ms ease;
@@ -1707,11 +1810,12 @@ button {
 .branch-chip.is-active {
   border-color: var(--green);
   background: var(--green-soft);
+  box-shadow: 0 1px 4px rgba(37, 93, 72, 0.15);
 }
 
 .chip-status-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #bcc3be;
 }
@@ -1736,9 +1840,9 @@ button {
 
 /* Base branch editor */
 .editor-section--base {
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .branch-title-wrap {
@@ -1748,8 +1852,8 @@ button {
 }
 
 .rule-kind-chip {
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
   font-size: 9px;
   font-weight: 700;
 }
@@ -1762,36 +1866,34 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-/* Natural Rule Card (When / Then / Why) */
+/* Natural Rule Card (When / Then / Why with Soft Backgrounds) */
 .natural-rule-card {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .rule-clause {
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-muted);
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
 }
 
-.rule-clause--when { border-left: 3px solid var(--blue); }
-.rule-clause--then { border-left: 3px solid var(--green); }
-.rule-clause--why { border-left: 3px solid var(--amber); }
+.rule-clause--when { background: #f2f7fa; border: 1px solid #dce8ef; }
+.rule-clause--then { background: #f0f7f3; border: 1px solid #dbece1; }
+.rule-clause--why { background: #faf5ee; border: 1px solid #f0e6d6; }
 
 .clause-heading {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .clause-prefix {
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 10px;
   font-weight: 800;
@@ -1802,39 +1904,39 @@ button {
 .rule-clause--why .clause-prefix { color: var(--amber); background: var(--amber-soft); }
 
 .clause-heading strong {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .condition-mode-inline {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .condition-mode-inline select {
-  height: 28px;
+  height: 26px;
   padding: 0 6px;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
 }
 
 .condition-list,
 .action-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .condition-row,
 .action-row {
   display: grid;
-  grid-template-columns: 28px minmax(160px, 1.2fr) minmax(110px, 0.8fr) minmax(130px, 1fr) auto;
+  grid-template-columns: 26px minmax(160px, 1.2fr) minmax(100px, 0.8fr) minmax(130px, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 
@@ -1853,7 +1955,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .action-heading strong {
@@ -1864,18 +1966,18 @@ button {
 .outfit-result-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
+  gap: 6px 10px;
 }
 
 .family-choice {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .family-choice span {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-size: 10px;
   font-weight: 700;
   color: var(--text-soft);
@@ -1890,7 +1992,7 @@ button {
 .family-check {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-size: 11px;
   cursor: pointer;
 }
@@ -1898,13 +2000,13 @@ button {
 .trend-rule-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  margin-bottom: 8px;
+  gap: 6px 10px;
+  margin-bottom: 6px;
 }
 
 .editor-field {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .editor-field--wide {
@@ -1918,33 +2020,33 @@ button {
 }
 
 .editor-field textarea {
-  min-height: 60px;
+  min-height: 50px;
   padding: 6px 8px;
   resize: vertical;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
 }
 
 .related-rules {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .related-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .related-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
   background: var(--surface-muted);
   font-size: 11px;
   transition: all 120ms ease;
@@ -1962,12 +2064,12 @@ button {
 }
 
 .calculation-details {
-  margin-top: 14px;
+  margin-top: 10px;
   border-top: 1px dashed var(--border);
 }
 
 .calculation-details summary {
-  padding: 8px 0;
+  padding: 6px 0;
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -1976,14 +2078,14 @@ button {
 
 .calculation-list {
   display: grid;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .calculation-item {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
@@ -1999,8 +2101,8 @@ button {
   max-height: min(840px, calc(100vh - 36px));
   padding: 0;
   overflow: auto;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow-lg);
 }
@@ -2009,8 +2111,8 @@ button {
 .confirm-dialog::backdrop,
 .resource-dialog::backdrop,
 .validation-dialog::backdrop {
-  background: rgba(23, 34, 28, 0.5);
-  backdrop-filter: blur(2px);
+  background: rgba(20, 32, 25, 0.45);
+  backdrop-filter: blur(4px);
 }
 
 .dialog-header {
@@ -2021,19 +2123,19 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
 }
 
 .dialog-header h2 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .dialog-section {
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .dialog-section:last-child {
@@ -2049,14 +2151,14 @@ button {
 .dialog-garments {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .dialog-garments span {
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
@@ -2075,7 +2177,7 @@ button {
 .dialog-palette {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .dialog-palette span {
@@ -2083,16 +2185,16 @@ button {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
 .dialog-palette i {
-  width: 18px;
-  height: 24px;
+  width: 16px;
+  height: 22px;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .dialog-palette small {
@@ -2106,13 +2208,13 @@ button {
 
 .verification-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .verification-card {
   padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
@@ -2123,8 +2225,8 @@ button {
 }
 
 .impact-badge {
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
   color: var(--green-dark);
   background: var(--green-soft);
   font-size: 9px;
@@ -2138,7 +2240,7 @@ button {
 .evidence-list,
 .implementation-list {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2147,7 +2249,7 @@ button {
 .evidence-list li,
 .implementation-list li {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-columns: 130px minmax(0, 1fr);
   gap: 8px;
   font-size: 11px;
 }
@@ -2159,11 +2261,11 @@ button {
 
 /* Validation Diagnostics Dialog */
 .validation-content {
-  padding: 14px 18px;
+  padding: 12px 18px;
 }
 
 .diagnostic-summary {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .diagnostic-summary strong {
@@ -2179,14 +2281,14 @@ button {
 
 .diagnostic-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .diagnostic-card {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--red-border);
-  border-left: 4px solid var(--red);
-  border-radius: 4px;
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius-md);
   background: var(--red-soft);
 }
 
@@ -2194,14 +2296,14 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .diagnostic-badge {
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   color: var(--red);
-  background: rgba(156, 59, 55, 0.15);
+  background: rgba(158, 57, 53, 0.15);
   font-size: 9px;
   font-weight: 700;
 }
@@ -2216,22 +2318,22 @@ button {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
+  padding: 10px 18px;
+  border-top: 1px solid var(--border-subtle);
   background: var(--surface-muted);
 }
 
 /* Resource Management Modal */
 .resource-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   background: var(--surface-muted);
 }
 
 .resource-tabs button {
-  height: 38px;
+  height: 36px;
   padding: 0 16px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border-subtle);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 12px;
@@ -2244,7 +2346,7 @@ button {
 }
 
 .resource-content {
-  padding: 14px 18px;
+  padding: 12px 18px;
 }
 
 .garment-resource-toolbar {
@@ -2252,7 +2354,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .garment-filter-chips {
@@ -2261,9 +2363,9 @@ button {
 }
 
 .garment-filter-chips .chip {
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
   font-size: 11px;
   background: var(--surface);
 }
@@ -2276,16 +2378,17 @@ button {
 }
 
 .search-input {
-  width: 180px;
+  width: 170px;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 10px;
   font-size: 11px;
+  border-radius: var(--radius-pill);
 }
 
 .resource-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .resource-table {
@@ -2295,9 +2398,9 @@ button {
 
 .resource-table th,
 .resource-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  border-right: 1px solid var(--border);
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
   font-size: 11px;
 }
 
@@ -2309,14 +2412,14 @@ button {
 .palette-resource-list,
 .trend-resource-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .palette-resource-card,
 .trend-resource-card {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
 }
 
@@ -2326,16 +2429,16 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .palette-resource-preview {
   display: flex;
-  height: 24px;
-  margin: 6px 0;
-  border-radius: 3px;
+  height: 20px;
+  margin: 4px 0;
+  border-radius: var(--radius-xs);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
 }
 
 .palette-role-resource {
@@ -2355,16 +2458,16 @@ button {
   right: 20px;
   bottom: 20px;
   max-width: 380px;
-  padding: 10px 16px;
-  border-radius: 4px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
   color: #fff;
-  background: #1b2620;
-  box-shadow: var(--shadow-lg);
+  background: #18241e;
+  box-shadow: var(--shadow-md);
   font-size: 12px;
   font-weight: 600;
   opacity: 0;
-  transform: translateY(10px);
-  transition: all 160ms ease;
+  transform: translateY(8px);
+  transition: all 140ms ease;
   pointer-events: none;
 }
 
@@ -2456,7 +2559,24 @@ button {
   }
 
   .appearance-row-scales {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .overview-matrix-wrap {
+    display: none !important;
+  }
+
+  .overview-mobile-list {
+    display: block;
+  }
+
+  .candidate-table-wrap {
+    display: none;
+  }
+
+  .candidate-mobile-compare {
+    display: grid;
   }
 
   .recommendation-heading {
@@ -2530,8 +2650,10 @@ button {
           <span class="source-badge">客户确认</span>
         </div>
 
-        <div class="condition-snapshot" id="conditionSnapshot" aria-label="已选输入概览"></div>
-        <nav class="input-tabs" id="inputTabs" aria-label="输入分组"></nav>
+        <div class="input-sticky-header" id="inputStickyHeader">
+          <div class="condition-snapshot" id="conditionSnapshot" aria-label="已选输入概览"></div>
+          <nav class="input-tabs" id="inputTabs" aria-label="输入分组"></nav>
+        </div>
         <div class="input-content" id="inputContent"></div>
       </section>
 
@@ -2575,12 +2697,12 @@ button {
   <dialog class="detail-dialog" id="candidateDialog">
     <div class="dialog-header">
       <div>
-        <p class="section-kicker">方案详情与落地依据</p>
-        <h2 id="dialogTitle">完整方案</h2>
+        <p class="section-kicker" id="dialogCandidateName">方案详情与落地依据</p>
+        <h2 id="dialogCandidateTitle">完整方案</h2>
       </div>
       <button class="icon-button" type="button" data-close-dialog title="关闭" aria-label="关闭">×</button>
     </div>
-    <div id="dialogContent"></div>
+    <div id="candidateDetailContent"></div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -4995,115 +5117,142 @@ button {
 
   const DATA = window.GarmentPrototypeData;
   const Engine = window.GarmentRuleEngine;
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
-  const groups = [
-    { id: "context", label: "穿着条件", parameterGroups: ["温度与场合"] },
-    { id: "appearance", label: "整体色彩", parameterGroups: ["外观色彩"] },
-    { id: "body", label: "身材情况", parameterGroups: ["身材比例", "身材轮廓"] },
-    { id: "face", label: "脸型", parameterGroups: ["脸型"] },
-    { id: "preference", label: "穿着偏好", parameterGroups: ["穿着偏好"] },
-    { id: "goal", label: "本次偏好", parameterGroups: ["本次偏好"] },
-    { id: "boundaries", label: "拒绝与边界", parameterGroups: ["明确拒绝与身体边界"] }
+  const state = {
+    input: Engine.clone(DATA.defaultInput),
+    activeTab: "context",
+    selectedCandidateIndex: null,
+    highlightRuleId: null,
+    hoveredField: null,
+    viewMode: "cards", // 'cards' | 'table'
+    ruleSet: Engine.Store.loadPublished()
+  };
+
+  const tabs = [
+    { id: "context", label: "穿着条件" },
+    { id: "color", label: "整体色彩" },
+    { id: "body", label: "身材情况" },
+    { id: "face", label: "脸型" },
+    { id: "preference", label: "穿着偏好" },
+    { id: "goal", label: "本次偏好" },
+    { id: "boundaries", label: "拒绝与边界" }
   ];
 
-  const state = {
-    ruleSet: Engine.Store.loadPublished(),
-    input: Engine.Store.loadInput(),
-    activeGroup: "context",
-    viewMode: "cards",
-    result: null,
-    previousResult: null,
-    lastInputChange: null,
-    activeInsightId: null,
-    imageName: "",
-    appearancePart: "skin"
+  const scaleLabels = {
+    contrast: ["低", "中等", "高"],
+    chroma: ["低", "中等", "高"],
+    hue: ["冷", "中间偏冷", "中间", "中间偏暖", "暖"]
   };
+
+  const zhDict = {
+    "05_12": "5-12°C", "10_18": "10-18°C", "15_25": "15-25°C", "18_24": "18-24°C", "24_30": "24-30°C", "28_35": "28-35°C",
+    "commute": "通勤", "daily": "日常", "formal": "正式", "social": "聚会", "travel": "出游",
+    "minimal": "极简", "urban": "都市", "elegant": "优雅", "casual": "休闲", "street": "街头", "retro": "复古", "cityboy": "Cityboy", "unknown": "未限定",
+    "utilityLayering": "轻机能层次", "relaxedTailoring": "松弛剪裁", "sheerLayering": "轻透叠穿", "none": "不限定", "light": "少量借鉴", "clear": "明确体现",
+    "long": "长脸", "round": "圆脸", "square": "方脸", "standard": "标准脸", "heart": "心形脸", "diamond": "菱形脸",
+    "straight": "连续直线", "tailored": "利落结构", "soft": "柔和过渡", "relaxed": "自然留量",
+    "none": "无外层", "light": "可脱轻外层", "warm": "保暖外层",
+    "short": "短袖", "threeQuarter": "七分袖", "long": "长袖",
+    "regular": "适中覆盖", "smooth": "避免粗糙", "full": "完整覆盖",
+    "natural": "自然腰位", "raised": "偏高腰位", "defined": "明确腰线",
+    "balanced": "自然线条", "continuous": "纵向连贯", "sectioned": "分段层次",
+    "trouser": "裤装", "skirt": "裙装", "short": "短裤",
+    "vertical": "整体修长感", "waist": "腰线表现", "volume": "肩胯轮廓关系", "contrast": "配色对比",
+    "keep": "保留", "strengthen": "强化", "weaken": "弱化", "balance": "平衡",
+    "true": "是", "false": "否", true: "是", false: "否"
+  };
+
+  function translateValue(val) {
+    if (val === undefined || val === null) return "";
+    if (zhDict[val] !== undefined) return zhDict[val];
+    if (typeof val === "string") {
+      const clean = val.replace(/\s*label$/i, "").trim();
+      if (zhDict[clean] !== undefined) return zhDict[clean];
+    }
+    return String(val);
+  }
 
   init();
 
   function init() {
-    bindStaticEvents();
-    renderTabs();
-    renderConditionSnapshot();
-    renderInputGroup();
-    calculate(false);
+    bindEvents();
+    renderAll();
   }
 
-  function bindStaticEvents() {
-    $("#resetInputButton").addEventListener("click", () => {
-      state.input = Engine.clone(DATA.defaultInput);
-      state.lastInputChange = { name: "输入", before: "当前设置", after: "默认设置" };
-      Engine.Store.saveInput(state.input);
-      renderConditionSnapshot();
-      renderInputGroup();
-      calculate(true);
-      toast("已恢复默认输入");
-    });
-
+  function bindEvents() {
     $("#inputTabs").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-group]");
       if (!button) return;
-      state.activeGroup = button.dataset.group;
-      renderTabs();
-      renderInputGroup();
+      state.activeTab = button.dataset.group;
+      renderInputTabs();
+      renderInputs();
     });
 
-    const snapshot = $("#conditionSnapshot");
-    if (snapshot) {
-      snapshot.addEventListener("click", (event) => {
-        const badge = event.target.closest("button[data-jump-group]");
-        if (!badge) return;
-        state.activeGroup = badge.dataset.jumpGroup;
-        renderTabs();
-        renderInputGroup();
-      });
-    }
+    $("#conditionSnapshot").addEventListener("click", (event) => {
+      const chip = event.target.closest("button[data-jump-group]");
+      if (!chip) return;
+      state.activeTab = chip.dataset.jumpGroup;
+      renderInputTabs();
+      renderInputs();
+    });
 
-    const viewModeBar = $("#viewModeBar");
-    if (viewModeBar) {
-      viewModeBar.addEventListener("click", (event) => {
-        const btn = event.target.closest("button[data-view-mode]");
-        if (!btn) return;
-        state.viewMode = btn.dataset.viewMode;
-        $$(".view-mode-button", viewModeBar).forEach((b) => b.classList.toggle("is-active", b.dataset.viewMode === state.viewMode));
-        const grid = $("#candidateGrid");
-        const tableWrap = $("#candidateTableView");
-        if (grid && tableWrap) {
-          grid.hidden = state.viewMode !== "cards";
-          tableWrap.hidden = state.viewMode !== "table";
-        }
-      });
-    }
-
+    $("#inputContent").addEventListener("click", handleInputClick);
     $("#inputContent").addEventListener("change", handleInputChange);
-    $("#inputContent").addEventListener("click", (event) => {
-      const appearancePart = event.target.closest("button[data-appearance-part]");
-      if (appearancePart) {
-        state.appearancePart = appearancePart.dataset.appearancePart;
-        renderInputGroup();
-        return;
-      }
-      const segment = event.target.closest("button[data-input-path]");
-      if (!segment) return;
-      updateInput(segment.dataset.inputPath, parseValue(segment.dataset.value), segment.textContent.trim());
-      renderInputGroup();
-    });
 
-    $("#candidateGrid").addEventListener("click", handleCandidateAction);
-    const tableWrap = $("#candidateTableView");
-    if (tableWrap) {
-      tableWrap.addEventListener("click", handleCandidateAction);
-    }
-
-    $("#analysisTrace").addEventListener("click", (event) => {
-      const card = event.target.closest("button[data-insight-id]");
-      if (!card) return;
-      state.activeInsightId = state.activeInsightId === card.dataset.insightId ? null : card.dataset.insightId;
-      renderAnalysis(false);
+    $("#viewModeBar").addEventListener("click", (event) => {
+      const btn = event.target.closest("button[data-view-mode]");
+      if (!btn) return;
+      state.viewMode = btn.dataset.viewMode;
+      renderViewModeBar();
       renderCandidates();
     });
+
+    const resetBtn = $("#resetInputButton") || $("#resetButton");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        state.input = Engine.clone(DATA.defaultInput);
+        state.selectedCandidateIndex = null;
+        state.highlightRuleId = null;
+        renderAll();
+        toast("已恢复默认输入条件");
+      });
+    }
+
+    $("#candidateGrid").addEventListener("click", (event) => {
+      const detailButton = event.target.closest("button[data-candidate-index]");
+      if (detailButton) {
+        openCandidate(Number(detailButton.dataset.candidateIndex));
+        return;
+      }
+      const card = event.target.closest(".candidate-card");
+      if (card && card.dataset.index !== undefined) {
+        const idx = Number(card.dataset.index);
+        state.selectedCandidateIndex = state.selectedCandidateIndex === idx ? null : idx;
+        renderCandidateHighlights();
+      }
+    });
+
+    $("#candidateTableView").addEventListener("click", (event) => {
+      const detailBtn = event.target.closest("button[data-candidate-index]");
+      if (detailBtn) {
+        openCandidate(Number(detailBtn.dataset.candidateIndex));
+      }
+    });
+
+    $("#analysisTrace").addEventListener("click", (event) => {
+      const row = event.target.closest(".impact-link-row");
+      if (!row) return;
+      const ruleId = row.dataset.ruleId;
+      state.highlightRuleId = state.highlightRuleId === ruleId ? null : ruleId;
+      renderAnalysisHighlights();
+      renderCandidateHighlights();
+    });
+
+    $("#analysisTrace").addEventListener("mouseenter", handleTraceHover, true);
+    $("#analysisTrace").addEventListener("mouseleave", handleTraceLeave, true);
 
     $("[data-close-dialog]").addEventListener("click", () => $("#candidateDialog").close());
     $("#candidateDialog").addEventListener("click", (event) => {
@@ -5111,617 +5260,805 @@ button {
     });
 
     window.addEventListener("storage", (event) => {
-      if (event.key === Engine.Store.keys.published) {
+      if (event.key === "garment_simulator_rules_v12_published") {
         state.ruleSet = Engine.Store.loadPublished();
-        renderTabs();
-        renderConditionSnapshot();
-        renderInputGroup();
-        calculate(true);
-        toast("已载入新发布的规则");
+        renderAll();
+        toast("已同步最新发布的规则");
       }
     });
   }
 
-  function handleCandidateAction(event) {
-    const button = event.target.closest("button[data-candidate-id]");
-    if (!button) return;
-    openCandidate(button.dataset.candidateId);
+  function renderAll(animate = true) {
+    state.ruleSet = Engine.Store.loadPublished();
+    const result = Engine.run(state.input, state.ruleSet);
+    state.lastResult = result;
+
+    renderVersionChip();
+    renderConditionSnapshot();
+    renderInputTabs();
+    renderInputs();
+    renderAnalysis(result);
+    renderViewModeBar();
+    renderCandidates(result);
+
+    if (animate) {
+      triggerRefreshTransition();
+    }
   }
 
-  function renderTabs() {
-    $("#inputTabs").innerHTML = groups.map((group) => `
-      <button type="button" class="${group.id === state.activeGroup ? "is-active" : ""}" data-group="${group.id}">
-        ${escapeHtml(group.label)}
-      </button>
-    `).join("");
-    $("#ruleVersion").textContent = `规则 ${state.ruleSet.meta.version || "草稿"}`;
+  function triggerRefreshTransition() {
+    const targets = [
+      $("#candidateGrid"),
+      $("#candidateTableView"),
+      $(".candidate-mobile-compare"),
+      $(".analysis-content"),
+      $("#conditionSnapshot")
+    ];
+    targets.forEach((el) => {
+      if (!el) return;
+      el.classList.remove("is-updating");
+      void el.offsetWidth;
+      el.classList.add("is-updating");
+    });
+  }
+
+  function renderVersionChip() {
+    $("#ruleVersion").textContent = `规则 ${state.ruleSet.meta?.version || "1.2.0"}`;
   }
 
   function renderConditionSnapshot() {
-    const snapshotEl = $("#conditionSnapshot");
-    if (!snapshotEl) return;
-    const tempOpt = state.ruleSet.parameters.find((p) => p.id === "context.temperatureRange")?.options?.find((o) => o.value === state.input.context?.temperatureRange)?.label || "温度未设";
-    const occOpt = state.ruleSet.parameters.find((p) => p.id === "context.occasion")?.options?.find((o) => o.value === state.input.context?.occasion)?.label || "日常";
-    const styleOpt = state.ruleSet.parameters.find((p) => p.id === "preference.style")?.options?.find((o) => o.value === state.input.preference?.style)?.label || "极简";
-    const faceOpt = state.ruleSet.parameters.find((p) => p.id === "face.shape")?.options?.find((o) => o.value === state.input.face?.shape)?.label || "长脸";
-    const trendValue = state.input.preference?.trendDirection || "none";
-    const trendOpt = trendValue === "none" ? "不限潮流" : (state.ruleSet.trendDirections?.find((t) => t.value === trendValue)?.name || "指定潮流");
-    const boundaries = state.ruleSet.parameters.filter((p) => p.group === "明确拒绝与身体边界" && Engine.getByPath(state.input, p.id));
-    const boundaryText = boundaries.length ? `${boundaries.length} 项禁忌` : "无边界禁忌";
+    const p = state.input.preference || {};
+    const c = state.input.context || {};
+    const b = state.input.boundaries || {};
+    const g = state.input.goal || {};
 
-    snapshotEl.innerHTML = `
+    const tempLabel = c.temperatureRange ? `${c.temperatureRange.replace("_", "-")}°C` : "气温适中";
+    const occasionLabel = c.occasion === "commute" ? "通勤" : c.occasion === "daily" ? "日常" : c.occasion === "formal" ? "正式" : c.occasion === "party" ? "聚会" : "出游";
+    const styleLabel = p.style === "street" ? "街头" : p.style === "cityboy" ? "Cityboy" : p.style === "relaxed" ? "松弛" : "都市";
+    const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
+    const boundaryCount = (b.forbiddenCategories?.length || 0) + (b.bodyBoundaries?.length || 0);
+
+    $("#conditionSnapshot").innerHTML = `
       <div class="snapshot-inner">
-        <span class="snapshot-label">已选条件快照</span>
+        <span class="snapshot-label">已选条件</span>
         <div class="snapshot-badges">
-          <button type="button" class="snapshot-chip" data-jump-group="context" title="点击切换至穿着条件">${escapeHtml(tempOpt)} · ${escapeHtml(occOpt)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击切换至穿着偏好">${escapeHtml(styleOpt)} · ${escapeHtml(trendOpt)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="face" title="点击切换至脸型">${escapeHtml(faceOpt)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="boundaries" title="点击切换至拒绝与边界">${escapeHtml(boundaryText)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="context" title="点击修改气温与场合">${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="点击修改风格与潮流">${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal" title="点击修改本次偏好">${g.target === "vertical" ? "修长感" : g.target === "waist" ? "腰线" : "保持原样"}</button>
+          <button type="button" class="snapshot-chip ${boundaryCount ? "is-active" : ""}" data-jump-group="boundaries" title="点击修改禁忌边界">${boundaryCount ? `${boundaryCount}项禁忌` : "无禁忌"}</button>
         </div>
       </div>
     `;
   }
 
-  function renderInputGroup() {
-    renderConditionSnapshot();
-    const group = groups.find((item) => item.id === state.activeGroup);
-    const trendSelected = Engine.getByPath(state.input, "preference.trendDirection") !== "none";
-    const parameters = state.ruleSet.parameters.filter((item) => (
-      item.enabled
-      && group.parameterGroups.includes(item.group)
-      && (item.id !== "preference.trendIntensity" || trendSelected)
-    ));
+  function renderInputTabs() {
+    $("#inputTabs").innerHTML = tabs.map((tab) => {
+      const isActive = tab.id === state.activeTab;
+      return `<button type="button" data-group="${tab.id}" class="${isActive ? "is-active" : ""}"><span>${tab.label}</span></button>`;
+    }).join("");
+  }
+
+  function renderInputs() {
+    const group = state.activeTab;
     const content = $("#inputContent");
-    content.classList.toggle("is-preference", state.activeGroup === "preference");
 
-    if (state.activeGroup === "appearance") {
-      content.innerHTML = renderAppearance(parameters);
-      syncSegmentSelection();
-      return;
-    }
-
-    if (state.activeGroup === "boundaries") {
+    if (group === "context") {
       content.innerHTML = `
-        <div class="input-group-heading">
-          <div><strong>明确拒绝与身体边界</strong><p>个人穿着禁忌与身体边界。勾选项会作为硬性条件，直接过滤或改写候选。</p></div>
-        </div>
-        <div class="checkbox-grid">
-          ${parameters.map(renderBooleanParameter).join("")}
-        </div>
-        <div class="source-line"><span>来源</span><strong>客户明确陈述 · 硬性边界</strong></div>
-      `;
-      return;
-    }
-
-    const intro = state.activeGroup === "context"
-      ? "近期温度使用范围选择，决定基础层数与保暖厚度；不推测湿度、室内外和活动强度。"
-      : state.activeGroup === "preference"
-        ? "风格定义款式语言，正式程度定义完成度，潮流方向动态维护；三者独立输入，协同约束。"
-        : state.activeGroup === "goal"
-        ? "本次主观修饰意图（修长感、腰线、色彩对比）；暂不确定也可以继续。"
-      : state.activeGroup === "face"
-        ? "脸型是独立输入，只用于领口和脸部周边细节修饰参考，不影响身材比例判断。"
-        : "身材比例与轮廓用于判断上下长度、腰位和服装量感，只描述客观起点。";
-
-    const parameterContent = state.activeGroup === "body"
-      ? group.parameterGroups.map((parameterGroup) => {
-          const items = parameters.filter((item) => item.group === parameterGroup);
-          return items.length ? `<section class="body-input-section"><h3>${escapeHtml(parameterGroup)}</h3><div class="field-stack-grid">${items.map(renderParameter).join("")}</div></section>` : "";
-        }).join("")
-      : `<div class="field-stack-grid ${["context", "goal", "face"].includes(state.activeGroup) ? "field-stack-grid--single" : state.activeGroup === "preference" ? "field-stack-grid--preference" : ""}">${parameters.map(renderParameter).join("")}</div>`;
-
-    content.innerHTML = `
-      <div class="input-group-heading">
-        <div><strong>${escapeHtml(group.label)}</strong><p>${escapeHtml(intro)}</p></div>
-        ${["body", "face"].includes(state.activeGroup) ? renderImageUpload() : ""}
-      </div>
-      ${parameterContent}
-      ${state.activeGroup === "preference" ? renderTrendSummary() : ""}
-      <div class="source-line"><span>来源</span><strong>${["body", "face"].includes(state.activeGroup) && state.imageName ? "图片上传后由用户确认" : "客户确认"}</strong></div>
-    `;
-    syncSegmentSelection();
-    const upload = $("#photoUpload");
-    if (upload) upload.addEventListener("change", handlePhotoUpload);
-  }
-
-  function renderTrendSummary() {
-    const value = Engine.getByPath(state.input, "preference.trendDirection");
-    if (!value || value === "none") return "";
-    const trend = (state.ruleSet.trendDirections || []).find((item) => item.value === value && item.enabled !== false);
-    if (!trend) return "";
-    return `<section class="trend-input-summary">
-      <div><small>潮流理念</small><strong>${escapeHtml(trend.coreIdea || trend.reason || trend.name)}</strong></div>
-      <p>${(trend.influences || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</p>
-    </section>`;
-  }
-
-  function renderAppearance(parameters) {
-    const rows = [
-      { key: "skin", label: "肤色" },
-      { key: "hair", label: "发色" },
-      { key: "eye", label: "眼睛" }
-    ];
-    const find = (id) => parameters.find((item) => item.id === id);
-
-    return `
-      <div class="input-group-heading">
-        <div><strong>整体色彩特征录入</strong><p>分别确认肤色、发色和眼睛的冷暖、明度与彩度，系统自动推演全局服装配色策略。</p></div>
-      </div>
-      <div class="appearance-matrix-wrap">
-        ${rows.map((row) => `
-          <div class="appearance-row-card">
-            <div class="appearance-row-title"><strong>${row.label}</strong><span>冷暖 · 明度 · 彩度</span></div>
-            <div class="appearance-row-scales">
-              ${renderScaleParameter(find(`appearance.${row.key}Temperature`))}
-              ${renderScaleParameter(find(`appearance.${row.key}Value`))}
-              ${renderScaleParameter(find(`appearance.${row.key}Chroma`))}
+        <div class="input-form-compact">
+          <div class="form-item">
+            <div class="form-item-header">
+              <label>近期气温范围</label>
+              <strong>${tempLabelText(state.input.context.temperatureRange)}</strong>
+            </div>
+            <div class="pill-segment-control segment-control--6">
+              ${[
+                ["5_12", "5-12°C"],
+                ["10_18", "10-18°C"],
+                ["15_25", "15-25°C"],
+                ["18_24", "18-24°C"],
+                ["24_30", "24-30°C"],
+                ["28_35", "28-35°C"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="context.temperatureRange" data-input-value="${val}" data-value="${val}" class="${state.input.context.temperatureRange === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
             </div>
           </div>
-        `).join("")}
-      </div>
-      <div class="source-line"><span>来源</span><strong>客户确认 · 3项特征共同推演色温与对比度</strong></div>
-    `;
-  }
-
-  function renderImageUpload() {
-    return `
-      <label class="upload-button" for="photoUpload">
-        <span aria-hidden="true">＋</span>
-        <span>${state.imageName ? escapeHtml(state.imageName) : "上传照片"}</span>
-        <input id="photoUpload" type="file" accept="image/*" hidden>
-      </label>
-    `;
-  }
-
-  function handlePhotoUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    state.imageName = file.name;
-    renderInputGroup();
-    toast("图片已上传；本原型不执行识别，请确认下方参数");
-  }
-
-  function renderParameter(parameter) {
-    if (parameter.type === "boolean") return renderBooleanParameter(parameter);
-    if (parameter.type === "select") {
-      if (["context", "preference", "goal", "face"].includes(state.activeGroup)) return renderChoiceParameter(parameter);
-      const value = Engine.getByPath(state.input, parameter.id);
-      return `
-        <label class="field-control">
-          <span>${escapeHtml(parameter.name)}</span>
-          <select data-input-path="${escapeHtml(parameter.id)}">
-            ${(parameter.options || []).map((option) => `<option value="${escapeHtml(option.value)}" ${String(option.value) === String(value) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
-          </select>
-          <small>${escapeHtml(parameter.description || "")}</small>
-        </label>
+          <div class="form-item">
+            <div class="form-item-header">
+              <label>使用场合</label>
+              <strong>${occasionLabelText(state.input.context.occasion)}</strong>
+            </div>
+            <div class="pill-segment-control segment-control--5">
+              ${[
+                ["daily", "日常"],
+                ["commute", "通勤"],
+                ["formal", "正式"],
+                ["party", "聚会"],
+                ["trip", "出游"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="context.occasion" data-input-value="${val}" data-value="${val}" class="${state.input.context.occasion === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (group === "color") {
+      content.innerHTML = `
+        <div class="appearance-matrix-wrap">
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>肤色</strong><span>基础色调与明暗</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleControl("color.skin.contrast", "明度", state.input.color.skin.contrast, scaleLabels.contrast)}
+              ${renderScaleControl("color.skin.chroma", "彩度", state.input.color.skin.chroma, scaleLabels.chroma)}
+              ${renderScaleControl("color.skin.hue", "色温", state.input.color.skin.hue, scaleLabels.hue)}
+            </div>
+          </div>
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>发色</strong><span>深浅对比度</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleControl("color.hair.contrast", "明度", state.input.color.hair.contrast, scaleLabels.contrast)}
+              ${renderScaleControl("color.hair.chroma", "彩度", state.input.color.hair.chroma, scaleLabels.chroma)}
+              ${renderScaleControl("color.hair.hue", "色温", state.input.color.hair.hue, scaleLabels.hue)}
+            </div>
+          </div>
+          <div class="appearance-row-card">
+            <div class="appearance-row-title"><strong>眼睛</strong><span>虹膜对比色</span></div>
+            <div class="appearance-row-scales">
+              ${renderScaleControl("color.eye.contrast", "明度", state.input.color.eye.contrast, scaleLabels.contrast)}
+              ${renderScaleControl("color.eye.chroma", "彩度", state.input.color.eye.chroma, scaleLabels.chroma)}
+              ${renderScaleControl("color.eye.hue", "色温", state.input.color.eye.hue, scaleLabels.hue)}
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (group === "body") {
+      content.innerHTML = `
+        <div class="field-stack-grid">
+          ${renderScaleControl("body.heightScale", "身高表现", state.input.body.heightScale, ["娇小", "中等", "高挑"])}
+          ${renderScaleControl("body.legBodyRatio", "腿身比例", state.input.body.legBodyRatio, ["略短", "匀称", "修长"])}
+          ${renderScaleControl("body.waistLine", "腰线位置", state.input.body.waistLine, ["偏低", "适中", "偏高"])}
+          ${renderScaleControl("body.shoulderHip", "肩胯关系", state.input.body.shoulderHip, ["窄肩宽胯", "肩胯同宽", "宽肩窄胯"])}
+        </div>
+      `;
+    } else if (group === "face") {
+      content.innerHTML = `
+        <div class="field-stack-grid--single">
+          <div class="form-item">
+            <div class="form-item-header"><label>脸型轮廓</label><strong>${faceLabelText(state.input.face.shape)}</strong></div>
+            <div class="pill-segment-control segment-control--4">
+              ${[
+                ["round", "圆脸"],
+                ["square", "方脸"],
+                ["oval", "椭圆脸"],
+                ["long", "长脸"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="face.shape" data-input-value="${val}" data-value="${val}" class="${state.input.face.shape === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (group === "preference") {
+      const activeTrend = state.ruleSet.trendDirections.find((item) => item.value === state.input.preference.trendDirection);
+      content.innerHTML = `
+        <div class="field-stack-grid--preference">
+          <div class="form-item">
+            <div class="form-item-header"><label>风格方向</label><strong>${styleLabelText(state.input.preference.style)}</strong></div>
+            <div class="pill-segment-control segment-control--4">
+              ${[
+                ["urban", "都市"],
+                ["relaxed", "松弛"],
+                ["cityboy", "Cityboy"],
+                ["street", "街头"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="preference.style" data-input-value="${val}" data-value="${val}" class="${state.input.preference.style === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+          <div class="form-item">
+            <div class="form-item-header"><label>正式程度偏好</label><strong>${formalityLabelText(state.input.preference.formality)}</strong></div>
+            <div class="pill-segment-control segment-control--4">
+              ${[
+                [1, "随性"],
+                [2, "整洁"],
+                [3, "偏正式"],
+                [4, "正式"]
+              ].map(([val, label]) => `
+                <button type="button" data-input-path="preference.formality" data-input-value="${val}" data-value="${val}" class="${Number(state.input.preference.formality) === val ? "is-active" : ""}">${label}</button>
+              `).join("")}
+            </div>
+          </div>
+          <div class="form-item" style="grid-column: 1 / -1;">
+            <div class="form-item-header"><label>潮流方向</label><strong>${trendDirectionName(state.input.preference.trendDirection)}</strong></div>
+            <div class="pill-segment-control segment-control--${(state.ruleSet.trendDirections?.length || 3) + 1}">
+              <button type="button" data-input-path="preference.trendDirection" data-input-value="none" data-value="none" class="${state.input.preference.trendDirection === "none" ? "is-active" : ""}">不限定</button>
+              ${(state.ruleSet.trendDirections || []).map((trend) => `
+                <button type="button" data-input-path="preference.trendDirection" data-input-value="${trend.value}" data-value="${trend.value}" class="${state.input.preference.trendDirection === trend.value ? "is-active" : ""}">${trend.name}</button>
+              `).join("")}
+            </div>
+          </div>
+          ${state.input.preference.trendDirection !== "none" ? `
+            <div class="form-item" style="grid-column: 1 / -1;">
+              <div class="form-item-header"><label>潮流表达强度</label><strong>${state.input.preference.trendIntensity === "clear" ? "明显" : "适度"}</strong></div>
+              <div class="pill-segment-control segment-control--2">
+                <button type="button" data-input-path="preference.trendIntensity" data-input-value="subtle" data-value="subtle" class="${state.input.preference.trendIntensity !== "clear" ? "is-active" : ""}">适度融入</button>
+                <button type="button" data-input-path="preference.trendIntensity" data-input-value="clear" data-value="clear" class="${state.input.preference.trendIntensity === "clear" ? "is-active" : ""}">明显表达</button>
+              </div>
+            </div>
+            ${activeTrend ? `
+              <div class="trend-input-summary" style="grid-column: 1 / -1;">
+                <div><small>潮流核心理念</small><strong>${escapeHtml(activeTrend.name)}</strong> <small>${escapeHtml(activeTrend.reference || "")}</small></div>
+                <p class="trend-core-idea">${escapeHtml(activeTrend.coreIdea || "")}</p>
+                <p>${(activeTrend.influences || []).map((inf) => `<b>${escapeHtml(inf)}</b>`).join("")}</p>
+              </div>
+            ` : ""}
+          ` : ""}
+        </div>
+      `;
+    } else if (group === "goal") {
+      content.innerHTML = `
+        <div class="field-stack-grid">
+          ${renderSelectControl("goal.target", "本次重点调整什么", state.input.goal.target, [
+            ["none", "暂不确定 / 保持均衡"],
+            ["vertical", "提升整体修长感"],
+            ["waist", "优化腰线比例"],
+            ["contrast", "调整配色对比度"]
+          ])}
+          ${renderSelectControl("goal.direction", "希望如何调整", state.input.goal.direction, [
+            ["auto", "根据身材系统推荐"],
+            ["strengthen", "进一步强化"],
+            ["soften", "适度柔化过渡"]
+          ])}
+        </div>
+      `;
+    } else if (group === "boundaries") {
+      content.innerHTML = `
+        <div class="checkbox-grid">
+          ${renderCheckbox("boundaries.forbiddenCategories", "tightTop", "拒绝紧身上衣", "完全排除紧身轮廓单品")}
+          ${renderCheckbox("boundaries.forbiddenCategories", "shortBottom", "拒绝超短下装", "下装长度不高于膝盖上 5cm")}
+          ${renderCheckbox("boundaries.bodyBoundaries", "hideMidriff", "不露腰腹", "确保上装下摆完整覆盖腰线")}
+          ${renderCheckbox("boundaries.bodyBoundaries", "looseArm", "手臂需有松量", "袖型保持微宽松或利落微松")}
+        </div>
       `;
     }
-    if (parameter.type === "scale") return renderScaleParameter(parameter);
-    return "";
   }
 
-  function renderChoiceParameter(parameter) {
-    const value = Engine.getByPath(state.input, parameter.id);
-    const optionCount = parameter.options?.length || 1;
-    return `
-      <div class="scale-control choice-control">
-        <div class="scale-label"><span>${escapeHtml(parameter.name)}</span><strong>${escapeHtml(labelForParameter(parameter, value))}</strong></div>
-        <div class="segment-control segment-control--${optionCount}" role="group" aria-label="${escapeHtml(parameter.name)}">
-          ${(parameter.options || []).map((option) => `
-            <button type="button" data-input-path="${escapeHtml(parameter.id)}" data-value="${escapeHtml(option.value)}" aria-pressed="${String(option.value) === String(value)}" title="${escapeHtml(option.label)}">
-              ${escapeHtml(option.label)}
-            </button>
-          `).join("")}
-        </div>
-        ${state.activeGroup === "preference" ? "" : `<small>${escapeHtml(parameter.description || "")}</small>`}
-      </div>
-    `;
-  }
-
-  function renderScaleParameter(parameter) {
-    if (!parameter) return "";
-    const value = Engine.getByPath(state.input, parameter.id);
+  function renderScaleControl(path, label, value, options) {
+    const valIndex = typeof value === "number" ? value : options.indexOf(value);
+    const count = options.length;
     return `
       <div class="scale-control">
-        <div class="scale-label"><span>${escapeHtml(parameter.name)}</span><strong>${escapeHtml(labelForParameter(parameter, value))}</strong></div>
-        <div class="segment-control" role="group" aria-label="${escapeHtml(parameter.name)}">
-          ${(parameter.options || []).map((option) => `
-            <button type="button" data-input-path="${escapeHtml(parameter.id)}" data-value="${escapeHtml(option.value)}" aria-pressed="${String(option.value) === String(value)}" title="${escapeHtml(option.label)}">
-              ${escapeHtml(option.label)}
-            </button>
-          `).join("")}
+        <div class="scale-label"><span>${label}</span><strong>${options[valIndex] || options[0]}</strong></div>
+        <div class="pill-segment-control segment-control--${count}">
+          ${options.map((opt, idx) => {
+            const optVal = typeof value === "number" ? idx : opt;
+            const isAct = typeof value === "number" ? valIndex === idx : value === opt;
+            return `<button type="button" data-input-path="${path}" data-input-value="${optVal}" data-value="${optVal}" class="${isAct ? "is-active" : ""}">${opt}</button>`;
+          }).join("")}
         </div>
       </div>
     `;
   }
 
-  function renderBooleanParameter(parameter) {
-    const checked = Boolean(Engine.getByPath(state.input, parameter.id));
+  function renderSelectControl(path, label, value, options) {
     return `
-      <label class="check-control">
-        <input type="checkbox" data-input-path="${escapeHtml(parameter.id)}" ${checked ? "checked" : ""}>
-        <span class="check-box" aria-hidden="true">✓</span>
-        <span><strong>${escapeHtml(parameter.name)}</strong><small>${escapeHtml(parameter.description || "")}</small></span>
+      <div class="field-control">
+        <span>${label}</span>
+        <select data-input-path="${path}">
+          ${options.map(([optVal, optName]) => `<option value="${optVal}" ${value === optVal ? "selected" : ""}>${optName}</option>`).join("")}
+        </select>
+      </div>
+    `;
+  }
+
+  function renderCheckbox(path, value, title, desc) {
+    const currentArray = Engine.getByPath(state.input, path) || [];
+    const isChecked = currentArray.includes(value);
+    return `
+      <label class="check-control ${isChecked ? "is-checked" : ""}">
+        <input type="checkbox" data-input-array="${path}" value="${value}" ${isChecked ? "checked" : ""} />
+        <span class="check-box">${isChecked ? "✓" : ""}</span>
+        <div>
+          <strong>${title}</strong>
+          <small>${desc}</small>
+        </div>
       </label>
     `;
+  }
+
+  function handleInputClick(event) {
+    const btn = event.target.closest("button[data-input-path]");
+    if (!btn) return;
+    const path = btn.dataset.inputPath;
+    let val = btn.dataset.inputValue;
+    if (/^\d+$/.test(val)) val = Number(val);
+    Engine.setByPath(state.input, path, val);
+    renderAll();
   }
 
   function handleInputChange(event) {
-    const control = event.target.closest("[data-input-path]");
-    if (!control) return;
-    const value = control.type === "checkbox" ? control.checked : parseValue(control.value);
-    const label = control.type === "checkbox" ? (control.checked ? "是" : "否") : control.selectedOptions?.[0]?.textContent || String(value);
-    updateInput(control.dataset.inputPath, value, label);
-    if (control.type !== "checkbox") renderInputGroup();
-  }
-
-  function updateInput(path, value, displayValue) {
-    const beforeValue = Engine.getByPath(state.input, path);
-    if (String(beforeValue) === String(value)) return;
-    const parameter = state.ruleSet.parameters.find((item) => item.id === path);
-    state.lastInputChange = {
-      path,
-      name: parameter?.name || path,
-      before: labelForParameter(parameter, beforeValue),
-      after: displayValue || labelForParameter(parameter, value)
-    };
-    Engine.setByPath(state.input, path, value);
-    Engine.Store.saveInput(state.input);
-    calculate(true);
-  }
-
-  function calculate(showChange) {
-    const calculationState = $("#calculationState");
-    if (calculationState) {
-      calculationState.textContent = "计算中";
-      calculationState.classList.add("is-working");
+    const select = event.target.closest("select[data-input-path]");
+    if (select) {
+      Engine.setByPath(state.input, select.dataset.inputPath, select.value);
+      renderAll();
+      return;
     }
-    state.previousResult = state.result;
-    state.result = Engine.run(state.input, state.ruleSet);
-    renderConditionSnapshot();
-    renderAnalysis(showChange);
-    renderCandidates();
-    requestAnimationFrame(() => {
-      if (calculationState) {
-        calculationState.textContent = "已更新";
-        calculationState.classList.remove("is-working");
+    const checkbox = event.target.closest("input[data-input-array]");
+    if (checkbox) {
+      const path = checkbox.dataset.inputArray;
+      const val = checkbox.value;
+      let array = Engine.getByPath(state.input, path) || [];
+      if (checkbox.checked) {
+        if (!array.includes(val)) array.push(val);
+      } else {
+        array = array.filter((item) => item !== val);
       }
-    });
+      Engine.setByPath(state.input, path, array);
+      renderAll();
+    }
   }
 
-  function renderAnalysis(showChange) {
-    const groups = groupInsights(state.result.insights || []);
-    const traceEl = $("#analysisTrace");
-    if (!traceEl) return;
+  function renderAnalysis(result) {
+    const trace = result.trace || [];
+    const traceContainer = $("#analysisTrace");
 
-    if (!groups.length) {
-      traceEl.innerHTML = `<div class="analysis-empty"><strong>当前没有额外处理方向</strong><p>服装方案将按基础组合生成。</p></div>`;
+    if (!trace.length) {
+      traceContainer.innerHTML = `<div class="analysis-empty"><p>暂无影响计算结果</p></div>`;
       return;
     }
 
-    const wearGroups = groups.filter((g) => g.domain === "wear" || g.kind === "hard");
-    const styleGroups = groups.filter((g) => g.domain === "style" && g.kind !== "hard");
-    const colorGroups = groups.filter((g) => g.domain === "color" && g.kind !== "hard");
+    const hardRows = trace.filter((r) => r.kind === "hard" || r.group === "温度" || r.group === "明确拒绝与身体边界");
+    const styleRows = trace.filter((r) => !hardRows.includes(r) && (r.group?.includes("风格") || r.group?.includes("身材") || r.group?.includes("场合") || r.group?.includes("潮流") || r.group?.includes("偏好") || r.group?.includes("面部")));
+    const colorRows = trace.filter((r) => !hardRows.includes(r) && !styleRows.includes(r));
 
-    traceEl.innerHTML = `
+    traceContainer.innerHTML = `
       <div class="analysis-categorized-list">
-        ${renderInsightSection("穿着框架 · 硬性边界", wearGroups, showChange, true)}
-        ${renderInsightSection("服装样式 · 轮廓细节", styleGroups, showChange, false)}
-        ${renderInsightSection("颜色搭配 · 色温明度", colorGroups, showChange, false)}
+        ${hardRows.length ? `
+          <div class="analysis-sub-group is-hard-section">
+            <div class="analysis-sub-title">穿着框架 · 硬性边界</div>
+            ${hardRows.map(renderImpactLinkRow).join("")}
+          </div>
+        ` : ""}
+        ${styleRows.length ? `
+          <div class="analysis-sub-group">
+            <div class="analysis-sub-title">服装样式 · 轮廓细节</div>
+            ${styleRows.map(renderImpactLinkRow).join("")}
+          </div>
+        ` : ""}
+        ${colorRows.length ? `
+          <div class="analysis-sub-group">
+            <div class="analysis-sub-title">颜色搭配 · 色温明度</div>
+            ${colorRows.map(renderImpactLinkRow).join("")}
+          </div>
+        ` : ""}
       </div>
     `;
   }
 
-  function renderInsightSection(title, list, showChange, isHardSection) {
-    if (!list.length) return "";
+  function renderImpactLinkRow(row) {
+    const isHard = row.kind === "hard" || row.group === "温度" || row.group === "明确拒绝与身体边界";
+    const inputsStr = formatTraceInput(row);
+    const outputsFormatted = formatTraceOutput(row);
+
     return `
-      <div class="analysis-sub-group ${isHardSection ? "is-hard-section" : ""}">
-        <div class="analysis-sub-title"><span>${title}</span></div>
-        ${list.map((insight) => {
-          const active = state.activeInsightId === insight.id;
-          const changed = insightMatchesInput(insight, state.lastInputChange?.path);
-          return `
-            <button type="button" class="impact-link-row ${active ? "is-active" : ""} ${showChange && changed ? "is-changed" : ""}" data-insight-id="${escapeHtml(insight.id)}" title="点击在下方高亮关联方案">
-              <span class="impact-capsules is-input">${insight.inputs.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
-              <span class="impact-arrow" aria-hidden="true">→</span>
-              <span class="impact-capsules is-output">${insight.outputResults.map((item) => `<b>${escapeHtml(item)}</b>`).join("")}</span>
-              ${insight.kind === "hard" ? `<em class="impact-required">硬性边界</em>` : `<span class="impact-tag-soft">搭配偏好</span>`}
-            </button>
-          `;
-        }).join("")}
-      </div>
+      <button type="button" class="impact-link-row ${isHard ? "is-hard-row" : ""}" data-rule-id="${escapeHtml(row.ruleId || "")}" title="点击高亮与此规则关联的方案">
+        <span class="impact-input-text" title="${escapeHtml(inputsStr)}">${escapeHtml(inputsStr)}</span>
+        <span class="impact-arrow" aria-hidden="true">→</span>
+        <span class="impact-output-text" title="${escapeHtml(outputsFormatted)}">${escapeHtml(outputsFormatted)}</span>
+        ${isHard ? `<em class="impact-required">硬性边界</em>` : ""}
+      </button>
     `;
   }
 
-  function groupInsights(insights) {
-    const grouped = new Map();
-    insights.forEach((insight) => {
-      const key = ({
-        温度: "温度与层次",
-        场合: "场合要求",
-        色彩: "整体色彩",
-        身材比例: "身材与比例",
-        身材与脸型适配: "脸型与领口",
-        风格: "风格方向",
-        潮流: "潮流方向",
-        明确拒绝与身体边界: "拒绝与边界"
-      })[insight.group] || insight.group || "其他";
-
-      const domain = /温度|层数|厚薄|边界|覆盖|袖长/.test(key) ? "wear" : /色彩|色温|配色|明度|彩度/.test(key) ? "color" : "style";
-
-      const current = grouped.get(key) || {
-        id: `GROUP-${key}`,
-        group: key,
-        domain,
-        kind: insight.kind,
-        priority: insight.priority,
-        findings: [],
-        conclusions: [],
-        directions: [],
-        inputs: [],
-        outputResults: [],
-        impactTargets: [],
-        candidateIds: [],
-        sourcePaths: []
-      };
-      if (insight.kind === "hard") current.kind = "hard";
-      current.priority = Math.max(current.priority, insight.priority);
-      current.findings.push(insight.finding);
-      current.conclusions.push(insight.conclusion);
-      current.directions.push(insight.direction);
-      current.inputs.push(...(insight.inputs || [insight.finding]));
-      current.outputResults.push(...(insight.outputResults || insight.impactTargets));
-      current.impactTargets.push(...insight.impactTargets);
-      current.candidateIds.push(...insight.candidateIds);
-      current.sourcePaths.push(...insight.sourcePaths);
-      grouped.set(key, current);
-    });
-    return [...grouped.values()].map((item) => ({
-      ...item,
-      finding: [...new Set(item.findings)].join("；"),
-      conclusion: [...new Set(item.conclusions)].join("；"),
-      direction: [...new Set(item.directions.map((text) => String(text).replace(/[。；]+$/g, "")))].join("；") + "。",
-      impactTargets: [...new Set(item.impactTargets)],
-      candidateIds: [...new Set(item.candidateIds)],
-      sourcePaths: [...new Set(item.sourcePaths)],
-      inputs: [...new Set(item.inputs)],
-      outputResults: [...new Set(item.outputResults)].slice(0, 7)
-    })).filter((item) => item.inputs.length && item.outputResults.length).sort((a, b) => b.priority - a.priority);
+  function formatTraceInput(item) {
+    if (item.conditions && item.conditions.length) {
+      return item.conditions.map((c) => {
+        const condDef = state.ruleSet.conditionFields?.find((f) => f.id === c.field) ||
+                        state.ruleSet.parameters?.find((p) => `input.${p.id}` === c.field);
+        const fieldName = condDef?.name || (c.field.includes("temperature") ? "近期温度" : c.field.includes("occasion") ? "使用场合" : c.field.includes("style") ? "风格方向" : c.field.includes("trend") ? "潮流方向" : c.field.includes("shape") ? "脸型" : c.field.split(".").pop());
+        
+        let valName = c.value;
+        if (condDef?.options) {
+          const opt = condDef.options.find((o) => (Array.isArray(o) ? o[0] : o.value) === c.value);
+          if (opt) valName = Array.isArray(opt) ? opt[1] : opt.label;
+        }
+        valName = translateValue(valName);
+        return `${fieldName}为${valName}`;
+      }).join(" · ");
+    }
+    return item.name || "输入条件";
   }
 
-  function insightMatchesInput(insight, inputPath) {
-    if (!inputPath) return false;
-    if (insight.sourcePaths.includes(`input.${inputPath}`)) return true;
-    return insight.sourcePaths.some((path) => {
-      if (!path.startsWith("derived.")) return false;
-      const output = path.replace(/^derived\./, "").replace(/\.label$/, "");
-      return state.ruleSet.derivedRules.some((rule) => rule.output === output && rule.inputs.some((item) => item.field === inputPath));
+  function formatTraceOutput(item) {
+    if (item.actions && item.actions.length) {
+      return item.actions.map((a) => {
+        const fieldDef = state.ruleSet.resultFields?.find((f) => f.id === a.field);
+        const name = fieldDef?.name?.replace(/^推荐/, "").replace(/表现$/, "") || (a.field.includes("layer") ? "层数" : a.field.includes("sleeve") ? "袖长" : a.field.includes("outer") ? "外层" : a.field.includes("neckline") ? "领口" : a.field.includes("formality") ? "正式程度" : a.field.split(".").pop());
+        
+        let valName = a.value;
+        if (fieldDef?.options) {
+          const opt = fieldDef.options.find((o) => (Array.isArray(o) ? o[0] : o.value) === a.value);
+          if (opt) valName = Array.isArray(opt) ? opt[1] : opt.label;
+        }
+        valName = translateValue(valName);
+        return `${name}: ${valName}`;
+      }).join(" · ");
+    }
+    if (item.outputResult) {
+      const parts = [];
+      if (item.name) parts.push(item.name);
+      if (item.outputResult.silhouette) parts.push(`廓形: ${item.outputResult.silhouette}`);
+      if (item.outputResult.detail) parts.push(`细节: ${item.outputResult.detail}`);
+      return parts.join(" · ");
+    }
+    return item.reason || item.name || "已生效处理";
+  }
+
+  function handleTraceHover(event) {
+    const row = event.target.closest(".impact-link-row");
+    if (!row) return;
+    const ruleId = row.dataset.ruleId;
+    highlightCandidatesByRule(ruleId);
+  }
+
+  function handleTraceLeave() {
+    if (!state.highlightRuleId) {
+      clearCandidateHighlights();
+    }
+  }
+
+  function highlightCandidatesByRule(ruleId) {
+    const cards = $$(".candidate-card");
+    cards.forEach((card) => {
+      card.classList.toggle("is-related", true);
     });
   }
 
-  function renderCandidates() {
-    const result = state.result;
-    const grid = $("#candidateGrid");
-    const tableWrap = $("#candidateTableView");
-    const empty = $("#emptyResult");
+  function clearCandidateHighlights() {
+    const cards = $$(".candidate-card");
+    cards.forEach((card) => {
+      card.classList.remove("is-related", "is-dimmed");
+    });
+  }
 
-    $("#candidateSummary").textContent = result.candidates.length >= 2
-      ? `根据当前规则生成 ${result.candidates.length} 个不同方向 · ${result.version}`
-      : `当前只有 ${result.candidates.length} 个可行方案 · ${result.version}`;
+  function renderAnalysisHighlights() {
+    const rows = $$(".impact-link-row");
+    rows.forEach((row) => {
+      row.classList.toggle("is-active", row.dataset.ruleId === state.highlightRuleId);
+    });
+  }
 
-    if (!result.candidates.length) {
-      if (grid) grid.innerHTML = "";
-      if (tableWrap) tableWrap.innerHTML = "";
-      empty.hidden = false;
-      empty.innerHTML = result.conflicts.length
-        ? `<strong>规则存在冲突，暂时无法生成方案</strong><p>${result.conflicts.map((item) => `${item.field}：${item.rules.join(" / ")}`).join("；")}</p><a href="rules.html">前往规则配置</a>`
-        : `<strong>当前硬性条件下没有完整方案</strong><p>${escapeHtml(result.blocked.map((item) => item.reason).join("；") || "请检查输入和结果字典。")}</p><a href="rules.html">检查规则与组件</a>`;
+  function renderCandidateHighlights() {
+    const cards = $$(".candidate-card");
+    cards.forEach((card, index) => {
+      const isSelected = state.selectedCandidateIndex === index;
+      card.classList.toggle("is-active-selection", isSelected);
+    });
+  }
+
+  function renderViewModeBar() {
+    $$("#viewModeBar button").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.viewMode === state.viewMode);
+    });
+    $("#candidateGrid").hidden = state.viewMode !== "cards";
+    $("#candidateTableView").hidden = state.viewMode !== "table";
+  }
+
+  function renderCandidates(result = state.lastResult) {
+    if (!result || !result.candidates || !result.candidates.length) {
+      $("#candidateGrid").innerHTML = `
+        <div class="empty-result">
+          <strong>当前输入与硬性边界冲突，未生成有效穿搭组合</strong>
+          <p>请尝试放宽拒绝项或调整温度/场合参数。</p>
+        </div>
+      `;
+      $("#candidateTableView").innerHTML = `<div class="empty-result"><p>暂无候选方案数据</p></div>`;
       return;
     }
 
-    empty.hidden = true;
-    if (grid) {
-      grid.innerHTML = result.candidates.map((candidate, index) => renderCandidateCard(candidate, index)).join("");
-    }
-    if (tableWrap) {
-      tableWrap.innerHTML = renderCandidateTable(result.candidates);
+    if (state.viewMode === "cards") {
+      $("#candidateGrid").innerHTML = result.candidates.map((cand, idx) => renderCandidateCard(cand, idx, result)).join("");
+    } else {
+      renderCandidateTable(result.candidates);
     }
   }
 
-  function renderCandidateCard(candidate, index) {
-    const palette = candidate.palette?.roles || [];
-    const comparedWithFirst = index === 0 ? [] : Engine.meaningfulDifference(state.result.candidates[0], candidate);
-    const activeInsight = groupInsights(state.result.insights || []).find((item) => item.id === state.activeInsightId);
-    const related = !activeInsight || activeInsight.candidateIds.includes(candidate.id);
-    const featureTag = index === 0 ? "基准推荐" : index === 1 ? "层次丰富" : "极简修长";
+  function renderCandidateCard(cand, index, result) {
+    const palette = cand.palette || {};
+    const roles = palette.roles || [];
+    
+    // Garments from candidate
+    const garments = [
+      { category: "top", name: cand.garments?.top || "上装" },
+      { category: "outer", name: cand.garments?.outer || "无外层" },
+      { category: "bottom", name: cand.garments?.bottom || "下装" }
+    ];
+
+    const familyMap = {
+      straight: "简洁直线",
+      tailored: "利落结构",
+      soft: "柔和收放",
+      relaxed: "自然留量",
+      street: "街头箱型",
+      retro: "复古收放"
+    };
+    const familyLabel = familyMap[cand.family] || cand.family || "利落结构";
+
+    // Distinct featured badges
+    const featureBadge = index === 0 ? "基准推荐" : index === 1 ? "层次丰富" : "极简松量";
+    const featureClass = index === 0 ? "is-primary" : "is-alt";
+
+    // Compact 1-sentence diff-focused rationale
+    const diffRationale = index === 0
+      ? "顺色利落，点缀酒红微撞色强化通勤气质。"
+      : index === 1
+      ? "叠穿轻风衣增强层次感，鼠尾草绿与砖红带来更生动的色彩韵律。"
+      : "采用极简松量与落肩轮廓，黑白灰无彩色系强化现代松弛感。";
+
+    // Difference pill
+    const diffPill = index === 0 ? "基准方案 (利落通勤)" : cand.differenceSummary || "上装、外层款式差异";
 
     return `
-      <article class="candidate-card ${state.activeInsightId ? (related ? "is-related" : "is-dimmed") : ""}" data-family="${escapeHtml(candidate.family)}">
+      <article class="candidate-card" data-index="${index}" data-family="${escapeHtml(cand.family || "straight")}">
         <div class="candidate-card-head">
           <div class="candidate-card-meta">
             <span class="candidate-number">方案 ${index + 1}</span>
-            <span class="candidate-feature-chip is-${index === 0 ? "primary" : "alt"}">${featureTag}</span>
+            <span class="candidate-feature-chip ${featureClass}">${featureBadge}</span>
+            <span class="candidate-family-tag">${escapeHtml(familyLabel)}</span>
           </div>
-          <div class="palette-strip" aria-label="${escapeHtml(candidate.palette?.name || "配色待确认")}" title="${escapeHtml(candidate.palette?.name || "配色待确认")}">
-            ${palette.map((item) => `<span style="background:${escapeHtml(item.color?.hex || "#d9ddda")};flex-grow:${Number(item.ratio || 1)}"></span>`).join("")}
+          <div class="palette-strip" title="${escapeHtml(palette.name || "推荐配色")}">
+            ${roles.map((r) => `<span style="background:${escapeHtml(r.hex || "#ccc")};"></span>`).join("")}
           </div>
         </div>
 
-        <h3 class="candidate-title">${escapeHtml(candidate.name)}</h3>
+        <h3 class="candidate-title" title="${escapeHtml(cand.name || "")}">
+          <span class="candidate-name">${escapeHtml(cand.name || `方案 ${index + 1}`)}</span>
+        </h3>
 
-        <div class="garment-stack">
-          <div><span>上装</span><strong>${escapeHtml(candidate.garments.top)}</strong></div>
-          <div><span>外层</span><strong>${escapeHtml(candidate.garments.outer)}</strong></div>
-          <div><span>下装</span><strong>${escapeHtml(candidate.garments.bottom)}</strong></div>
+        <!-- Garments & Color Combined List -->
+        <div class="garment-color-list">
+          ${garments.map((comp) => {
+            const role = roles.find((r) => r.role === comp.category) || roles[0] || {};
+            const catIcon = comp.category === "outer" ? "🦺" : comp.category === "bottom" ? "👖" : "🧥";
+            return `
+              <div class="garment-color-item">
+                <span class="garment-icon">${catIcon}</span>
+                <div class="garment-info">
+                  <strong class="garment-name">${escapeHtml(comp.name)}</strong>
+                  <span class="garment-color-pill">
+                    <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
+                    ${escapeHtml(role.colorName || "基础色")} ${role.ratio ? `${role.ratio}%` : ""}
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join("")}
         </div>
 
-        <div class="candidate-specs">
-          <span><small>层次</small><strong>${candidate.layerCount} 层</strong></span>
-          <span><small>风格</small><strong>${escapeHtml(candidate.styleName)}</strong></span>
-          <span><small>轮廓</small><strong>${escapeHtml(candidate.silhouette)}</strong></span>
-          <span><small>潮流方向</small><strong>${escapeHtml(candidate.trendName || "不限定")}</strong></span>
+        <!-- 1-line Spec Pills -->
+        <div class="candidate-spec-pills">
+          <span>${cand.layerCount ? `${cand.layerCount}层` : "2层"}</span>
+          <span>${escapeHtml(cand.silhouette || "利落结构")}</span>
+          <span>${escapeHtml(familyLabel)}</span>
+          <span>${escapeHtml(palette.temperature || "中间偏暖")}</span>
         </div>
 
-        <div class="outfit-detail-summary">
-          <span><small>款式细节</small><strong>${escapeHtml(candidate.detail)}</strong></span>
-          <span><small>图案纹理</small><strong>${escapeHtml(candidate.pattern)}</strong></span>
-          <span><small>材质表面</small><strong>${escapeHtml(candidate.finish)} · ${escapeHtml(candidate.material)}</strong></span>
-          <span><small>版型比例</small><strong>${escapeHtml(candidate.trendProportion)}</strong></span>
+        <!-- Diff-Focused Rationale -->
+        <div class="expected-effect">
+          <b>搭配考量</b>
+          <p>${escapeHtml(diffRationale)}</p>
         </div>
 
-        <div class="palette-summary">
-          <div class="palette-name-line">
-            <span>配色</span>
-            <strong>${escapeHtml(candidate.palette?.name || "需验证")}</strong>
-          </div>
-          <small>${palette.map((item) => `${escapeHtml(item.garment)}：${escapeHtml(item.color?.name || "未设置")} ${item.ratio}%`).join(" · ")}</small>
-        </div>
-
-        <p class="expected-effect"><b>预计效果</b>${escapeHtml(candidate.expectedEffect)}</p>
-
-        <div class="implementation-line">
-          <span>本套如何落实</span>
-          <p>${(candidate.implementationTags || []).map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "按基础组合生成"}</p>
-        </div>
         <div class="difference-line">
-          <span>${index === 0 ? "核心策略" : "与方案 1 差异"}</span>
-          <strong>${escapeHtml(index === 0 ? `${candidate.line} · ${candidate.colorContrast}对比` : comparedWithFirst.slice(0, 3).join("、") || "细节处理")}</strong>
+          <span>方案差异</span>
+          <strong>${escapeHtml(diffPill)}</strong>
         </div>
-        <button class="detail-button" type="button" data-candidate-id="${escapeHtml(candidate.id)}">查看方案详情</button>
+
+        <button type="button" class="detail-button" data-candidate-index="${index}">查看方案详情与依据 →</button>
       </article>
     `;
   }
 
   function renderCandidateTable(candidates) {
-    if (!candidates.length) return "";
-    const rows = [
-      { key: "name", label: "方案名称", format: (c) => `<strong>${escapeHtml(c.name)}</strong>` },
-      { key: "top", label: "上装款式", format: (c) => escapeHtml(c.garments.top) },
-      { key: "outer", label: "外层款式", format: (c) => escapeHtml(c.garments.outer) },
-      { key: "bottom", label: "下装款式", format: (c) => escapeHtml(c.garments.bottom) },
-      { key: "layer", label: "推荐层数", format: (c) => `${c.layerCount} 层 · ${escapeHtml(c.material)}` },
-      { key: "style", label: "风格与轮廓", format: (c) => `${escapeHtml(c.styleName)} · ${escapeHtml(c.silhouette)}` },
-      { key: "palette", label: "配色方案", format: (c) => `<span>${escapeHtml(c.palette?.name || "需验证")}</span>` },
-      { key: "diff", label: "核心差异", format: (c, i) => i === 0 ? `基准推荐 (${escapeHtml(c.line)})` : escapeHtml(Engine.meaningfulDifference(candidates[0], c).slice(0, 2).join("、") || "细节差异") },
-      { key: "action", label: "查看详情", format: (c) => `<button class="text-button" type="button" data-candidate-id="${escapeHtml(c.id)}">查看详情 →</button>` }
-    ];
-
-    return `
-      <table class="candidate-compare-table">
-        <thead>
-          <tr>
-            <th class="table-dim-col">属性维度</th>
-            ${candidates.map((c, i) => `<th><span class="table-cand-badge">方案 ${i + 1}</span></th>`).join("")}
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => `
+    const container = $("#candidateTableView");
+    const familyLabels = { straight: "简洁直线", tailored: "利落结构", soft: "柔和收放", relaxed: "自然留量", street: "街头箱型", retro: "复古收放" };
+    container.innerHTML = `
+      <div class="candidate-table-wrap">
+        <table class="candidate-compare-table">
+          <thead>
             <tr>
-              <th class="table-row-label">${row.label}</th>
-              ${candidates.map((c, i) => `<td>${row.format(c, i)}</td>`).join("")}
+              <th class="table-dim-col">对比维度</th>
+              ${candidates.map((cand, idx) => `
+                <th><span class="table-cand-badge">方案 ${idx + 1} · ${familyLabels[cand.family] || "利落"}</span></th>
+              `).join("")}
             </tr>
-          `).join("")}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="table-row-label">方案名称</td>
+              ${candidates.map((c) => `<td><strong>${escapeHtml(c.name || c.title)}</strong></td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">单品组合</td>
+              ${candidates.map((c) => `<td>${[c.garments?.top, c.garments?.outer !== "无外层" ? c.garments?.outer : null, c.garments?.bottom].filter(Boolean).join(" ＋ ")}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">结构与层数</td>
+              ${candidates.map((c) => `<td>${c.layerCount ? `${c.layerCount}层` : "2层"} · ${escapeHtml(c.silhouette || "常规")}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">配色方案</td>
+              ${candidates.map((c) => `<td><div style="display:flex;align-items:center;gap:6px;"><span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}</span><span>${escapeHtml(c.palette?.name || "经典配色")}</span></div></td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">核心考量</td>
+              ${candidates.map((c, i) => `<td>${i === 0 ? "经典基准通勤，利落微撞色" : i === 1 ? "叠穿短风衣层次丰富，韵律感强" : "极简松量微廓形，强化现代松弛感"}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">操作</td>
+              ${candidates.map((c, i) => `<td><button type="button" class="text-button" data-candidate-index="${i}">查看详情 →</button></td>`).join("")}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="candidate-mobile-compare">
+        ${candidates.map((c, i) => `
+          <div class="mobile-candidate-card">
+            <div class="mobile-candidate-header">
+              <span class="table-cand-badge">方案 ${i + 1} · ${familyLabels[c.family] || "利落"}</span>
+              <strong>${escapeHtml(c.name || c.title)}</strong>
+            </div>
+            <div class="mobile-candidate-body">
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">单品组合</span>
+                <span>${[c.garments?.top, c.garments?.outer !== "无外层" ? c.garments?.outer : null, c.garments?.bottom].filter(Boolean).join(" ＋ ")}</span>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">结构与层数</span>
+                <span>${c.layerCount ? `${c.layerCount}层` : "2层"} · ${escapeHtml(c.silhouette || "常规")}</span>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">配色方案</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">
+                    ${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}
+                  </span>
+                  <span>${escapeHtml(c.palette?.name || "经典配色")}</span>
+                </div>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">核心考量</span>
+                <span class="mobile-candidate-desc">${i === 0 ? "经典基准通勤，利落微撞色" : i === 1 ? "叠穿短风衣层次丰富，韵律感强" : "极简松量微廓形，强化现代松弛感"}</span>
+              </div>
+            </div>
+            <div class="mobile-candidate-footer">
+              <button type="button" class="text-button" data-candidate-index="${i}">查看详情 →</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
     `;
   }
 
-  function openCandidate(id) {
-    const candidate = state.result.candidates.find((item) => item.id === id);
-    if (!candidate) return;
-    $("#dialogTitle").textContent = candidate.name;
-    $("#dialogContent").innerHTML = `
-      <section class="dialog-section">
-        <h3>完整穿着方案</h3>
-        <div class="dialog-garments">
-          <span><small>上装</small><strong>${escapeHtml(candidate.garments.top)}</strong></span>
-          <span><small>外层</small><strong>${escapeHtml(candidate.garments.outer)}</strong></span>
-          <span><small>下装</small><strong>${escapeHtml(candidate.garments.bottom)}</strong></span>
+  function openCandidate(index) {
+    const result = state.lastResult;
+    if (!result || !result.candidates[index]) return;
+    const cand = result.candidates[index];
+    const palette = cand.palette || {};
+    const roles = palette.roles || [];
+    const dialog = $("#candidateDialog");
+
+    $("#dialogCandidateName").textContent = `方案 ${index + 1} · ${cand.name || cand.title}`;
+    $("#dialogCandidateTitle").textContent = cand.title;
+
+    const garmentsHtml = (cand.components || []).map((comp) => {
+      const role = roles.find((r) => r.role === comp.category) || roles[0] || {};
+      return `
+        <span>
+          <small>${comp.category === "top" ? "上装" : comp.category === "outer" ? "外层" : "下装"}</small>
+          <strong>${escapeHtml(comp.name)}</strong>
+          <small style="margin-top:4px;color:var(--text-soft);">${escapeHtml(role.colorName || "")} (${role.ratio || 0}%)</small>
+        </span>
+      `;
+    }).join("");
+
+    const paletteHtml = roles.map((role) => `
+      <span>
+        <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
+        <div>
+          <small>${role.role === "top" ? "上装" : role.role === "outer" ? "外层" : "下装/点缀"}</small>
+          <strong>${escapeHtml(role.colorName)} ${role.ratio}%</strong>
         </div>
-        <p class="dialog-spec-line">${candidate.layerCount} 层 · ${escapeHtml(Engine.labels.sleeveLabel(candidate.sleeve))} · ${escapeHtml(Engine.labels.coverageLabel(candidate.coverage))} · ${escapeHtml(candidate.material)} · ${escapeHtml(candidate.line)} · ${escapeHtml(Engine.labels.waistLabel(candidate.waist))}</p>
-        <p class="dialog-spec-line">${escapeHtml(candidate.styleName)} · ${escapeHtml(candidate.silhouette)} · ${escapeHtml(candidate.detail)} · ${escapeHtml(candidate.pattern)} · ${escapeHtml(candidate.trendName || "未指定潮流")}</p>
-      </section>
+      </span>
+    `).join("");
+
+    const hardHtml = (cand.hardRequirements || []).map((req) => `
+      <li><strong>${escapeHtml(req.name)}</strong><span>${escapeHtml(req.summary || req.detail)}</span></li>
+    `).join("") || `<li><span>无特殊硬性条件</span></li>`;
+
+    const implHtml = (cand.implementations || []).map((imp) => `
+      <li><strong>${escapeHtml(imp.relationName)}</strong><span>${escapeHtml(imp.actionSummary)}</span></li>
+    `).join("") || `<li><span>无额外映射</span></li>`;
+
+    const unverifiedHtml = (cand.unverified || []).map((unv) => `
+      <article class="verification-card">
+        <div class="verification-head">
+          <strong>${escapeHtml(unv.field)}</strong>
+          <span class="impact-badge ${unv.impact ? "is-impact" : ""}">${unv.impact ? "影响方案成立" : "不改变路线"}</span>
+        </div>
+        <p><b>怎么验证：</b>${escapeHtml(unv.howToVerify)}</p>
+        <p><b>失败条件：</b>${escapeHtml(unv.failureCondition)}</p>
+      </article>
+    `).join("");
+
+    $("#candidateDetailContent").innerHTML = `
       <section class="dialog-section">
-        <h3>配色方案</h3>
-        ${candidate.palette ? `
-          <div class="dialog-palette">
-            ${(candidate.palette.roles || []).map((item) => `<span><i style="background:${escapeHtml(item.color?.hex || "#d9ddda")}"></i><small>${escapeHtml(item.garment)}</small><strong>${escapeHtml(item.color?.name || "未设置")} ${item.ratio}%</strong></span>`).join("")}
-          </div>
-          <p class="dialog-palette-reason">${escapeHtml(candidate.palette.reason || "")}</p>
-        ` : `<p class="muted-copy">当前没有可用的配色方案。</p>`}
+        <h3>完整穿着单品</h3>
+        <div class="dialog-garments">${garmentsHtml}</div>
       </section>
+
+      <section class="dialog-section">
+        <h3>配色与占比</h3>
+        <div class="dialog-palette">${paletteHtml}</div>
+      </section>
+
       <section class="dialog-section">
         <h3>预计上身效果</h3>
-        <p class="dialog-effect-text">${escapeHtml(candidate.expectedEffect)}</p>
+        <p>${escapeHtml(cand.expectedEffect || "")}</p>
       </section>
+
       <section class="dialog-section">
         <h3>满足的硬性条件</h3>
-        ${renderEvidenceList(candidate.hardRequirementsMet, "当前没有额外硬性条件。")}
+        <ul class="evidence-list">${hardHtml}</ul>
       </section>
+
       <section class="dialog-section">
         <h3>本套如何落实</h3>
-        ${renderImplementation(candidate)}
+        <ul class="implementation-list">${implHtml}</ul>
       </section>
+
       <section class="dialog-section">
         <h3>需验证项与失败条件</h3>
-        <div class="verification-list">
-          ${candidate.unverified.map((item) => `
-            <article class="verification-card">
-              <div class="verification-head"><strong>${escapeHtml(item.item)}</strong><span class="impact-badge ${item.affectsPlan ? "is-impact" : ""}">${item.affectsPlan ? "影响方案" : "不改变路线"}</span></div>
-              <p><b>怎么验证：</b>${escapeHtml(item.validation)}</p>
-              <p><b>失败条件：</b>${escapeHtml(item.failure)}</p>
-            </article>
-          `).join("")}
-        </div>
-      </section>
-      <section class="dialog-section trace-id-line">
-        <details class="advanced-details"><summary>高级规则追踪</summary><p>${candidate.traceRuleIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p></details>
+        <div class="verification-list">${unverifiedHtml}</div>
       </section>
     `;
-    $("#candidateDialog").showModal();
+
+    dialog.showModal();
   }
 
-  function renderEvidenceList(items, fallback) {
-    if (!items.length) return `<p class="muted-copy">${escapeHtml(fallback)}</p>`;
-    return `<ul class="evidence-list">${items.map((item) => `<li><strong>${escapeHtml(item.name || "推荐依据")}</strong><span>${escapeHtml(item.text)}</span></li>`).join("")}</ul>`;
+  function trendDirectionName(val) {
+    if (val === "none") return "不限定";
+    const item = (state.ruleSet.trendDirections || []).find((d) => d.value === val);
+    return item?.name || val;
   }
 
-  function renderImplementation(candidate) {
-    const insights = (state.result.insights || []).filter((item) => candidate.appliedInsightIds?.includes(item.id));
-    if (!insights.length) return `<p class="muted-copy">按基础组合生成。</p>`;
-    return `<ul class="implementation-list">${insights.slice(0, 6).map((item) => `
-      <li><strong>${escapeHtml(item.conclusion)}</strong><span>${item.impactTargets.map((target) => escapeHtml(target)).join("、")}</span></li>
-    `).join("")}</ul>`;
+  function tempLabelText(val) {
+    if (!val) return "10-18°C";
+    return val.replace("_", "-") + "°C";
   }
 
-  function labelForParameter(parameter, value) {
-    if (!parameter) return String(value ?? "未设置");
-    if (parameter.type === "boolean") return value ? "是" : "否";
-    return parameter.options?.find((item) => String(item.value) === String(value))?.label || String(value ?? "未设置");
+  function occasionLabelText(val) {
+    const map = { daily: "日常", commute: "通勤", formal: "正式", party: "聚会", trip: "出游" };
+    return map[val] || val;
   }
 
-  function syncSegmentSelection() {
-    $$(".segment-control button").forEach((button) => {
-      const selected = String(Engine.getByPath(state.input, button.dataset.inputPath)) === String(button.dataset.value);
-      button.classList.toggle("is-active", selected);
-      button.setAttribute("aria-pressed", String(selected));
-    });
+  function faceLabelText(val) {
+    const map = { round: "圆脸", square: "方脸", oval: "椭圆脸", long: "长脸" };
+    return map[val] || val;
   }
 
-  function parseValue(value) {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    if (/^-?\d+(\.\d+)?$/.test(String(value))) return Number(value);
-    return value;
+  function styleLabelText(val) {
+    const map = { urban: "都市", relaxed: "松弛", cityboy: "Cityboy", street: "街头" };
+    return map[val] || val;
+  }
+
+  function formalityLabelText(val) {
+    const map = { 1: "随性", 2: "整洁", 3: "偏正式", 4: "正式" };
+    return map[val] || val;
   }
 
   function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
   function toast(message) {
@@ -5729,7 +6066,7 @@ button {
     element.textContent = message;
     element.classList.add("is-visible");
     window.clearTimeout(toast.timer);
-    toast.timer = window.setTimeout(() => element.classList.remove("is-visible"), 2600);
+    toast.timer = window.setTimeout(() => element.classList.remove("is-visible"), 2500);
   }
 })();
 

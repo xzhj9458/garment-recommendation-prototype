@@ -71,12 +71,6 @@
     { id: "trends", label: "潮流方向" }
   ];
 
-  const outfitLabels = {
-    family: "服装路线", families: "候选路线", silhouette: "服装轮廓", detail: "款式细节",
-    pattern: "图案纹理", formality: "正式程度", finish: "材质表面", trend: "潮流表达",
-    proportion: "版型比例", detailIntensity: "细节强度", note: "穿着表达", seasonVersion: "款式时效"
-  };
-
   const familyOptions = [["straight", "简洁直线"], ["tailored", "利落结构"], ["soft", "柔和收放"], ["relaxed", "自然留量"], ["street", "街头箱型"], ["retro", "复古收放"]];
 
   const state = {
@@ -108,7 +102,7 @@
       renderMode();
     });
 
-    $("#overviewMatrix").addEventListener("click", (event) => {
+    $("#overviewView").addEventListener("click", (event) => {
       const target = event.target.closest("button[data-overview-target]");
       if (!target) return;
       state.selectedId = target.dataset.overviewTarget;
@@ -368,6 +362,48 @@
         <th class="overview-row-label"><span>${escapeHtml(group.name)}</span>${group.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}<small>${escapeHtml(group.inputs.join("、"))}</small></th>
         ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(group, domain, field))).join("")}
       </tr>`).join("")}</tbody>`;
+
+    $("#overviewMobileList").innerHTML = groups.map((group) => {
+      const impacts = [];
+      overviewGroups.forEach(domain => {
+        domain.fields.forEach(field => {
+          const level = overviewImpact(group, domain.id, field.id);
+          if (level) {
+            impacts.push({ domain, field, level });
+          }
+        });
+      });
+      if (impacts.length === 0) return '';
+      return `
+        <div class="mobile-relation-card ${group.hard ? "is-hard" : ""}">
+          <div class="mobile-relation-header">
+            <div>
+              <strong>${escapeHtml(group.name)}</strong>
+              ${group.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}
+            </div>
+            <small>${escapeHtml(group.inputs.join("、"))}</small>
+          </div>
+          <div class="mobile-relation-impacts">
+            ${impacts.map(i => {
+              const label = overviewImpactLabels[i.level] || "有关联";
+              return `
+                <button type="button" class="mobile-impact-item is-${escapeHtml(i.level)}" 
+                  data-overview-target="${escapeHtml(group.id)}" 
+                  data-overview-domain="${escapeHtml(i.domain.id)}" 
+                  data-overview-field="${escapeHtml(i.field.id)}"
+                  aria-label="${escapeHtml(group.name)}对${escapeHtml(i.field.name)}：${escapeHtml(label)}">
+                  <span class="impact-field">${escapeHtml(i.field.name)}</span>
+                  <div class="impact-status-wrap">
+                    <span class="impact-dot" aria-hidden="true"></span>
+                    <span class="impact-status">${escapeHtml(label)}</span>
+                  </div>
+                </button>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
   function renderRelationPicker() {
