@@ -241,9 +241,9 @@
           <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
           <div class="field-stack-grid">
             ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
-            ${renderParameterScale("body.legRatio", "腿身比例", parameter("body.legRatio"))}
-            ${renderParameterScale("body.waistDefinition", "腰线明显程度", parameter("body.waistDefinition"))}
-            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"))}
+            ${renderParameterScale("body.legRatio", "腿身比例（现状）", parameter("body.legRatio"))}
+            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度（现状）", parameter("body.waistDefinition"))}
+            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系（现状）", parameter("body.shoulderHipBalance"))}
           </div>
         </div>
         <div class="input-section input-section--face">
@@ -277,8 +277,8 @@
         <div class="input-section">
           <div class="input-section-heading"><strong>本次目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
           <div class="field-stack-grid">
-            ${renderParameterSelect("goal.endpoint", "本次重点调整什么", endpoint)}
-            ${renderParameterSelect("goal.direction", "希望如何调整", direction)}
+            ${renderParameterSelect("goal.endpoint", "本次调整目标", endpoint)}
+            ${renderParameterSelect("goal.direction", "目标调整方向", direction)}
           </div>
         </div>
         <div class="input-section">

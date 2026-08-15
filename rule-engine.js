@@ -1028,7 +1028,12 @@
     const derivedOutputs = new Set(ruleSet.derivedRules.map((rule) => rule.output));
     const resultFieldMap = new Map(ruleSet.resultFields.map((field) => [field.id, field]));
     const allowedOperators = new Set(Object.keys(ruleSet.operatorDictionary?.operators || {}));
-    const validateRuleReferences = (rule) => {
+    const validateRuleReferences = (rule, relationType = "") => {
+      const scopedMappings = relationType === "decision" && Array.isArray(ruleSet.fieldMappings)
+        ? ruleSet.fieldMappings.filter((mapping) => (rule.conditions || []).some((condition) => mapping.conditionFields?.includes(condition.field)))
+        : [];
+      const scopedConditionFields = new Set(scopedMappings.flatMap((mapping) => mapping.conditionFields || []));
+      const scopedResultFields = new Set(scopedMappings.flatMap((mapping) => mapping.resultFields || []));
       (rule.inputs || []).forEach((input) => {
         if (!parameterIds.has(input.field) && !derivedOutputs.has(input.field)) {
           errors.push({ type: "missing_input_field", ruleId: rule.id, field: input.field, message: `${rule.name} 引用了不存在的输入字段 ${input.field}。` });
@@ -1040,6 +1045,9 @@
       (rule.conditions || []).forEach((condition) => {
         if (!conditionFieldIds.has(condition.field)) {
           errors.push({ type: "missing_condition_field", ruleId: rule.id, field: condition.field, message: `${rule.name} 引用了不存在的条件字段 ${condition.field}。` });
+        }
+        if (relationType === "decision" && scopedMappings.length && !scopedConditionFields.has(condition.field)) {
+          errors.push({ type: "out_of_scope_condition_field", ruleId: rule.id, field: condition.field, message: `${rule.name} 使用了不属于当前关系的条件字段 ${condition.field}。` });
         }
         if (!allowedOperators.has(condition.operator)) {
           errors.push({ type: "invalid_operator", ruleId: rule.id, operator: condition.operator, message: `${rule.name} 使用了未定义的运算符 ${condition.operator}。` });
@@ -1058,9 +1066,15 @@
         } else if (definition.actions && !definition.actions.includes(action.type)) {
           errors.push({ type: "invalid_action", ruleId: rule.id, field: action.field, action: action.type, message: `${rule.name} 不能对 ${action.field} 使用 ${action.type}。` });
         }
+        if (relationType === "decision" && scopedMappings.length && !scopedResultFields.has(action.field) && !action.field.startsWith("candidate.")) {
+          errors.push({ type: "out_of_scope_result_field", ruleId: rule.id, field: action.field, message: `${rule.name} 写入了不属于当前关系的结果字段 ${action.field}。` });
+        }
       });
     };
-    [...ruleSet.derivedRules, ...ruleSet.decisionRules, ...ruleSet.outfitOutputs, ...(ruleSet.trendDirections || [])].forEach(validateRuleReferences);
+    ruleSet.derivedRules.forEach((rule) => validateRuleReferences(rule, "derived"));
+    ruleSet.decisionRules.forEach((rule) => validateRuleReferences(rule, "decision"));
+    ruleSet.outfitOutputs.forEach((rule) => validateRuleReferences(rule, "outfit"));
+    (ruleSet.trendDirections || []).forEach((rule) => validateRuleReferences(rule, "trend"));
 
     ruleSet.components.forEach((component) => {
       const attributes = component.attributes || {};

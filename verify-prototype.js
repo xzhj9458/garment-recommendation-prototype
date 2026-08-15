@@ -163,10 +163,10 @@ async function choose(page, pathName, value) {
     assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("穿着框架") && (await rules.page.locator("#overviewMatrix thead").innerText()).includes("服装样式") && (await rules.page.locator("#overviewMatrix thead").innerText()).includes("颜色搭配"), "规则总览结果大类表头不完整");
     assert(!(await rules.page.locator("#overviewMatrix thead").innerText()).includes("候选处理"), "规则总览仍把候选处理作为横向字段");
     assert(await rules.page.locator("#overviewMatrix .overview-impact-cell.is-strong").count() > 0, "规则总览没有展示直接影响色块");
-    const overviewNames = await rules.page.locator("#overviewMatrix tbody th > span").allInnerTexts();
-    const expectedOrder = ["温度与层次", "场合要求", "整体色彩", "身材与比例", "脸型与领口", "风格方向", "正式程度", "潮流方向", "本次偏好", "拒绝与边界"];
+    const overviewNames = await rules.page.locator("#overviewMatrix tbody .overview-row-label > span").allInnerTexts();
+    const expectedOrder = ["近期温度", "使用场合", "外观色彩", "身材情况", "脸型", "风格方向", "正式程度", "潮流方向", "本次调整目标", "拒绝与边界"];
     assert(JSON.stringify(overviewNames) === JSON.stringify(expectedOrder), `规则总览排序不正确：${overviewNames.join("、")}`);
-    assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("层数") && await rules.page.locator('#overviewMatrix tr:has(th span:text-is("温度与层次")) .overview-impact-cell.is-strong').count() >= 4, "总览没有展示温度对穿着框架的具体影响");
+    assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("层数") && await rules.page.locator('#overviewMatrix tr:has(th span:text-is("近期温度")) .overview-impact-cell.is-strong').count() >= 4, "总览没有展示温度对穿着框架的具体影响");
 
     const rulesNavCenter = await rules.page.locator(".page-nav").evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -185,8 +185,8 @@ async function choose(page, pathName, value) {
     assert(Math.abs(overviewWidth - configWidth) <= 1, `总览与配置视图宽度不一致 (${overviewWidth} vs ${configWidth})`);
     assert(Math.abs(overviewLeft - configLeft) <= 1, `总览与配置视图左对齐不一致 (${overviewLeft} vs ${configLeft})`);
     assert((await rules.page.locator("#editorTitle").innerText()) === "潮流方向", "总览没有定位到对应的潮流配置");
-    assert(await rules.page.locator("#relationSelect").inputValue() === "trend", "关系配置没有同步当前关系选择器");
-    assert(await rules.page.locator("#relationSelect option").count() === 10, "关系配置缺少完整的关系导航");
+    assert(await rules.page.locator('#relationNavButtons button[data-relation-id="trend"].is-active').count() === 1, "关系配置没有同步当前关系选择器");
+    assert(await rules.page.locator("#relationNavButtons button[data-relation-id]").count() === 10, "关系配置缺少完整的关系导航");
     assert(await rules.page.locator(".relationship-main").count() === 0, "关系配置仍保留重复的关系列表容器");
     assert(await rules.page.locator("#ruleTableBody").count() === 0, "关系配置仍保留业务关系表格");
     assert(!(await rules.page.locator("#configureView").innerText()).includes("业务关系"), "关系配置仍展示业务关系文案");
@@ -194,7 +194,17 @@ async function choose(page, pathName, value) {
     const trendEditorText = await rules.page.locator("#editorContent").innerText();
     assert(trendEditorText.includes("理念来源") && trendEditorText.includes("会优先使用的服装路线"), "潮流方向配置缺少理念与服装映射");
 
-    await rules.page.locator("#relationSelect").selectOption("temperature");
+    await rules.page.locator('#relationNavButtons button[data-relation-id="face"]').click();
+    const faceScope = await rules.page.evaluate(() => ({
+      conditions: [...document.querySelectorAll('select[data-edit^="conditions."]')].filter((select) => select.dataset.edit.endsWith(".field")).map((select) => select.selectedOptions[0]?.textContent.trim()),
+      actionFields: [...document.querySelectorAll('select[data-edit^="actions."]')].filter((select) => select.dataset.edit.endsWith(".field")).map((select) => select.selectedOptions[0]?.textContent.trim()),
+      conditionOptions: [...document.querySelectorAll('select[data-edit^="conditions."] option')].map((item) => item.textContent.trim())
+    }));
+    assert(faceScope.conditions.length > 0 && faceScope.conditions.every((label) => label === "脸型"), "脸型关系没有锁定脸型条件");
+    assert(faceScope.actionFields.every((label) => label === "推荐领口方向" || label === "脸型配合说明"), "脸型关系暴露了无关结果字段");
+    assert(!faceScope.conditionOptions.includes("肤色") && !faceScope.conditionOptions.includes("腿身比例（现状）"), "脸型关系仍暴露外观或身材条件字段");
+
+    await rules.page.locator('#relationNavButtons button[data-relation-id="temperature"]').click();
     assert(await rules.page.locator("[data-branch-select] option").count() === 6, "温度关系没有合并为六个分支");
     assert((await rules.page.locator("#editorContent").innerText()).includes("会改变哪些穿搭内容"), "配置编辑器没有形成输入到结果的闭环");
     await rules.page.locator("#backToOverview").click();

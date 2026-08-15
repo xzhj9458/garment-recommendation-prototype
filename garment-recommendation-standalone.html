@@ -52,6 +52,7 @@
 
   --content-max-width: 1440px;
   --page-gutter: 24px;
+  --input-panel-height: 420px;
   --header-height: 54px;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
@@ -486,8 +487,8 @@ button {
 }
 
 .input-content {
-  height: 290px;
-  max-height: 290px;
+  height: var(--input-panel-height);
+  max-height: none;
   overflow-y: auto;
   padding: 12px 16px;
   box-sizing: border-box;
@@ -1592,6 +1593,34 @@ button {
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
 }
 
+.overview-group-label {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  min-width: 112px;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  background: #f4f8f5;
+  color: var(--green-dark);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.04);
+}
+
+.overview-group-label span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.overview-group-label small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
 .overview-matrix tr.is-hard .overview-row-label {
   background: #fefcfb;
 }
@@ -1784,13 +1813,46 @@ button {
   font-size: 12px;
 }
 
-.configure-relation-picker select {
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
+.relation-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: min(980px, 70vw);
+  overflow-x: auto;
+  padding: 2px;
+}
+
+.relation-nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  font-size: 12px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.relation-nav-button:hover {
+  border-color: var(--green-border);
+  background: var(--green-soft);
+}
+
+.relation-nav-button.is-active {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.relation-nav-button small {
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .configure-toolbar-meta {
@@ -2663,8 +2725,7 @@ button {
   }
 
   .input-content {
-    height: 310px;
-    max-height: 310px;
+    height: 360px;
   }
 
   .appearance-row-scales {
@@ -2727,7 +2788,25 @@ button {
   }
 
   .configure-toolbar {
-    padding: 0 var(--page-gutter);
+    align-items: flex-start;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 44px;
+    padding: 7px var(--page-gutter);
+  }
+
+  .configure-view {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .configure-relation-picker {
+    min-width: 0;
+    flex: 1 1 100%;
+    align-items: flex-start;
+  }
+
+  .relation-nav-buttons {
+    max-width: calc(100vw - 92px);
   }
 
   .relationship-workspace {
@@ -2763,8 +2842,8 @@ button {
       <section class="surface input-surface">
         <div class="surface-header">
           <div>
-            <p class="section-kicker">01 本次输入</p>
-            <h1>确认本次条件</h1>
+            <p class="section-kicker">01 输入条件</p>
+            <h1>本次穿着条件</h1>
           </div>
           <span class="source-badge">客户确认</span>
         </div>
@@ -2781,8 +2860,8 @@ button {
     <section class="recommendation-section" aria-labelledby="recommendationTitle">
       <div class="recommendation-heading">
         <div>
-          <p class="section-kicker">02 完整方案</p>
-          <h2 id="recommendationTitle">完整穿着方案</h2>
+          <p class="section-kicker">02 穿搭方案</p>
+          <h2 id="recommendationTitle">候选穿搭方案</h2>
         </div>
         <div class="recommendation-heading-controls">
           <p id="candidateSummary">根据当前规则生成 3 个不同方向</p>
@@ -3051,7 +3130,7 @@ button {
     },
     {
       id: "body.legRatio",
-      name: "腿身比例",
+      name: "腿身比例（现状）",
       group: "身材比例",
       type: "scale",
       required: false,
@@ -3067,7 +3146,7 @@ button {
     },
     {
       id: "body.waistDefinition",
-      name: "腰线明显程度",
+      name: "腰部曲线明显度（现状）",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -3079,11 +3158,11 @@ button {
         { value: 3, label: "较明显" },
         { value: 4, label: "很明显" }
       ],
-      description: "只描述当前关系，不代表需要修正。"
+      description: "描述自然站立时腰部曲线的明显程度，不是腰围粗细，也不代表需要修正。"
     },
     {
       id: "body.shoulderHipBalance",
-      name: "肩胯轮廓关系",
+      name: "肩胯轮廓关系（现状）",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -3117,7 +3196,7 @@ button {
     },
     {
       id: "goal.endpoint",
-      name: "本次想调整什么",
+      name: "本次调整目标",
       group: "本次偏好",
       type: "select",
       required: false,
@@ -3133,7 +3212,7 @@ button {
     },
     {
       id: "goal.direction",
-      name: "希望如何调整",
+      name: "目标调整方向",
       group: "本次偏好",
       type: "select",
       required: false,
@@ -3525,7 +3604,7 @@ button {
     { id: "requirements.formalityMin", name: "最低正式程度", group: "场合", valueType: "number", options: [[1, "自然"], [2, "整洁"], [3, "正式"], [4, "高度正式"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.movement", name: "行动便利", group: "身体边界", valueType: "boolean", options: [[true, "必须便利"], [false, "无额外要求"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.texture", name: "贴肤触感", group: "身体边界", options: [["regular", "常规"], ["smooth", "避免粗糙"]], actions: ["SET", "REQUIRE"] },
-    { id: "requirements.waist", name: "服装腰线位置", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
+    { id: "requirements.waist", name: "推荐服装腰位", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.line", name: "服装线条走向", group: "服装版型", options: [["balanced", "自然线条"], ["continuous", "纵向连贯"], ["sectioned", "分段层次"]], actions: ["SET"] },
     { id: "requirements.colorTemperature", name: "服装色温", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
     { id: "requirements.colorContrast", name: "配色明度对比", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
@@ -3545,7 +3624,7 @@ button {
     ["derived.color.chroma.label", "整体彩度", ["低", "中等", "高"]],
     ["derived.body.slenderness.label", "整体修长表现", ["小巧", "中等", "修长"]],
     ["derived.body.proportion.label", "上下身比例", ["上长下短", "略上长", "均衡", "略下长", "上短下长"]],
-    ["derived.body.waistDefinition.label", "腰线明显程度", ["不明显", "偏弱", "中等", "较明显", "很明显"]],
+    ["derived.body.waistDefinition.label", "腰部曲线明显度", ["不明显", "偏弱", "中等", "较明显", "很明显"]],
     ["derived.body.shoulderHipBalance.label", "肩胯轮廓关系", ["肩部明显", "肩部略明显", "肩胯接近", "胯部略明显", "胯部明显"]],
     ["derived.body.shape.label", "身材轮廓", ["H 型", "O 型", "X 型", "A 型", "Y 型"]]
   ].map(([id, name, values]) => ({ id, name, group: "分析结果", options: values.map((value) => [value, value]) }));
@@ -3634,13 +3713,13 @@ button {
     {
       inputId: "context.temperatureRange",
       conditionFields: ["input.context.temperatureRange"],
-      resultFields: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.material"],
+      resultFields: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.coverage", "requirements.material"],
       illustrationFields: ["illustration.layerCount", "illustration.layers"]
     },
     {
       inputId: "context.occasion",
       conditionFields: ["input.context.occasion"],
-      resultFields: ["requirements.formalityMin", "requirements.material"],
+      resultFields: ["requirements.formalityMin", "requirements.movement", "requirements.material"],
       illustrationFields: ["illustration.layers"]
     },
     {
@@ -3669,8 +3748,8 @@ button {
     },
     {
       inputId: "goal-boundaries",
-      conditionFields: ["input.goal.endpoint", "input.goal.direction", "input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
-      resultFields: ["requirements.waist", "requirements.line", "requirements.colorContrastMax", "requirements.coverage", "requirements.movement", "requirements.texture", "candidate.bottomType"],
+      conditionFields: ["input.goal.endpoint", "input.goal.direction", "derived.body.slenderness.label", "derived.body.proportion.label", "derived.color.contrast.label", "input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
+      resultFields: ["requirements.waist", "requirements.line", "requirements.colorContrast", "requirements.colorContrastMax", "requirements.coverage", "requirements.movement", "requirements.texture", "preferences.family", "candidate.bottomType", "notes"],
       illustrationFields: ["illustration.waist", "illustration.line", "illustration.layers"]
     }
   ];
@@ -5369,7 +5448,12 @@ button {
     const derivedOutputs = new Set(ruleSet.derivedRules.map((rule) => rule.output));
     const resultFieldMap = new Map(ruleSet.resultFields.map((field) => [field.id, field]));
     const allowedOperators = new Set(Object.keys(ruleSet.operatorDictionary?.operators || {}));
-    const validateRuleReferences = (rule) => {
+    const validateRuleReferences = (rule, relationType = "") => {
+      const scopedMappings = relationType === "decision" && Array.isArray(ruleSet.fieldMappings)
+        ? ruleSet.fieldMappings.filter((mapping) => (rule.conditions || []).some((condition) => mapping.conditionFields?.includes(condition.field)))
+        : [];
+      const scopedConditionFields = new Set(scopedMappings.flatMap((mapping) => mapping.conditionFields || []));
+      const scopedResultFields = new Set(scopedMappings.flatMap((mapping) => mapping.resultFields || []));
       (rule.inputs || []).forEach((input) => {
         if (!parameterIds.has(input.field) && !derivedOutputs.has(input.field)) {
           errors.push({ type: "missing_input_field", ruleId: rule.id, field: input.field, message: `${rule.name} 引用了不存在的输入字段 ${input.field}。` });
@@ -5381,6 +5465,9 @@ button {
       (rule.conditions || []).forEach((condition) => {
         if (!conditionFieldIds.has(condition.field)) {
           errors.push({ type: "missing_condition_field", ruleId: rule.id, field: condition.field, message: `${rule.name} 引用了不存在的条件字段 ${condition.field}。` });
+        }
+        if (relationType === "decision" && scopedMappings.length && !scopedConditionFields.has(condition.field)) {
+          errors.push({ type: "out_of_scope_condition_field", ruleId: rule.id, field: condition.field, message: `${rule.name} 使用了不属于当前关系的条件字段 ${condition.field}。` });
         }
         if (!allowedOperators.has(condition.operator)) {
           errors.push({ type: "invalid_operator", ruleId: rule.id, operator: condition.operator, message: `${rule.name} 使用了未定义的运算符 ${condition.operator}。` });
@@ -5399,9 +5486,15 @@ button {
         } else if (definition.actions && !definition.actions.includes(action.type)) {
           errors.push({ type: "invalid_action", ruleId: rule.id, field: action.field, action: action.type, message: `${rule.name} 不能对 ${action.field} 使用 ${action.type}。` });
         }
+        if (relationType === "decision" && scopedMappings.length && !scopedResultFields.has(action.field) && !action.field.startsWith("candidate.")) {
+          errors.push({ type: "out_of_scope_result_field", ruleId: rule.id, field: action.field, message: `${rule.name} 写入了不属于当前关系的结果字段 ${action.field}。` });
+        }
       });
     };
-    [...ruleSet.derivedRules, ...ruleSet.decisionRules, ...ruleSet.outfitOutputs, ...(ruleSet.trendDirections || [])].forEach(validateRuleReferences);
+    ruleSet.derivedRules.forEach((rule) => validateRuleReferences(rule, "derived"));
+    ruleSet.decisionRules.forEach((rule) => validateRuleReferences(rule, "decision"));
+    ruleSet.outfitOutputs.forEach((rule) => validateRuleReferences(rule, "outfit"));
+    (ruleSet.trendDirections || []).forEach((rule) => validateRuleReferences(rule, "trend"));
 
     ruleSet.components.forEach((component) => {
       const attributes = component.attributes || {};
@@ -5862,9 +5955,9 @@ button {
           <div class="input-section-heading"><strong>身材情况</strong><span>身材不是脸型的子项，与脸型并列作为个人特征</span></div>
           <div class="field-stack-grid">
             ${renderParameterScale("body.heightPresence", "身高表现", parameter("body.heightPresence"))}
-            ${renderParameterScale("body.legRatio", "腿身比例", parameter("body.legRatio"))}
-            ${renderParameterScale("body.waistDefinition", "腰线明显程度", parameter("body.waistDefinition"))}
-            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系", parameter("body.shoulderHipBalance"))}
+            ${renderParameterScale("body.legRatio", "腿身比例（现状）", parameter("body.legRatio"))}
+            ${renderParameterScale("body.waistDefinition", "腰部曲线明显度（现状）", parameter("body.waistDefinition"))}
+            ${renderParameterScale("body.shoulderHipBalance", "肩胯轮廓关系（现状）", parameter("body.shoulderHipBalance"))}
           </div>
         </div>
         <div class="input-section input-section--face">
@@ -5898,8 +5991,8 @@ button {
         <div class="input-section">
           <div class="input-section-heading"><strong>本次目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
           <div class="field-stack-grid">
-            ${renderParameterSelect("goal.endpoint", "本次重点调整什么", endpoint)}
-            ${renderParameterSelect("goal.direction", "希望如何调整", direction)}
+            ${renderParameterSelect("goal.endpoint", "本次调整目标", endpoint)}
+            ${renderParameterSelect("goal.direction", "目标调整方向", direction)}
           </div>
         </div>
         <div class="input-section">

@@ -64,6 +64,55 @@
     { id: "boundaries", name: "拒绝与边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖程度", "行动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
   ];
 
+  // Each business relation owns a bounded set of fields. The editor uses this
+  // contract to keep a selected relation focused on its actual responsibility.
+  const relationScopes = {
+    temperature: {
+      condition: ["input.context.temperatureRange"],
+      result: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.coverage", "requirements.material"]
+    },
+    occasion: {
+      condition: ["input.context.occasion"],
+      result: ["requirements.formalityMin", "requirements.movement", "requirements.material"]
+    },
+    color: {
+      condition: ["input.appearance.skinTemperature", "input.appearance.skinValue", "input.appearance.skinChroma", "input.appearance.hairTemperature", "input.appearance.hairValue", "input.appearance.hairChroma", "input.appearance.eyeTemperature", "input.appearance.eyeValue", "input.appearance.eyeChroma", "derived.color.temperature.label", "derived.color.contrast.label", "derived.color.chroma.label"],
+      result: ["requirements.colorTemperature", "requirements.colorContrast", "requirements.colorContrastMax", "requirements.colorChroma", "requirements.palettePlanId"]
+    },
+    body: {
+      condition: ["input.body.heightPresence", "input.body.legRatio", "input.body.waistDefinition", "input.body.shoulderHipBalance", "derived.body.slenderness.label", "derived.body.proportion.label", "derived.body.waistDefinition.label", "derived.body.shoulderHipBalance.label", "derived.body.shape.label"],
+      result: ["requirements.waist", "requirements.line", "preferences.family"]
+    },
+    face: {
+      condition: ["input.face.shape"],
+      result: ["requirements.neckline", "requirements.faceEffect"]
+    },
+    style: {
+      condition: ["input.preference.style"],
+      result: ["preferences.family"]
+    },
+    formality: {
+      condition: ["input.preference.formality"],
+      result: ["requirements.formalityMin", "requirements.material"]
+    },
+    trend: {
+      condition: ["input.preference.trendDirection", "input.preference.trendIntensity"],
+      result: ["preferences.family"]
+    },
+    goal: {
+      condition: ["input.goal.endpoint", "input.goal.direction", "derived.body.slenderness.label", "derived.body.proportion.label", "derived.color.contrast.label"],
+      result: ["requirements.waist", "requirements.line", "requirements.colorContrast", "requirements.colorContrastMax", "preferences.family"]
+    },
+    boundaries: {
+      condition: ["input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
+      result: ["requirements.coverage", "requirements.movement", "requirements.texture", "requirements.waist", "requirements.colorContrastMax", "candidate.bottomType"]
+    }
+  };
+
+  businessDefinitions.forEach((definition) => {
+    definition.scope = relationScopes[definition.id] || { condition: [], result: [] };
+  });
+
   const resourceTabs = [
     { id: "inputs", label: "输入选项" },
     { id: "garments", label: "服装库" },
@@ -86,7 +135,7 @@
     validation: null
   };
 
-  init();
+  window.addEventListener("DOMContentLoaded", init, { once: true });
 
   function init() {
     state.selectedId = businessRelations()[0]?.id || null;
@@ -115,8 +164,10 @@
       renderMode();
     });
 
-    $("#relationSelect").addEventListener("change", (event) => {
-      state.selectedId = event.target.value;
+    $("#relationNavButtons").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-relation-id]");
+      if (!button) return;
+      state.selectedId = button.dataset.relationId;
       renderRelationPicker();
       renderEditor();
     });
@@ -306,6 +357,39 @@
 
   function businessRelationById(id) { return businessRelations().find((item) => item.id === id); }
 
+  const overviewRowSpecs = [
+    { groupId: "context", label: "近期温度", relationId: "temperature", mappingId: "context.temperatureRange" },
+    { groupId: "context", label: "使用场合", relationId: "occasion", mappingId: "context.occasion" },
+    { groupId: "personal", label: "外观色彩", relationId: "color", mappingId: "personal.appearance" },
+    { groupId: "personal", label: "身材情况", relationId: "body", mappingId: "personal.body" },
+    { groupId: "personal", label: "脸型", relationId: "face", mappingId: "personal.face" },
+    { groupId: "preference", label: "风格方向", relationId: "style", mappingId: "preference.style" },
+    { groupId: "preference", label: "正式程度", relationId: "formality", mappingId: "preference.formality" },
+    { groupId: "preference", label: "潮流方向", relationId: "trend", mappingId: "preference.trendDirection" },
+    { groupId: "goal-boundaries", label: "本次调整目标", relationId: "goal", mappingId: "goal-boundaries" },
+    { groupId: "goal-boundaries", label: "拒绝与边界", relationId: "boundaries", mappingId: "goal-boundaries" }
+  ];
+
+  function canonicalOverviewRows() {
+    const groups = state.ruleSet.inputGroups || [];
+    const mappings = state.ruleSet.fieldMappings || [];
+    return overviewRowSpecs.map((spec) => {
+      const inputGroup = groups.find((group) => group.id === spec.groupId);
+      const business = businessDefinitions.find((item) => item.id === spec.relationId);
+      const mapping = mappings.find((item) => item.inputId === spec.mappingId);
+      return {
+        ...spec,
+        groupName: inputGroup?.name || spec.groupId,
+        groupDescription: inputGroup?.description || "",
+        mapping,
+        business,
+        hard: business?.hard,
+        inputs: business?.inputs || [],
+        overview: business?.overview || {}
+      };
+    });
+  }
+
   function activeAtomicRelation(business) {
     const mappings = business?.mappingMembers || [];
     const selected = state.memberSelection[business?.id];
@@ -329,49 +413,56 @@
     $("#configureView").hidden = state.mode !== "configure";
   }
 
-  function overviewImpact(group, domainId, fieldId) {
-    return group.overview?.[domainId]?.[fieldId] || null;
+  function overviewImpact(row, domainId, fieldId) {
+    return row.overview?.[domainId]?.[fieldId] || null;
   }
 
   function schemaGroupName(id) {
     return state.ruleSet.inputGroups?.find((group) => group.id === id)?.name || id || "其他";
   }
 
-  function renderOverviewImpact(group, domain, field) {
-    const level = overviewImpact(group, domain.id, field.id);
+  function renderOverviewImpact(row, domain, field) {
+    const level = overviewImpact(row, domain.id, field.id);
     if (!level) {
-      return `<td class="overview-impact-cell is-empty"><span aria-label="${escapeHtml(group.name)}不影响${escapeHtml(field.name)}">—</span></td>`;
+      return `<td class="overview-impact-cell is-empty"><span aria-label="${escapeHtml(row.label)}不影响${escapeHtml(field.name)}">—</span></td>`;
     }
     const label = overviewImpactLabels[level] || "有关联";
     return `<td class="overview-impact-cell is-${escapeHtml(level)}">
-      <button type="button" data-overview-target="${escapeHtml(group.id)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(group.name)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(group.name)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
+      <button type="button" data-overview-target="${escapeHtml(row.relationId)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(row.label)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(row.label)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
         <span class="impact-dot" aria-hidden="true"></span><span class="impact-status">${escapeHtml(label)}</span>
       </button>
     </td>`;
   }
 
   function renderOverview() {
-    const groups = businessRelations();
+    const rows = canonicalOverviewRows();
+    const groupSpans = rows.reduce((acc, row) => { acc[row.groupId] = (acc[row.groupId] || 0) + 1; return acc; }, {});
+    let previousGroup = null;
     $("#overviewMatrix").innerHTML = `
       <thead>
         <tr>
-          <th class="overview-row-heading" rowspan="2">输入主题</th>
+          <th class="overview-row-heading" rowspan="2">输入分组</th>
+          <th class="overview-row-heading" rowspan="2">输入字段</th>
           ${overviewGroups.map((group) => `<th class="overview-group-heading overview-group-${escapeHtml(group.id)}" colspan="${group.fields.length}">${escapeHtml(group.name)}</th>`).join("")}
         </tr>
         <tr>
           ${overviewGroups.flatMap((group) => group.fields.map((field) => `<th class="overview-field-heading overview-group-${escapeHtml(group.id)}">${escapeHtml(field.name)}</th>`)).join("")}
         </tr>
       </thead>
-      <tbody>${groups.map((group) => `<tr class="${group.hard ? "is-hard" : ""}">
-        <th class="overview-row-label"><span>${escapeHtml(group.name)}</span>${group.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}<small>${escapeHtml(group.inputs.join("、"))}</small></th>
-        ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(group, domain, field))).join("")}
-      </tr>`).join("")}</tbody>`;
+      <tbody>${rows.map((row) => {
+        const groupCell = row.groupId === previousGroup ? "" : `<th class="overview-group-label" rowspan="${groupSpans[row.groupId]}"><span>${escapeHtml(row.groupName)}</span><small>${escapeHtml(row.groupDescription)}</small></th>`;
+        previousGroup = row.groupId;
+        return `<tr class="${row.hard ? "is-hard" : ""}">${groupCell}
+        <th class="overview-row-label"><span>${escapeHtml(row.label)}</span>${row.hard ? `<em>边界</em>` : `<em class="soft-tag">输入</em>`}<small>${escapeHtml(row.inputs.join("、"))}</small></th>
+        ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(row, domain, field))).join("")}
+      </tr>`;
+      }).join("")}</tbody>`;
 
-    $("#overviewMobileList").innerHTML = groups.map((group) => {
+    $("#overviewMobileList").innerHTML = rows.map((row) => {
       const impacts = [];
       overviewGroups.forEach(domain => {
         domain.fields.forEach(field => {
-          const level = overviewImpact(group, domain.id, field.id);
+          const level = overviewImpact(row, domain.id, field.id);
           if (level) {
             impacts.push({ domain, field, level });
           }
@@ -379,23 +470,23 @@
       });
       if (impacts.length === 0) return '';
       return `
-        <div class="mobile-relation-card ${group.hard ? "is-hard" : ""}">
+        <div class="mobile-relation-card ${row.hard ? "is-hard" : ""}">
           <div class="mobile-relation-header">
             <div>
-              <strong>${escapeHtml(group.name)}</strong>
-              ${group.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}
+              <strong>${escapeHtml(row.groupName)} · ${escapeHtml(row.label)}</strong>
+              ${row.hard ? `<em>边界</em>` : `<em class="soft-tag">输入</em>`}
             </div>
-            <small>${escapeHtml(group.inputs.join("、"))}</small>
+            <small>${escapeHtml(row.inputs.join("、"))}</small>
           </div>
           <div class="mobile-relation-impacts">
             ${impacts.map(i => {
               const label = overviewImpactLabels[i.level] || "有关联";
               return `
-                <button type="button" class="mobile-impact-item is-${escapeHtml(i.level)}" 
-                  data-overview-target="${escapeHtml(group.id)}" 
+                <button type="button" class="mobile-impact-item is-${escapeHtml(i.level)}"
+                  data-overview-target="${escapeHtml(row.relationId)}"
                   data-overview-domain="${escapeHtml(i.domain.id)}" 
                   data-overview-field="${escapeHtml(i.field.id)}"
-                  aria-label="${escapeHtml(group.name)}对${escapeHtml(i.field.name)}：${escapeHtml(label)}">
+                  aria-label="${escapeHtml(row.label)}对${escapeHtml(i.field.name)}：${escapeHtml(label)}">
                   <span class="impact-field">${escapeHtml(i.field.name)}</span>
                   <div class="impact-status-wrap">
                     <span class="impact-dot" aria-hidden="true"></span>
@@ -413,7 +504,7 @@
   function renderRelationPicker() {
     const groups = businessRelations();
     if (!groups.length) {
-      $("#relationSelect").innerHTML = "<option value=\"\">暂无可配置关系</option>";
+      $("#relationNavButtons").innerHTML = "<span class=\"muted-copy\">暂无可配置关系</span>";
       $("#relationStatus").textContent = "暂无关系";
       $("#previousRelationButton").disabled = true;
       $("#nextRelationButton").disabled = true;
@@ -422,7 +513,7 @@
     if (!groups.some((group) => group.id === state.selectedId)) state.selectedId = groups[0].id;
     const index = groups.findIndex((group) => group.id === state.selectedId);
     const selected = groups[index];
-    $("#relationSelect").innerHTML = groups.map((group) => `<option value="${escapeHtml(group.id)}" ${group.id === selected.id ? "selected" : ""}>${escapeHtml(group.name)}</option>`).join("");
+    $("#relationNavButtons").innerHTML = groups.map((group) => `<button type="button" role="tab" aria-selected="${group.id === selected.id}" class="relation-nav-button ${group.id === selected.id ? "is-active" : ""}" data-relation-id="${escapeHtml(group.id)}"><span>${escapeHtml(group.name)}</span><small>${group.branchCount || 0} 个分支</small></button>`).join("");
     $("#relationStatus").textContent = `${index + 1} / ${groups.length} · ${selected.enabled ? "已启用" : "已停用"} · ${selected.branchCount || 0} 个分支`;
     $("#previousRelationButton").disabled = index <= 0;
     $("#nextRelationButton").disabled = index >= groups.length - 1;
@@ -523,8 +614,9 @@
 
   function renderMappingEditor(relation, business) {
     const rule = relation.rule;
-    const conditionOptions = state.ruleSet.conditionFields.map((item) => [item.id, item.name]);
-    const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule);
+    const conditionFields = scopedFields(state.ruleSet.conditionFields, business.scope?.condition);
+    const resultFields = scopedFields(state.ruleSet.resultFields, business.scope?.result);
+    const stepTwo = relation.type === "trend" ? renderTrendResults(rule) : relation.type === "outfit" ? renderOutfitResults(rule) : renderDecisionActions(rule, resultFields);
 
     return `
       ${renderEditorBase(relation)}
@@ -539,7 +631,7 @@
             </div>
           </div>
           <div class="condition-list">
-            ${(rule.conditions || []).map((condition, index) => renderConditionRow(condition, index, conditionOptions)).join("") || `<p class="muted-copy">没有条件限制时，该规则默认始终适用。</p>`}
+            ${(rule.conditions || []).map((condition, index) => renderConditionRow(condition, index, conditionFields)).join("") || `<p class="muted-copy">没有条件限制时，该规则默认始终适用。</p>`}
           </div>
         </section>
 
@@ -589,14 +681,14 @@
     const definition = conditionDefinition(condition.field);
     return `<div class="condition-row">
       <span class="clause-sub-tag">IF</span>
-      ${groupedSelect("输入或分析项", `conditions.${index}.field`, condition.field, state.ruleSet.conditionFields)}
+      ${groupedSelect("输入或分析项", `conditions.${index}.field`, condition.field, definitions)}
       ${selectField("判断逻辑", `conditions.${index}.operator`, condition.operator, [["eq", "等于 (eq)"], ["neq", "不等于 (neq)"], ["gt", "高于 (gt)"], ["gte", "不低于 (gte)"], ["lt", "低于 (lt)"], ["lte", "不高于 (lte)"]])}
       ${typedValueField("设定值", `conditions.${index}.value`, condition.value, definition)}
       <button class="icon-button is-danger" type="button" data-remove-condition="${index}" title="删除条件" aria-label="删除条件">×</button>
     </div>`;
   }
 
-  function renderDecisionActions(rule) {
+  function renderDecisionActions(rule, definitions) {
     return `
       <div class="action-heading">
         <strong>结果动作列表</strong>
@@ -608,7 +700,7 @@
           return `<div class="action-row">
             <span class="clause-sub-tag is-then">SET</span>
             ${selectField("作用方式", `actions.${index}.type`, action.type, [["SET", "强制设定为 (SET)"], ["REQUIRE", "必须满足 (REQUIRE)"], ["FORBID", "排除该值 (FORBID)"], ["FILTER", "过滤该项 (FILTER)"], ["BOOST", "提升优先级 (BOOST)"], ["ADD", "增加候选 (ADD)"]])}
-            ${groupedSelect("影响内容", `actions.${index}.field`, action.field, state.ruleSet.resultFields)}
+            ${groupedSelect("影响内容", `actions.${index}.field`, action.field, definitions)}
             ${typedValueField("设定具体值", `actions.${index}.value`, action.value, definition)}
             <button class="icon-button is-danger" type="button" data-remove-action="${index}" title="删除处理" aria-label="删除处理">×</button>
           </div>`;
@@ -751,7 +843,9 @@
 
     if (event.target.closest("[data-add-condition]")) {
       editable.conditions ||= [];
-      editable.conditions.push({ field: "input.context.temperatureRange", operator: "eq", value: "18_24" });
+      const allowed = scopedFields(state.ruleSet.conditionFields, business.scope?.condition);
+      const first = allowed[0];
+      editable.conditions.push({ field: first?.id || "input.context.temperatureRange", operator: "eq", value: first?.options?.[0]?.[0] ?? "18_24" });
       markDirty();
       renderEditor();
       return;
@@ -767,7 +861,9 @@
 
     if (event.target.closest("[data-add-action]") && relation.type === "decision") {
       editable.actions ||= [];
-      editable.actions.push({ type: "SET", field: "requirements.material", value: "轻薄" });
+      const allowed = scopedFields(state.ruleSet.resultFields, business.scope?.result);
+      const first = allowed[0];
+      editable.actions.push({ type: "SET", field: first?.id || "requirements.material", value: first?.options?.[0]?.[0] ?? "" });
       markDirty();
       renderEditor();
       return;
@@ -1122,6 +1218,13 @@
   function groupedSelect(label, path, value, definitions) {
     const groups = [...new Set(definitions.map((item) => item.groupId || item.group || "其他"))];
     return `<label class="editor-field"><span>${label}</span><select data-edit="${path}">${groups.map((group) => `<optgroup label="${escapeHtml(schemaGroupName(group))}">${definitions.filter((item) => (item.groupId || item.group || "其他") === group).map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === value ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</optgroup>`).join("")}</select></label>`;
+  }
+
+  function scopedFields(definitions, allowedIds) {
+    if (!Array.isArray(allowedIds) || !allowedIds.length) return definitions;
+    const allowed = new Set(allowedIds);
+    const scoped = definitions.filter((item) => allowed.has(item.id));
+    return scoped.length ? scoped : definitions;
   }
 
   function typedValueField(label, path, value, definition) {

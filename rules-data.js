@@ -237,7 +237,7 @@
     },
     {
       id: "body.legRatio",
-      name: "腿身比例",
+      name: "腿身比例（现状）",
       group: "身材比例",
       type: "scale",
       required: false,
@@ -253,7 +253,7 @@
     },
     {
       id: "body.waistDefinition",
-      name: "腰线明显程度",
+      name: "腰部曲线明显度（现状）",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -265,11 +265,11 @@
         { value: 3, label: "较明显" },
         { value: 4, label: "很明显" }
       ],
-      description: "只描述当前关系，不代表需要修正。"
+      description: "描述自然站立时腰部曲线的明显程度，不是腰围粗细，也不代表需要修正。"
     },
     {
       id: "body.shoulderHipBalance",
-      name: "肩胯轮廓关系",
+      name: "肩胯轮廓关系（现状）",
       group: "身材轮廓",
       type: "scale",
       required: false,
@@ -303,7 +303,7 @@
     },
     {
       id: "goal.endpoint",
-      name: "本次想调整什么",
+      name: "本次调整目标",
       group: "本次偏好",
       type: "select",
       required: false,
@@ -319,7 +319,7 @@
     },
     {
       id: "goal.direction",
-      name: "希望如何调整",
+      name: "目标调整方向",
       group: "本次偏好",
       type: "select",
       required: false,
@@ -711,7 +711,7 @@
     { id: "requirements.formalityMin", name: "最低正式程度", group: "场合", valueType: "number", options: [[1, "自然"], [2, "整洁"], [3, "正式"], [4, "高度正式"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.movement", name: "行动便利", group: "身体边界", valueType: "boolean", options: [[true, "必须便利"], [false, "无额外要求"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.texture", name: "贴肤触感", group: "身体边界", options: [["regular", "常规"], ["smooth", "避免粗糙"]], actions: ["SET", "REQUIRE"] },
-    { id: "requirements.waist", name: "服装腰线位置", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
+    { id: "requirements.waist", name: "推荐服装腰位", group: "服装版型", options: [["natural", "自然腰位"], ["raised", "偏高腰位"], ["defined", "明确腰线"]], actions: ["SET", "REQUIRE"] },
     { id: "requirements.line", name: "服装线条走向", group: "服装版型", options: [["balanced", "自然线条"], ["continuous", "纵向连贯"], ["sectioned", "分段层次"]], actions: ["SET"] },
     { id: "requirements.colorTemperature", name: "服装色温", group: "配色", options: colorTemperatureBands.map((item) => [item.label, item.label]), actions: ["SET"] },
     { id: "requirements.colorContrast", name: "配色明度对比", group: "配色", options: [["低", "低"], ["中等", "中等"], ["高", "高"]], actions: ["SET"] },
@@ -731,7 +731,7 @@
     ["derived.color.chroma.label", "整体彩度", ["低", "中等", "高"]],
     ["derived.body.slenderness.label", "整体修长表现", ["小巧", "中等", "修长"]],
     ["derived.body.proportion.label", "上下身比例", ["上长下短", "略上长", "均衡", "略下长", "上短下长"]],
-    ["derived.body.waistDefinition.label", "腰线明显程度", ["不明显", "偏弱", "中等", "较明显", "很明显"]],
+    ["derived.body.waistDefinition.label", "腰部曲线明显度", ["不明显", "偏弱", "中等", "较明显", "很明显"]],
     ["derived.body.shoulderHipBalance.label", "肩胯轮廓关系", ["肩部明显", "肩部略明显", "肩胯接近", "胯部略明显", "胯部明显"]],
     ["derived.body.shape.label", "身材轮廓", ["H 型", "O 型", "X 型", "A 型", "Y 型"]]
   ].map(([id, name, values]) => ({ id, name, group: "分析结果", options: values.map((value) => [value, value]) }));
@@ -820,13 +820,13 @@
     {
       inputId: "context.temperatureRange",
       conditionFields: ["input.context.temperatureRange"],
-      resultFields: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.material"],
+      resultFields: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.coverage", "requirements.material"],
       illustrationFields: ["illustration.layerCount", "illustration.layers"]
     },
     {
       inputId: "context.occasion",
       conditionFields: ["input.context.occasion"],
-      resultFields: ["requirements.formalityMin", "requirements.material"],
+      resultFields: ["requirements.formalityMin", "requirements.movement", "requirements.material"],
       illustrationFields: ["illustration.layers"]
     },
     {
@@ -855,8 +855,8 @@
     },
     {
       inputId: "goal-boundaries",
-      conditionFields: ["input.goal.endpoint", "input.goal.direction", "input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
-      resultFields: ["requirements.waist", "requirements.line", "requirements.colorContrastMax", "requirements.coverage", "requirements.movement", "requirements.texture", "candidate.bottomType"],
+      conditionFields: ["input.goal.endpoint", "input.goal.direction", "derived.body.slenderness.label", "derived.body.proportion.label", "derived.color.contrast.label", "input.boundaries.rejectSkirt", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
+      resultFields: ["requirements.waist", "requirements.line", "requirements.colorContrast", "requirements.colorContrastMax", "requirements.coverage", "requirements.movement", "requirements.texture", "preferences.family", "candidate.bottomType", "notes"],
       illustrationFields: ["illustration.waist", "illustration.line", "illustration.layers"]
     }
   ];
