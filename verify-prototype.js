@@ -334,13 +334,24 @@ async function choose(page, pathName, value) {
         "boundaries.movementFriendly": true,
         "boundaries.sensitiveTexture": true
       });
+      const baseInput = engine.clone(window.GarmentPrototypeData.defaultInput);
+      const goalInput = engine.clone(baseInput);
+      engine.setByPath(goalInput, "goal.endpoint", "vertical");
+      engine.setByPath(goalInput, "goal.direction", "strengthen");
+      engine.setByPath(goalInput, "goal.layeringPreference", "singleLayer");
+      const baseResult = engine.run(baseInput);
+      const goalResult = engine.run(goalInput);
       return {
         tests: tests.length,
         failed: tests.filter((test) => !test.pass).map((test) => test.id),
         patterns: (data.patternLibrary || []).map((pattern) => pattern.name),
         validationErrors: validation.errors,
         catchesDangling: engine.validateRuleSet(broken).errors.some((error) => error.type === "missing_condition_field"),
-        constraints: constrained.constraints
+        constraints: constrained.constraints,
+        goalLayerCountStable: goalResult.requirements.layerCount === baseResult.requirements.layerCount,
+        goalPreferenceRecorded: Boolean(goalResult.decisionRecord?.goalPreferences?.length),
+        goalAssessmentRecorded: Boolean(goalResult.candidates[0]?.goalAssessment?.status),
+        boundaryActionsRecorded: Boolean(constrained.trace.boundaryActions?.length)
       };
     });
     assert(ruleChecks.tests >= 7 && ruleChecks.failed.length === 0, "规则回归用例存在失败");
@@ -348,6 +359,9 @@ async function choose(page, pathName, value) {
     assert(ruleChecks.validationErrors.length === 0, `当前规则集校验失败：${JSON.stringify(ruleChecks.validationErrors)}`);
     assert(ruleChecks.catchesDangling, "规则校验器没有捕获悬空条件字段");
     assert(JSON.stringify(ruleChecks.constraints) === JSON.stringify({ coverage: "full", contactTexture: "soft", mobility: "required" }), "三项穿着约束没有进入规范规则结果");
+    assert(ruleChecks.goalLayerCountStable, "叠穿倾向不应改写气温决定的穿着层数");
+    assert(ruleChecks.goalPreferenceRecorded && ruleChecks.goalAssessmentRecorded, "调整目标没有形成软偏好与候选满足度记录");
+    assert(ruleChecks.boundaryActionsRecorded, "穿着边界没有生成仲裁记录");
     assert(!(await rules.page.locator("#configureView").isVisible()), "规则配置与总览仍然同时挤在主工作区");
     assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 19, "规则总览没有将目标与边界收敛为两个聚合入口");
     assert(await rules.page.locator('#overviewMatrix [data-overview-toggle="goal"], #overviewMatrix [data-overview-toggle="boundaries"]').count() === 2, "目标与边界缺少展开入口");
@@ -358,7 +372,7 @@ async function choose(page, pathName, value) {
     assert(await rules.page.locator("#overviewMatrix .overview-impact-cell.is-strong").count() > 0, "规则总览没有展示直接影响色块");
     await rules.page.locator('#overviewMatrix [data-overview-toggle="goal"]').click();
     await rules.page.locator('#overviewMatrix [data-overview-toggle="boundaries"]').click();
-    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 27, "展开后没有恢复 27 个规范输入字段");
+    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 28, "展开后没有恢复 28 个规范输入字段");
     const overviewNames = await rules.page.locator("#overviewMatrix tbody .overview-row-label > span").allInnerTexts();
     const expectedOrder = await rules.page.evaluate(() => window.GarmentCanonicalData.fieldRegistry.inputs.map((field) => field.label));
     assert(JSON.stringify(overviewNames) === JSON.stringify(expectedOrder), `规则总览排序不正确：${overviewNames.join("、")}`);

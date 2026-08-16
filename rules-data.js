@@ -1467,7 +1467,7 @@
       shoulderHipBalance: "hipDominant",
       boneFrame: "medium"
     },
-    goal: { endpoint: "", direction: "keep" },
+    goal: { endpoint: "", direction: "keep", layeringPreference: "noPreference" },
     boundaries: {
       rejectSkirt: false,
       rejectTight: false,

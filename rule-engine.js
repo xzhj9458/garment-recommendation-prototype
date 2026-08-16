@@ -408,6 +408,9 @@
   function createCanonicalDecision(input, canonical, ruleSet) {
     const output = canonical.result;
     const canonicalInput = canonical.migration?.input || {};
+    const canonicalTrace = output.trace || {};
+    const goalPreferences = clone(canonicalTrace.goalPreferences || []);
+    const boundaryActions = clone(canonicalTrace.boundaryActions || []);
     const presentation = canonicalPresentationResource(input, ruleSet);
     const style = input.preference?.style;
     const trendDirection = input.preference?.trendDirection;
@@ -450,12 +453,37 @@
         "boundaries.movementFriendly": "行动不能受限",
         "boundaries.sensitiveTexture": "避免粗糙触感"
       };
-      trace.push({ stage: "hard", status: "matched", ruleId: field, name: labels[field], reason: `已将“${labels[field]}”作为不可覆盖的穿着边界。`, actions: [] });
+      const action = boundaryActions.find((item) => item.boundaryField === field);
+      const status = action?.status || "satisfied";
+      const rewritten = (action?.changes || []).filter((change) => change.status === "rewritten");
+      const reason = status === "rewritten"
+        ? `“${labels[field]}”已执行硬性改写：${rewritten.map((change) => `${change.field} 从 ${String(change.before ?? "未设置")} 调整为 ${String(change.after)}`).join("；")}。`
+        : `基础结果已自然满足“${labels[field]}”，无需改写。`;
+      trace.push({ stage: "hard", status, ruleId: field, name: labels[field], reason, actions: clone(action?.changes || []) });
     });
 
     const styleResult = presentation.styleOutput?.result || {};
     if (style) trace.push({ stage: "soft", status: "matched", ruleId: "canonical-style", name: `${styleNames[style] || "当前"}风格`, reason: presentation.styleOutput?.reason || "主风格用于排序服装路线，不覆盖身体和边界约束。", outputResult: { families: styleFamilies }, actions: [] });
     if (trendFamilies.length) trace.push({ stage: "soft", status: "matched", ruleId: "canonical-trend", name: presentation.trend?.name || "潮流方向", reason: presentation.trend?.reason || "潮流方向只调整服装细节和路线顺序。", outputResult: { families: trendFamilies }, actions: [] });
+    const goalEndpointLabels = { vertical: "纵向比例", waist: "腰线表达", volume: "服装量感", contrast: "色彩对比" };
+    const goalDirectionLabels = { keep: "保持", strengthen: "强化", weaken: "弱化", balance: "平衡" };
+    const layeringLabels = { noPreference: "不限定", singleLayer: "单层优先", lightLayering: "轻度叠穿", pronouncedLayering: "明显叠穿" };
+    const goalEndpoint = canonicalInput["goal.endpoint"] || null;
+    const goalDirection = canonicalInput["goal.direction"] || "keep";
+    const layeringPreference = canonicalInput["goal.layeringPreference"] || "noPreference";
+    if (goalEndpoint || layeringPreference !== "noPreference") {
+      const descriptions = [];
+      if (goalEndpoint) descriptions.push(`${goalEndpointLabels[goalEndpoint] || goalEndpoint} · ${goalDirectionLabels[goalDirection] || goalDirection}`);
+      if (layeringPreference !== "noPreference") descriptions.push(layeringLabels[layeringPreference] || layeringPreference);
+      trace.push({
+        stage: "soft",
+        status: goalPreferences.length ? "matched" : "satisfied",
+        ruleId: "canonical-goal",
+        name: "本次调整目标",
+        reason: `${descriptions.join("；")}作为软偏好参与候选排序，不覆盖场景骨架和穿着边界。`,
+        actions: goalPreferences.map((item) => ({ field: item.outputField, type: "PREFER", value: item.value, status: "pending" }))
+      });
+    }
 
     return {
       canonicalPrimary: true,
@@ -496,13 +524,70 @@
         note: presentation.trend?.result?.note || "长期可穿",
         seasonVersion: presentation.trend?.season || "长期"
       },
-      preferences: { family, styleFamilies, trendFamilies, trendIntensity },
+      preferences: {
+        family,
+        styleFamilies,
+        trendFamilies,
+        trendIntensity,
+        goalProfile: {
+          endpoint: goalEndpoint,
+          direction: goalDirection,
+          layeringPreference,
+          preferences: goalPreferences,
+          resolved: {},
+          blocked: []
+        }
+      },
       notes: [],
       forbidden: [],
       locks,
       trace,
-      conflicts: []
+      conflicts: [],
+      decisionRecord: {
+        baseline: clone(canonicalTrace.baseline || {}),
+        goalPreferences,
+        boundaryActions,
+        finalOutput: clone({
+          framework: output.framework,
+          garment: output.garment,
+          accessories: output.accessories,
+          constraints: output.constraints,
+          color: output.color
+        })
+      }
     };
+  }
+
+  function resolveCanonicalGoalPreferences(decision, ruleSet) {
+    const profile = decision.preferences?.goalProfile;
+    if (!profile) return;
+    const requirements = decision.requirements;
+    const boundaryActions = decision.decisionRecord?.boundaryActions || [];
+    const isBlocked = (preference) => boundaryActions.some((action) => (
+      (action.changes || []).some((change) => change.field === preference.outputField && Array.isArray(change.allowed) && !change.allowed.includes(preference.value))
+    ));
+    const contrastLabels = { low: "低", medium: "中等", high: "高" };
+
+    profile.preferences.forEach((preference) => {
+      if (isBlocked(preference)) {
+        profile.blocked.push({ ...preference, reason: "与穿着边界冲突，保持边界结果。" });
+        return;
+      }
+      profile.resolved[preference.outputField] = preference.value;
+      if (preference.outputField === "garment.waistline") requirements.goalWaist = preference.value;
+      if (preference.outputField === "garment.topFit") requirements.goalTopFit = preference.value;
+      if (preference.outputField === "color.contrastMode") requirements.goalColorContrast = contrastLabels[preference.value] || preference.value;
+      if (preference.outputField === "garment.silhouette") requirements.goalSilhouette = preference.value;
+    });
+
+    if (profile.endpoint === "vertical") {
+      requirements.goalLine = profile.direction === "strengthen" ? "continuous" : profile.direction === "weaken" ? "balanced" : null;
+    }
+    if (requirements.goalColorContrast) {
+      requirements.colorContrast = requirements.goalColorContrast;
+      resolvePalettePlan(decision, ruleSet);
+    }
+    requirements.goalProfile = profile;
   }
 
   function applyOutfitOutputs(input, derived, state, ruleSet) {
@@ -709,6 +794,10 @@
     if (requirements.line && attributes.lineDirection === requirements.line) score += 5;
     if (["top", "dress"].includes(category) && requirements.neckline && attributes.neckline === requirements.neckline) score += 5;
     if (category === "top" && requirements.canonicalTopFit && attributes.topFit === requirements.canonicalTopFit) score += 12;
+    if (category === "top" && requirements.goalTopFit && attributes.topFit === requirements.goalTopFit) score += 6;
+    if (category === "dress" && requirements.goalTopFit && attributes.topFit === requirements.goalTopFit) score += 4;
+    if (["bottom", "dress"].includes(category) && requirements.goalWaist && attributes.waistPosition === requirements.goalWaist) score += 6;
+    if (requirements.goalLine && attributes.lineDirection === requirements.goalLine) score += 4;
     if (category === "bottom" && requirements.canonicalBottomCut && attributes.bottomCut === requirements.canonicalBottomCut) score += 12;
     if (category === "dress" && requirements.canonicalDressCut && attributes.dressCut === requirements.canonicalDressCut) score += 16;
     if (requirements.texture && attributes.texture === requirements.texture) score += 2;
@@ -751,6 +840,16 @@
     let score = 0;
     if ((fitFamilies[requirements.canonicalTopFit] || []).includes(family)) score += 2;
     if ((cutFamilies[requirements.canonicalBottomCut] || []).includes(family)) score += 3;
+    const goal = requirements.goalProfile || {};
+    if (goal.endpoint === "vertical" && goal.direction === "strengthen" && ["straight", "tailored"].includes(family)) score += 3;
+    if (goal.endpoint === "vertical" && goal.direction === "weaken" && ["soft", "relaxed"].includes(family)) score += 2;
+    if (goal.endpoint === "waist" && goal.direction === "strengthen" && ["tailored", "soft", "retro"].includes(family)) score += 3;
+    if (goal.endpoint === "waist" && goal.direction === "weaken" && ["relaxed", "straight"].includes(family)) score += 3;
+    if (goal.endpoint === "volume" && goal.direction === "strengthen" && ["relaxed", "street"].includes(family)) score += 3;
+    if (goal.endpoint === "volume" && goal.direction === "weaken" && ["straight", "tailored"].includes(family)) score += 3;
+    if (goal.layeringPreference === "singleLayer" && ["straight", "tailored"].includes(family)) score += 2;
+    if (goal.layeringPreference === "lightLayering" && ["soft", "straight"].includes(family)) score += 2;
+    if (goal.layeringPreference === "pronouncedLayering" && ["relaxed", "street"].includes(family)) score += 3;
     return score;
   }
 
@@ -774,9 +873,10 @@
     }[requirements.neckline] || "常规领";
 
     if (category === "top") {
-      const fit = requirements.canonicalTopFit || attributes.topFit || "regular";
+      const fit = requirements.goalTopFit || requirements.canonicalTopFit || attributes.topFit || "regular";
       attributes.topFit = fit;
       attributes.neckline = requirements.neckline || attributes.neckline;
+      if (requirements.goalLine) attributes.lineDirection = requirements.goalLine;
       const fitLabel = { fitted: "合体版", regular: "常规版", oversized: "宽松版" }[fit] || "常规版";
       adapted.name = `${familyLabel}${fitLabel}${sleeveLabelText}${necklineLabelText}上衣`;
     }
@@ -784,7 +884,8 @@
     if (category === "bottom") {
       const cut = requirements.canonicalBottomCut || attributes.bottomCut;
       if (cut) attributes.bottomCut = cut;
-      if (requirements.waist) attributes.waistPosition = requirements.waist;
+      if (requirements.goalWaist || requirements.waist) attributes.waistPosition = requirements.goalWaist || requirements.waist;
+      if (requirements.goalLine) attributes.lineDirection = requirements.goalLine;
       const waistLabel = { raised: "偏高腰", natural: "自然腰", relaxed: "松弛腰" }[attributes.waistPosition] || "自然腰";
       const cutLabel = {
         straightLeg: "直筒长裤",
@@ -799,7 +900,8 @@
     if (category === "dress") {
       const cut = requirements.canonicalDressCut || attributes.dressCut;
       if (cut) attributes.dressCut = cut;
-      if (requirements.waist) attributes.waistPosition = requirements.waist;
+      if (requirements.goalWaist || requirements.waist) attributes.waistPosition = requirements.goalWaist || requirements.waist;
+      if (requirements.goalLine) attributes.lineDirection = requirements.goalLine;
       attributes.neckline = requirements.neckline || attributes.neckline;
       const waistLabel = { raised: "偏高腰", natural: "自然腰", relaxed: "松弛腰" }[attributes.waistPosition] || "自然腰";
       const cutLabel = {
@@ -812,6 +914,46 @@
     }
 
     return adapted;
+  }
+
+  function assessCandidateGoal(candidate, decision) {
+    const profile = decision.preferences?.goalProfile;
+    if (!profile || (!profile.endpoint && profile.layeringPreference === "noPreference")) return { status: "未设置目标", score: 0, items: [] };
+    const items = [];
+    const expected = [];
+    const add = (label, pass, detail, blocked = false) => {
+      expected.push(pass);
+      items.push({ label, status: blocked ? "受边界限制" : pass ? "已落实" : "未采用", detail });
+    };
+    const resolved = profile.resolved || {};
+    const blocked = profile.blocked || [];
+    const isBlocked = (field) => blocked.some((item) => item.outputField === field);
+    if (profile.endpoint === "vertical") {
+      const wanted = profile.direction === "strengthen" ? "continuous" : profile.direction === "weaken" ? "balanced" : null;
+      if (wanted) add("纵向比例", candidate.line === wanted || candidate.line === (wanted === "continuous" ? "连续直线" : "稳定平衡"), "候选线条为：" + candidate.line + (isBlocked("garment.waistline") ? "，腰位偏好受边界限制" : ""), isBlocked("garment.waistline"));
+    }
+    if (profile.endpoint === "waist") {
+      const wanted = resolved["garment.waistline"] || (profile.direction === "strengthen" ? "natural" : profile.direction === "weaken" ? "relaxed" : null);
+      if (wanted) add("腰线表达", candidate.waist === wanted, "候选腰线为：" + candidate.waist, isBlocked("garment.waistline"));
+    }
+    if (profile.endpoint === "volume") {
+      const wanted = resolved["garment.topFit"];
+      if (wanted) add("服装量感", candidate.topFit === wanted || (wanted === "regular" && candidate.topFit === "合体"), "候选上装留量为：" + (candidate.topFit || "一件式裙型"), isBlocked("garment.topFit"));
+    }
+    if (profile.endpoint === "contrast") {
+      const wanted = resolved["color.contrastMode"] || ({ strengthen: "高", weaken: "低", balance: "中等" }[profile.direction]);
+      if (wanted) add("色彩对比", candidate.colorContrast === wanted, "候选对比为：" + candidate.colorContrast, isBlocked("color.contrastMode"));
+    }
+    if (profile.layeringPreference !== "noPreference") {
+      const physicalLayer = Number(candidate.layerCount || 1);
+      const thermalException = profile.layeringPreference === "singleLayer" && physicalLayer > 1;
+      const pass = profile.layeringPreference === "singleLayer" ? !thermalException : profile.layeringPreference === "lightLayering" ? candidate.garments.outer === "无外层" || physicalLayer >= 2 : physicalLayer >= 2;
+      add("叠穿倾向", pass, thermalException ? "低温骨架要求保留必要外层，未删除物理层数" : "当前为" + physicalLayer + "层，按倾向组织外层与留量");
+    }
+    const score = expected.filter(Boolean).length;
+    const blockedCount = items.filter((item) => item.status === "受边界限制").length;
+    const status = !expected.length ? "已记录" : score === expected.length ? "完全满足" : score ? "部分满足" : blockedCount ? "受边界限制" : "未采用";
+    return { status, score, total: expected.length, items };
   }
 
   function assembleCandidates(input, derived, decision, ruleSet) {
@@ -909,7 +1051,7 @@
     const outerName = outer.attributes.outerKind === "none" ? "无外层" : outer.name;
     const bodyComponent = dress || bottom;
     const waist = bodyComponent.attributes.waistPosition || decision.requirements.waist || "natural";
-    const line = decision.requirements.line || bodyComponent.attributes.lineDirection || familyMeta.line;
+    const line = decision.requirements.goalLine || decision.requirements.line || bodyComponent.attributes.lineDirection || familyMeta.line;
     const unknownColor = decision.canonicalPrimary
       ? !decision.canonicalColor
       : [derived.color?.temperature, derived.color?.contrast, derived.color?.chroma].some((item) => !item || item.value === null);
@@ -936,7 +1078,7 @@
       ...(unknownColor ? [{ item: "外观色彩事实不完整", affectsPlan: false, validation: "在自然光下确认肤色底调、肤色明度、发色色调和发色深浅。", failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。" }] : [])
     ].map((item) => ({ ...item, field: item.item, impact: item.affectsPlan, howToVerify: item.validation, failureCondition: item.failure }));
 
-    return {
+    const candidate = {
       id: `CANDIDATE-${family.toUpperCase()}`,
       title: nameParts.join(" + "),
       name: nameParts.join(" + "),
@@ -990,6 +1132,13 @@
       unverified,
       traceRuleIds: [...hardRules, ...softRules.filter(relevantRule)].map((item) => item.ruleId)
     };
+    candidate.goalAssessment = assessCandidateGoal(candidate, decision);
+    candidate.decisionRecord = {
+      goalStatus: candidate.goalAssessment.status,
+      goalItems: candidate.goalAssessment.items,
+      boundaryActions: clone(decision.decisionRecord?.boundaryActions || [])
+    };
+    return candidate;
   }
 
   function resolvePalette(ruleSet, palettePlanId) {
@@ -1285,6 +1434,7 @@
     if (canonical && window.GarmentCanonicalOutputAdapter) {
       window.GarmentCanonicalOutputAdapter.applyToDecision(decision, canonical, ruleSet);
     }
+    if (canonical?.result) resolveCanonicalGoalPreferences(decision, ruleSet);
     const assembly = assembleCandidates(safeInput, derivation.derived, decision, ruleSet);
     if (canonical?.result) {
       const canonicalOutput = clone(canonical.result);
@@ -1310,6 +1460,15 @@
         ? "基准方案"
         : meaningfulDifference(baseline, candidate).join("、") || "候选细节差异";
     });
+    if (canonical?.result) {
+      decision.decisionRecord.candidateRanking = assembly.candidates.map((candidate) => ({
+        candidateId: candidate.id,
+        title: candidate.title,
+        goalStatus: candidate.goalAssessment?.status || "未设置",
+        goalScore: candidate.goalAssessment?.score || 0,
+        reasons: candidate.goalAssessment?.items || []
+      }));
+    }
     return {
       input: safeInput,
       version: ruleSet.meta.version || "draft",
@@ -1321,6 +1480,7 @@
       blocked: assembly.blocked,
       conflicts: [...decision.conflicts, ...assembly.conflicts],
       trace: [...derivation.trace, ...decision.trace],
+      decisionRecord: decision.decisionRecord || null,
       canonical,
       canonicalOverlay: canonical
         ? {

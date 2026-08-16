@@ -109,11 +109,21 @@
     return (REGISTRY.outputs || []).find((field) => field.id === fieldId)?.options?.map((option) => option[0]) || [];
   }
 
-  function applyModifierAction(input, result, action) {
+  function applyModifierAction(input, result, action, context = {}) {
     if (action.operation === "annotate") {
       const value = action.valueFrom ? inputValue(input, action.valueFrom) : action.value;
       const target = action.outputField === "trace" ? result.trace : getPath(result, action.outputField);
       if (target && typeof target === "object") target[action.metadataKey] = clone(value);
+      return;
+    }
+    if (context.isGoal && action.operation === "prefer") {
+      result.trace.goalPreferences.push({
+        ruleId: context.rule?.id,
+        input: context.modifier?.input,
+        outputField: action.outputField,
+        value: clone(action.value),
+        reason: context.rule?.why?.summary || "调整目标作为软偏好参与候选排序。"
+      });
       return;
     }
     const current = getPath(result, action.outputField);
@@ -133,16 +143,20 @@
     if (action.operation === "set" || action.operation === "prefer") setPath(result, action.outputField, action.value);
   }
 
-  function applyModifierRules(input, result, runtime) {
-    runtime.modifiers.forEach((modifier) => {
+  function applyModifierRules(input, result, runtime, goalRules = false) {
+    runtime.modifiers.filter((modifier) => modifier.input.startsWith("goal.") === goalRules).forEach((modifier) => {
       if (inputValue(input, modifier.input) === undefined || inputValue(input, modifier.input) === null) return;
       (modifier.rules || []).forEach((rule) => {
         if (!conditionMatches(input, rule.when)) return;
         result.trace.rules.push(rule.id);
         result.trace.modifierRules.push(rule.id);
-        (rule.then || []).forEach((action) => applyModifierAction(input, result, action));
+        (rule.then || []).forEach((action) => applyModifierAction(input, result, action, { modifier, rule, isGoal: goalRules }));
       });
     });
+  }
+
+  function boundaryLabel(field) {
+    return (REGISTRY.inputs || []).find((item) => item.id === field)?.label || field;
   }
 
   function matrix(runtime, id) {
@@ -179,12 +193,27 @@
       const conditions = Object.entries(row.canonicalInputs || {});
       if (!conditions.length || !conditions.every(([field, value]) => input[field] === value)) return;
       result.trace.rules.push(row.id);
-      conditions.forEach(([field]) => result.trace.conflicts.push(field));
       const overrides = row.canonicalOutputs?.overrides || {};
+      const changes = [];
       Object.entries(overrides).forEach(([field, allowed]) => {
         if (!Array.isArray(allowed) || !allowed.length) return;
         const current = getPath(result, field);
-        if (!allowed.includes(current)) setPath(result, field, allowed[0]);
+        if (allowed.includes(current)) {
+          changes.push({ field, before: current === undefined ? null : clone(current), after: current === undefined ? null : clone(current), allowed: clone(allowed), status: "satisfied" });
+          return;
+        }
+        setPath(result, field, allowed[0]);
+        changes.push({ field, before: current === undefined ? null : clone(current), after: clone(allowed[0]), allowed: clone(allowed), status: "rewritten" });
+      });
+      const rewritten = changes.filter((change) => change.status === "rewritten");
+      const boundaryField = conditions[0][0];
+      if (rewritten.length) result.trace.conflicts.push(boundaryField);
+      result.trace.boundaryActions.push({
+        ruleId: row.id,
+        boundaryField,
+        label: boundaryLabel(boundaryField),
+        status: rewritten.length ? "rewritten" : "satisfied",
+        changes
       });
     });
     if (result.framework.form !== "onePieceDress") result.garment.dressCut = null;
@@ -199,7 +228,7 @@
       constraints: { coverage: "standard", contactTexture: "standard", mobility: "standard" },
       color: { distribution: { main: [], nearFace: [], accent: [] }, nearFacePalette: { preferred: [], compatible: [], forbidden: [] } },
       explanation: { summary: "统一规则结果", why: [], validation: [] },
-      trace: { inputs: clone(input), rules: [], modifierRules: [], conflicts: [], missingInputs: [], pendingModifiers: [], fallback: false }
+      trace: { inputs: clone(input), rules: [], modifierRules: [], conflicts: [], missingInputs: [], pendingModifiers: [], goalPreferences: [], boundaryActions: [], baseline: null, fallback: false }
     };
 
     const scenario = findScenario(input, runtime);
@@ -247,7 +276,15 @@
       result.accessories.footwear = result.accessories.footwear || preferred(style.canonicalOutputs?.["accessories.footwear"]);
     }
 
-    applyModifierRules(input, result, runtime);
+    applyModifierRules(input, result, runtime, false);
+    result.trace.baseline = clone({
+      framework: result.framework,
+      garment: result.garment,
+      accessories: result.accessories,
+      constraints: result.constraints,
+      color: result.color
+    });
+    applyModifierRules(input, result, runtime, true);
     applyBoundaries(input, result, runtime);
     result.explanation.why = result.trace.rules.slice(0, 3);
     return result;

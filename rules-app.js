@@ -82,8 +82,8 @@
     { id: "palette", name: "色系偏好", topics: [], inputs: ["色系偏好"], outputs: ["色彩配比", "全身对比", "近脸安全色"], overview: {} },
     { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { wear: { formality: "strong" }, style: { silhouette: "medium", details: "medium" } } },
     { id: "trend", name: "潮流方向", topics: ["潮流方向"], inputs: ["潮流方向", "表达强度"], outputs: ["外轮廓", "服装量感", "表面纹理", "款式细节"], overview: { style: { silhouette: "medium", volume: "medium", details: "strong" } } },
-    { id: "goal", name: "调整目标", topics: ["本次偏好"], inputs: ["调整目标", "调整方向"], outputs: ["腰位", "线条方向", "配色对比"], overview: { style: { length: "medium", waist: "strong" }, color: { contrast: "medium" } } },
-    { id: "boundaries", name: "拒绝边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖要求", "活动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
+    { id: "goal", name: "调整目标", topics: ["本次偏好"], inputs: ["调整目标", "调整方向", "叠穿倾向"], outputs: ["腰线设计", "整体廓形", "上装松紧", "全身对比", "外层组织"], overview: { style: { silhouette: "medium", volume: "medium", waist: "medium" }, color: { contrast: "medium" } } },
+    { id: "boundaries", name: "穿着边界", topics: ["排除项与必要条件"], inputs: ["排除项", "必要条件"], outputs: ["覆盖要求", "活动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
   ];
 
   // Each business relation owns a bounded set of fields. The editor uses this
@@ -126,8 +126,8 @@
       result: ["preferences.family"]
     },
     goal: {
-      condition: ["input.goal.endpoint", "input.goal.direction", "derived.body.slenderness.label", "derived.body.proportion.label", "derived.color.contrast.label"],
-      result: ["requirements.waist", "requirements.line", "requirements.colorContrast", "requirements.colorContrastMax", "preferences.family"]
+      condition: ["input.goal.endpoint", "input.goal.direction", "input.goal.layeringPreference"],
+      result: ["requirements.waist", "requirements.line", "requirements.colorContrast", "requirements.colorContrastMax", "requirements.canonicalTopFit", "preferences.family"]
     },
     boundaries: {
       condition: ["input.boundaries.rejectSkirt", "input.boundaries.rejectTight", "input.boundaries.rejectDefinedWaist", "input.boundaries.rejectDeepNeck", "input.boundaries.rejectHighContrast", "input.boundaries.strictCoverage", "input.boundaries.movementFriendly", "input.boundaries.sensitiveTexture"],
@@ -174,7 +174,7 @@
       name: "目标边界",
       relations: [
         { id: "goal", name: "调整目标", tag: "搭配" },
-        { id: "boundaries", name: "拒绝边界", tag: "边界" }
+        { id: "boundaries", name: "穿着边界", tag: "边界" }
       ]
     }
   ];
@@ -266,7 +266,7 @@
     palette: ["preference.palette"],
     formality: ["preference.formality"],
     trend: ["preference.trendDirection", "preference.trendIntensity"],
-    goal: ["goal.endpoint", "goal.direction"],
+    goal: ["goal.endpoint", "goal.direction", "goal.layeringPreference"],
     boundaries: CANONICAL_INPUTS.filter((field) => field.id.startsWith("boundaries.")).map((field) => field.id)
   };
 
@@ -314,10 +314,11 @@
       { id: "trend-intensity", name: "方向 × 表达强度", type: "modifier", fieldId: "preference.trendIntensity" }
     ],
     goal: [
-      { id: "goal-joint", name: "调整目标 × 调整方向", type: "modifier", fieldId: "goal.direction", forceGroupLevel: true }
+      { id: "goal-joint", name: "视觉目标 × 调整方向", type: "modifier", fieldId: "goal.direction", forceGroupLevel: true },
+      { id: "goal-layering", name: "叠穿倾向", type: "modifier", fieldId: "goal.layeringPreference" }
     ],
     boundaries: [
-      { id: "boundaries", name: "拒绝边界", type: "matrix", matrixId: "boundary" }
+      { id: "boundaries", name: "穿着边界", type: "matrix", matrixId: "boundary" }
     ]
   };
 
@@ -592,7 +593,7 @@
       "GOAL-VERTICAL": "纵向比例调整",
       "GOAL-WAIST": "腰线特征调整",
       "GOAL-CONTRAST": "配色对比调整",
-      BOUNDARY: "拒绝边界",
+      BOUNDARY: "穿着边界",
       "OUTFIT-风格方向": "风格方向",
       "OUTFIT-正式程度": "正式程度",
       "TREND-DIRECTION": "潮流方向"
@@ -614,7 +615,7 @@
       "GOAL-VERTICAL": "纵向比例调整",
       "GOAL-WAIST": "腰线特征调整",
       "GOAL-CONTRAST": "配色对比调整",
-      BOUNDARY: "拒绝边界",
+      BOUNDARY: "穿着边界",
       "OUTFIT-风格方向": "风格方向",
       "OUTFIT-正式程度": "正式程度",
       "TREND-DIRECTION": "潮流方向"
@@ -730,7 +731,7 @@
     { groupId: "preference", label: "正式程度", relationId: "formality", mappingId: "preference.formality" },
     { groupId: "preference", label: "潮流方向", relationId: "trend", mappingId: "preference.trendDirection" },
     { groupId: "goal-boundaries", label: "调整目标", relationId: "goal", mappingId: "goal-boundaries" },
-    { groupId: "goal-boundaries", label: "拒绝边界", relationId: "boundaries", mappingId: "goal-boundaries" }
+    { groupId: "goal-boundaries", label: "穿着边界", relationId: "boundaries", mappingId: "goal-boundaries" }
   ];
 
   function canonicalOverviewRows() {
@@ -814,7 +815,7 @@
 
   function overviewDisplayRows() {
     const rows = canonicalOverviewRows();
-    const compactRelations = { goal: "调整目标", boundaries: "拒绝边界" };
+    const compactRelations = { goal: "调整目标", boundaries: "穿着边界" };
     const inserted = new Set();
     return rows.flatMap((row) => {
       const relationId = row.relationId;
@@ -1105,7 +1106,7 @@
       color: "肤色底调与发色深浅共同确定近脸安全色、全身对比和配色角色；肤色明度与发色色调再提供修饰。",
       body: "腿身分布、横向轮廓与骨架量感共同决定廓形、腰线、松紧和下装版型；腰线特征作为独立修饰条件。",
       face: "领口通过纵横线条和开合程度修饰脸型轮廓，同时协调耳饰与织物软配。",
-      style: "主风格控制廓形与鞋履路线，但不得覆盖体型、气温和拒绝边界。",
+      style: "主风格控制廓形与鞋履路线，但不得覆盖体型、气温和穿着边界。",
       boundary: "明确拒绝与身体边界拥有最高优先级，命中后必须重写冲突输出。"
     };
     return defaults[branch.matrixId] || "";

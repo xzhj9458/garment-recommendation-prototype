@@ -217,9 +217,11 @@
     const bodyPropLabel = canonicalValueLabel("body.legRatio", body.legRatio, "比例未确认");
     const faceLabel = canonicalValueLabel("face.shape", face.shape, "脸型未确认");
     const styleLabel = canonicalValueLabel("preference.style", p.style, "未限定");
+    const formalityLabel = canonicalValueLabel("preference.formality", p.formality, "未限定");
     const paletteLabel = canonicalValueLabel("preference.palette", p.palette, "不限定");
     const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
-    const goalLabel = g.endpoint ? `${canonicalValueLabel("goal.endpoint", g.endpoint)}·${canonicalValueLabel("goal.direction", g.direction, "保持")}` : "暂不调整";
+    const layeringLabel = canonicalValueLabel("goal.layeringPreference", g.layeringPreference, "不限定");
+    const goalLabel = g.endpoint ? `${canonicalValueLabel("goal.endpoint", g.endpoint)}·${canonicalValueLabel("goal.direction", g.direction, "保持")} · ${layeringLabel}` : `暂不调整 · ${layeringLabel}`;
     const boundaryList = [];
     if (b.rejectSkirt) boundaryList.push("拒裙");
     if (b.rejectTight) boundaryList.push("拒紧绷");
@@ -230,16 +232,25 @@
     if (b.movementFriendly) boundaryList.push("易活动");
     if (b.sensitiveTexture) boundaryList.push("亲肤");
     const boundaryLabel = boundaryList.length ? boundaryList.slice(0, 2).join("·") + (boundaryList.length > 2 ? `等${boundaryList.length}项` : "") : "无边界";
+    const fullSummary = [
+      `场景：${tempLabel} · ${occasionLabel}${environmentLabel ? ` · ${environmentLabel}` : ""}`,
+      `色彩：${skinToneLabel} · ${canonicalValueLabel("appearance.skinValue", a.skinValue, "明度未确认")} · ${canonicalValueLabel("appearance.hairTone", a.hairTone, "发色色调未确认")} · ${canonicalValueLabel("appearance.hairDepth", a.hairDepth, "发色深浅未确认")}`,
+      `身材：${bodyPropLabel} · ${canonicalValueLabel("body.waistDefinition", body.waistDefinition, "腰线未确认")} · ${canonicalValueLabel("body.shoulderHipBalance", body.shoulderHipBalance, "横向轮廓未确认")} · ${canonicalValueLabel("body.boneFrame", body.boneFrame, "骨架量感未确认")}`,
+      `脸型：${faceLabel}`,
+      `偏好：${styleLabel} · ${formalityLabel} · ${paletteLabel} · ${trendLabel}`,
+      `目标：${goalLabel}`,
+      `边界：${boundaryList.length ? boundaryList.join("、") : "无"}`
+    ].join("；");
 
     $("#conditionSnapshot").innerHTML = `
       <div class="snapshot-inner">
         <span class="snapshot-label">已选条件</span>
         <div class="snapshot-badges">
           <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温、场合与环境">场景: ${escapeHtml([tempLabel, occasionLabel, environmentLabel].filter(Boolean).join(" · "))}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底调与体型脸型">特征: ${escapeHtml(skinToneLabel)} · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格、色系与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(paletteLabel)} · ${escapeHtml(trendLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="调整目标与方向">目标: ${escapeHtml(goalLabel)}</button>
-          <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="身体与穿着边界">边界: ${escapeHtml(boundaryLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="personal" title="${escapeHtml(fullSummary)}">特征: ${escapeHtml(skinToneLabel)} · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="${escapeHtml(fullSummary)}">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(paletteLabel)} · ${escapeHtml(trendLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="${escapeHtml(fullSummary)}">目标: ${escapeHtml(goalLabel)}</button>
+          <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="${escapeHtml(fullSummary)}">边界: ${escapeHtml(boundaryLabel)}</button>
         </div>
       </div>
     `;
@@ -313,12 +324,19 @@
     } else if (group === "goal-boundaries") {
       const endpoint = canonicalParameter("goal.endpoint", { allowUnset: true });
       const direction = canonicalParameter("goal.direction");
-      const boundaryFields = [
+      const layering = canonicalParameter("goal.layeringPreference");
+      const directionOptions = endpoint.value === "contrast"
+        ? direction.options
+        : direction.options.filter((option) => option.value !== "balance");
+      const directionForRender = { ...direction, options: directionOptions };
+      const boundaryExclusions = [
         ["rejectSkirt", "拒绝裙装", "排除所有裙装下装"],
         ["rejectTight", "拒绝紧绷贴身", "排除修身或活动余量不足的版型"],
         ["rejectDefinedWaist", "拒绝明显收腰", "排除明确腰位或高腰表达"],
         ["rejectDeepNeck", "拒绝低领开阔", "排除低领或过度开阔的领口"],
-        ["rejectHighContrast", "拒绝高对比配色", "配色对比不高于中等"],
+        ["rejectHighContrast", "拒绝高对比配色", "配色对比不高于中等"]
+      ];
+      const boundaryRequirements = [
         ["strictCoverage", "要求完整覆盖", "上下装都必须满足完整覆盖"],
         ["movementFriendly", "行动不能受限", "抬手、行走和坐下保持便利"],
         ["sensitiveTexture", "避免粗糙触感", "排除粗糙贴肤表面"]
@@ -328,12 +346,14 @@
           <div class="input-section-heading"><strong>调整目标</strong><span>说明这次希望优先调整的视觉方向</span></div>
           <div class="field-stack-grid">
             ${renderParameterScale("goal.endpoint", "调整目标", endpoint)}
-            ${renderParameterScale("goal.direction", "调整方向", direction)}
+            ${renderParameterScale("goal.direction", "调整方向", directionForRender)}
+            ${renderParameterScale("goal.layeringPreference", "叠穿倾向", layering)}
           </div>
         </div>
         <div class="input-section">
-          <div class="input-section-heading"><strong>拒绝边界</strong><span>明确不可接受的方案条件，优先级高于风格偏好</span></div>
-          <div class="checkbox-grid">${boundaryFields.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div>
+          <div class="input-section-heading"><strong>穿着边界</strong><span>排除项与必要条件均高于目标和风格偏好</span></div>
+          <div class="boundary-subgroup"><strong>排除项</strong><div class="checkbox-grid">${boundaryExclusions.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div></div>
+          <div class="boundary-subgroup"><strong>必要条件</strong><div class="checkbox-grid">${boundaryRequirements.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div></div>
         </div>`;
     }
   }
@@ -490,6 +510,7 @@
     let val = btn.dataset.inputValue;
     if (/^\d+$/.test(val)) val = Number(val);
     Engine.setByPath(state.input, path, val);
+    if (path === "goal.endpoint" && val !== "contrast" && state.input.goal?.direction === "balance") state.input.goal.direction = "keep";
     Engine.Store.saveInput(state.input);
     renderAll();
   }
@@ -692,72 +713,179 @@
   function renderIllustration(illustration, candidate) {
     const model = illustration || {};
     const layers = model.layers || [];
-    const colorFor = (kind, fallback) => {
-      const role = (candidate.palette?.roles || []).find((item) => item.garment === kind);
-      return escapeHtml(role?.hex || fallback);
+    const roles = candidate.palette?.roles || [];
+
+    const getAccurateColor = (kind, fallback) => {
+      // 1. Direct role/garment match
+      const direct = roles.find((r) => r.garment === kind || (r.role && String(r.role).toLowerCase() === String(kind).toLowerCase()));
+      if (direct && direct.hex) return direct.hex;
+      // 2. Semantic category mappings
+      if (kind === "上装" || kind === "top" || kind === "内搭") {
+        const near = roles.find((r) => r.role === "nearFace" || r.role === "top");
+        if (near && near.hex) return near.hex;
+      }
+      if (kind === "外层" || kind === "outer") {
+        const out = roles.find((r) => r.garment === "外层" || r.role === "outer" || r.role === "main");
+        if (out && out.hex) return out.hex;
+      }
+      if (kind === "下装" || kind === "bottom") {
+        const bot = roles.find((r) => r.role === "main" || r.role === "bottom");
+        if (bot && bot.hex) return bot.hex;
+      }
+      if (kind === "连身裙" || kind === "dress") {
+        const dr = roles.find((r) => r.garment === "连身裙" || r.role === "main" || r.role === "nearFace");
+        if (dr && dr.hex) return dr.hex;
+      }
+      return roles[0]?.hex || fallback;
     };
+
     const topLayer = layers.find((layer) => layer.kind === "top") || {};
     const dressLayer = layers.find((layer) => layer.kind === "dress") || {};
     const outerLayer = layers.find((layer) => layer.kind === "outer") || {};
     const bottomLayer = layers.find((layer) => layer.kind === "bottom") || {};
-    const isDress = Boolean(dressLayer.visible);
-    const topColor = isDress ? colorFor("连身裙", dressLayer.color || "#dedbd1") : colorFor("上装", topLayer.color || "#dedbd1");
-    const outerColor = colorFor("外层", outerLayer.color || "#a8b1af");
-    const bottomColor = isDress ? topColor : colorFor("下装", bottomLayer.color || "#4c5961");
-    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none";
+    const isDress = Boolean(dressLayer.visible) || candidate.form === "onePieceDress" || Boolean(candidate.garments?.dress);
+
+    const topColor = isDress ? getAccurateColor("连身裙", dressLayer.color || "#e8e5dc") : getAccurateColor("上装", topLayer.color || "#e8e5dc");
+    const outerColor = getAccurateColor("外层", outerLayer.color || "#8d9b86");
+    const bottomColor = isDress ? topColor : getAccurateColor("下装", bottomLayer.color || "#34383a");
+    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none" && Boolean(candidate.garments?.outer && candidate.garments.outer !== "无外层");
+
     const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
+    const bottomCut = candidate.canonicalOutput?.garment?.bottomCut || candidate.bottomCut || "straightLeg";
+    const dressCut = candidate.canonicalOutput?.garment?.dressCut || candidate.dressCut || dressLayer.dressCut || "aLineMidi";
     const sleeve = (isDress ? dressLayer.sleeve : topLayer.sleeve) || candidate.sleeve || "long";
     const neckline = model.neckline || candidate.neckline || "regular";
     const waist = model.waist || candidate.waist || "natural";
     const line = model.line || candidate.line || "balanced";
-    const necklineText = String(neckline);
-    const isOpenNeckline = neckline === "open" || necklineText.includes("开阔") || necklineText.includes("开放");
-    const isSoftNeckline = neckline === "softCurve" || necklineText.includes("柔和") || necklineText.includes("曲线");
+
+    // Detect patterns for textures
+    const candidateName = String(candidate.name || "") + String(candidate.title || "") + Object.values(candidate.garments || {}).join(" ");
+    const hasStripe = candidateName.includes("条纹") || candidateName.includes("海魂");
+    const hasPlaid = candidateName.includes("格纹") || candidateName.includes("亲王格") || candidateName.includes("千鸟格");
+
+    // Accessories
+    const footwearKey = candidate.canonicalOutput?.accessories?.footwear || "loafersOxfords";
+    const bagKey = candidate.canonicalOutput?.accessories?.leatherGoods || "structuredTote";
+
+    // Sleeve Geometry
     const armPath = sleeve === "short"
-      ? `<path d="M92 64 L76 91 M128 64 L144 91" fill="none" stroke="${topColor}" stroke-width="13" stroke-linecap="round"/>`
+      ? `<path d="M90 64 L74 94 M130 64 L146 94" fill="none" stroke="${topColor}" stroke-width="12" stroke-linecap="round"/>`
       : sleeve === "threeQuarter"
-        ? `<path d="M92 64 L73 106 M128 64 L147 106" fill="none" stroke="${topColor}" stroke-width="13" stroke-linecap="round"/>`
-        : `<path d="M92 64 L73 123 M128 64 L147 123" fill="none" stroke="${topColor}" stroke-width="13" stroke-linecap="round"/>`;
+        ? `<path d="M90 64 L71 108 M130 64 L149 108" fill="none" stroke="${topColor}" stroke-width="12" stroke-linecap="round"/>`
+        : `<path d="M90 64 L71 124 M130 64 L149 124" fill="none" stroke="${topColor}" stroke-width="12" stroke-linecap="round"/>`;
+
+    // Neckline Geometry
+    const necklineText = String(neckline);
+    const isOpenNeckline = neckline === "open" || neckline === "vNeck" || necklineText.includes("V领") || necklineText.includes("开阔");
+    const isSquareNeckline = neckline === "squareNeck" || necklineText.includes("方领");
+    const isSoftNeckline = neckline === "softCurve" || neckline === "uNeck" || necklineText.includes("U领") || necklineText.includes("柔和");
     const necklinePath = isOpenNeckline
-      ? `<path d="M96 78 L110 92 L124 78" fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`
-      : isSoftNeckline
-        ? `<path d="M96 80 Q110 96 124 80" fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`
-        : `<path d="M98 80 Q110 88 122 80" fill="none" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`;
-    const waistY = waist === "raised" ? 108 : waist === "defined" ? 126 : 143;
+      ? `<path d="M97 72 L110 93 L123 72" fill="none" stroke="#ecd8c8" stroke-width="3" stroke-linecap="round"/>`
+      : isSquareNeckline
+        ? `<path d="M98 72 L98 87 L122 87 L122 72" fill="none" stroke="#ecd8c8" stroke-width="3"/>`
+        : isSoftNeckline
+          ? `<path d="M97 73 Q110 94 123 73" fill="none" stroke="#ecd8c8" stroke-width="3"/>`
+          : `<path d="M99 73 Q110 84 121 73" fill="none" stroke="#ecd8c8" stroke-width="3"/>`;
+
+    // Waistline Marker
+    const waistY = waist === "raised" ? 110 : waist === "defined" ? 126 : 142;
     const waistMark = waist === "defined"
-      ? `<path d="M84 ${waistY} L136 ${waistY}" stroke="#ffffff" stroke-opacity="0.78" stroke-width="3"/>`
+      ? `<path d="M86 ${waistY} L134 ${waistY}" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2.5"/>`
       : waist === "raised"
-        ? `<path d="M87 ${waistY} L133 ${waistY}" stroke="#ffffff" stroke-opacity="0.58" stroke-width="2" stroke-dasharray="4 3"/>`
+        ? `<path d="M88 ${waistY} L132 ${waistY}" stroke="#ffffff" stroke-opacity="0.75" stroke-width="2" stroke-dasharray="4 3"/>`
         : "";
-    const lineMark = line === "continuous"
-      ? `<path d="M110 96 L110 154" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2"/>`
-      : line === "sectioned"
-        ? `<path d="M87 116 L133 116 M87 138 L133 138" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2"/>`
-        : "";
-    const bottomShape = bottomType === "skirt"
-      ? `<path d="M78 159 L142 159 L157 235 Q110 248 63 235 Z" fill="${bottomColor}"/>`
+
+    // Trousers & Skirt Shapes
+    const trouserShape = bottomCut === "wideLeg"
+      ? `<path d="M78 148 L142 148 L148 238 L114 238 L110 166 L106 238 L72 238 Z" fill="${bottomColor}"/>`
+      : bottomCut === "tapered"
+        ? `<path d="M82 148 L138 148 L131 238 L112 238 L110 168 L108 238 L89 238 Z" fill="${bottomColor}"/>`
+        : `<path d="M82 148 L138 148 L137 238 L113 238 L110 168 L107 238 L83 238 Z" fill="${bottomColor}"/>`;
+
+    const bottomShape = bottomType === "skirt" || bottomCut === "aLineSkirt" || bottomCut === "straightSkirt"
+      ? `<path d="M80 148 L140 148 L158 234 Q110 244 62 234 Z" fill="${bottomColor}"/>`
       : bottomType === "short"
-        ? `<path d="M80 158 L140 158 L145 206 L114 206 L110 178 L106 206 L75 206 Z" fill="${bottomColor}"/>`
-        : `<path d="M82 158 L138 158 L136 236 L111 236 L108 178 L104 236 L79 236 Z" fill="${bottomColor}"/>`;
+        ? `<path d="M80 148 L140 148 L145 204 L114 204 L110 176 L106 204 L75 204 Z" fill="${bottomColor}"/>`
+        : trouserShape;
+
+    // Dress Shapes
     const dressShape = {
-      aLineMidi: `<path d="M93 55 L127 55 L141 104 L157 235 Q110 248 63 235 L79 104 Z" fill="${topColor}"/>`,
-      shirtDress: `<path d="M93 55 L127 55 L139 107 L144 235 Q110 241 76 235 L81 107 Z" fill="${topColor}"/><path d="M110 87 L110 220" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2"/>`,
-      wrapDress: `<path d="M93 55 L127 55 L140 108 L154 235 Q110 246 66 235 L80 108 Z" fill="${topColor}"/><path d="M94 68 L126 112 L91 128" fill="none" stroke="#ffffff" stroke-opacity="0.48" stroke-width="2"/>`,
-      columnDress: `<path d="M93 55 L127 55 L137 108 L139 235 Q110 240 81 235 L83 108 Z" fill="${topColor}"/>`
-    }[dressLayer.dressCut] || `<path d="M93 55 L127 55 L140 108 L151 235 Q110 245 69 235 L80 108 Z" fill="${topColor}"/>`;
+      aLineMidi: `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor}"/>`,
+      shirtDress: `<path d="M92 58 L128 58 L138 107 L144 235 Q110 241 76 235 L82 107 Z" fill="${topColor}"/><path d="M110 74 L110 226" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2"/><path d="M102 60 L110 68 L118 60" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.8"/>`,
+      wrapDress: `<path d="M92 58 L128 58 L140 108 L156 234 Q110 245 64 234 L80 108 Z" fill="${topColor}"/><path d="M94 66 L124 114 L88 128" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>`,
+      columnDress: `<path d="M92 58 L128 58 L136 108 L138 235 Q110 240 82 235 L84 108 Z" fill="${topColor}"/>`
+    }[dressCut] || `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor}"/>`;
+
+    // Outer Shape
+    const outerShape = `<path d="M84 56 L64 90 L74 174 L146 174 L156 90 L136 56 L124 74 L96 74 Z" fill="${outerColor}" opacity="0.96"/>
+      <path d="M96 56 L104 88 L110 88 L116 88 L124 56" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.5"/>`;
+
+    // Concrete Footwear
+    const footwearSvg = {
+      loafersOxfords: `<path d="M86 240 L103 240 L102 249 L85 249 Z M117 240 L134 240 L135 249 L118 249 Z" fill="#2d2926"/><line x1="91" y1="243" x2="98" y2="243" stroke="#d4af37" stroke-width="1.5"/><line x1="122" y1="243" x2="129" y2="243" stroke="#d4af37" stroke-width="1.5"/>`,
+      kittenHeels: `<path d="M86 241 L104 241 L101 250 L89 250 Z M116 241 L134 241 L131 250 L119 250 Z" fill="#3a2f2b"/><path d="M88 250 L87 254 M132 250 L133 254" stroke="#3a2f2b" stroke-width="2"/>`,
+      boots: `<path d="M85 232 L103 232 L103 249 L85 249 Z M117 232 L135 232 L135 249 L117 249 Z" fill="#24211f"/>`,
+      minimalSneakers: `<path d="M86 240 L103 240 L102 249 L85 249 Z M117 240 L134 240 L135 249 L118 249 Z" fill="#ece8df"/><line x1="85" y1="248" x2="103" y2="248" stroke="#ffffff" stroke-width="2"/><line x1="117" y1="248" x2="135" y2="248" stroke="#ffffff" stroke-width="2"/>`
+    }[footwearKey] || `<path d="M86 240 L103 240 L102 249 L85 249 Z M117 240 L134 240 L135 249 L118 249 Z" fill="#2d2926"/>`;
+
+    // Concrete Bags
+    const bagSvg = {
+      structuredTote: `<rect x="146" y="136" width="26" height="34" rx="2" fill="#5c4433"/><path d="M153 136 Q159 122 165 136" fill="none" stroke="#423023" stroke-width="2"/>`,
+      shoulderBag: `<path d="M138 86 Q146 108 148 120 L162 118 Q158 102 146 84 Z" fill="#6d4c38"/>`,
+      crossbody: `<line x1="94" y1="58" x2="146" y2="132" stroke="#4a3629" stroke-width="2.2"/><rect x="140" y="128" width="22" height="18" rx="3" fill="#634835"/>`,
+      slimBelt: `<rect x="86" y="125" width="48" height="4" rx="1" fill="#7a583e"/>`
+    }[bagKey] || "";
+
+    const svgId = `illu-${Math.random().toString(36).slice(2, 7)}`;
+
     return `
       <div class="outfit-illustration" data-illustration-type="${escapeHtml(model.type || "outfit-schematic")}">
-        <svg class="illustration-svg" viewBox="0 0 220 260" role="img" aria-label="${escapeHtml(candidate.title || "穿搭方案效果图")}">
-          <circle cx="110" cy="37" r="18" fill="#e8d2c1"/>
-          ${isDress ? dressShape : `<path d="M93 55 L127 55 L143 92 L137 158 L83 158 L77 92 Z" fill="${topColor}"/>`}
+        <svg class="illustration-svg" viewBox="0 0 220 264" role="img" aria-label="${escapeHtml(candidate.title || "穿搭方案效果图")}">
+          <defs>
+            <pattern id="stripe-${svgId}" width="16" height="6" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="3" x2="16" y2="3" stroke="#253e58" stroke-width="2.5" stroke-opacity="0.8"/>
+            </pattern>
+            <pattern id="plaid-${svgId}" width="12" height="12" patternUnits="userSpaceOnUse">
+              <path d="M0 0h12v12H0z" fill="none"/>
+              <path d="M0 0h12M0 4h12M0 8h12M0 0v12M4 0v12M8 0v12" stroke="#483d37" stroke-width="0.75" stroke-opacity="0.35"/>
+            </pattern>
+          </defs>
+
+          <!-- Stylized French Hair & Neck -->
+          <ellipse cx="110" cy="20" rx="7" ry="5" fill="#2d2926"/>
+          <path d="M96 34 C94 20 126 20 124 34 C126 40 122 46 118 48 C120 38 116 28 110 28 C104 28 100 38 102 48 C98 46 94 40 96 34 Z" fill="#2d2926"/>
+          <path d="M101 34 Q110 49 119 34 L117 58 Q110 62 103 58 Z" fill="#ecd8c8"/>
+          <path d="M103 58 Q110 62 117 58" stroke="#d4b8a2" stroke-width="1.2" fill="none" opacity="0.6"/>
+
+          <!-- Base Body / Dress -->
+          ${isDress ? dressShape : `<path d="M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z" fill="${topColor}"/>`}
+
+          <!-- Pattern Texture Overlays -->
+          ${hasStripe && !isDress ? `<path d="M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z" fill="url(#stripe-${svgId})"/>` : ""}
+          ${hasPlaid && !isDress ? `<path d="M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z" fill="url(#plaid-${svgId})"/>` : ""}
+
+          <!-- Arms -->
           ${armPath}
-          ${outerVisible ? `<path d="M88 62 L70 91 L78 166 L142 166 L150 91 L132 62 L125 80 L95 80 Z" fill="${outerColor}" opacity="0.92"/>` : ""}
+
+          <!-- Outer Layer -->
+          ${outerVisible ? outerShape : ""}
+          ${outerVisible && hasPlaid ? `<path d="M84 56 L64 90 L74 174 L146 174 L156 90 L136 56 L124 74 L96 74 Z" fill="url(#plaid-${svgId})"/>` : ""}
+
+          <!-- Bottom Separates -->
           ${isDress ? "" : bottomShape}
-          <path d="M100 235 L100 248 M120 235 L120 248" stroke="#39434a" stroke-width="7" stroke-linecap="round"/>
-          <path d="M94 250 L105 250 M115 250 L126 250" stroke="#39434a" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- Legs -->
+          <path d="M96 235 L96 242 M124 235 L124 242" stroke="#ecd8c8" stroke-width="6" stroke-linecap="round"/>
+
+          <!-- Concrete Footwear -->
+          ${footwearSvg}
+
+          <!-- Concrete Handbag -->
+          ${bagSvg}
+
+          <!-- Neckline, Waistline Markers -->
           ${necklinePath}
           ${waistMark}
-          ${lineMark}
         </svg>
         <span class="illustration-caption">${escapeHtml(model.layerCount || candidate.layerCount || 1)}层 · ${escapeHtml(model.silhouette || candidate.silhouette || "整体轮廓")} · ${escapeHtml(translateValue(sleeve))}</span>
       </div>
@@ -1003,6 +1131,14 @@
       <li><strong>${escapeHtml(imp.relationName)}</strong><span>${escapeHtml(imp.actionSummary)}</span></li>
     `).join("") || `<li><span>无额外映射</span></li>`;
 
+    const goalAssessment = cand.goalAssessment || null;
+    const goalHtml = goalAssessment && goalAssessment.status !== "未设置目标" ? `
+      <div class="decision-status ${goalAssessment.status === "完全满足" ? "is-good" : goalAssessment.status === "部分满足" ? "is-partial" : "is-muted"}">${escapeHtml(goalAssessment.status)}</div>
+      <ul class="evidence-list">${(goalAssessment.items || []).map((item) => `<li><strong>${escapeHtml(item.label)} · ${escapeHtml(item.status)}</strong><span>${escapeHtml(item.detail)}</span></li>`).join("")}</ul>
+    ` : `<p class="dialog-muted">本次未设置可调整目标，方案按基础骨架与风格偏好生成。</p>`;
+    const boundaryActions = cand.decisionRecord?.boundaryActions || result.decisionRecord?.boundaryActions || [];
+    const boundaryHtml = boundaryActions.length ? `<ul class="evidence-list">${boundaryActions.map((action) => `<li><strong>${escapeHtml(action.label || "穿着边界")} · ${action.status === "rewritten" ? "已改写" : "自然满足"}</strong><span>${(action.changes || []).map((change) => change.status === "rewritten" ? `${escapeHtml(change.field)}：${escapeHtml(String(change.before ?? "未设置"))} → ${escapeHtml(String(change.after))}` : `${escapeHtml(change.field)}：已在允许范围内`).join("；")}</span></li>`).join("")}</ul>` : `<p class="dialog-muted">本次未启用穿着边界。</p>`;
+
     const unverifiedHtml = (cand.unverified || []).map((unv) => `
       <article class="verification-card">
         <div class="verification-head">
@@ -1041,6 +1177,16 @@
       <section class="dialog-section">
         <h3>预计上身效果</h3>
         <p>${escapeHtml(cand.expectedEffect || "")}</p>
+      </section>
+
+      <section class="dialog-section">
+        <h3>目标调整</h3>
+        ${goalHtml}
+      </section>
+
+      <section class="dialog-section">
+        <h3>穿着边界仲裁</h3>
+        ${boundaryHtml}
       </section>
 
       <section class="dialog-section">
