@@ -84,7 +84,7 @@
     return field?.options?.find(([optionValue]) => String(optionValue) === String(value))?.[1] || fallback;
   }
 
-  init();
+  queueMicrotask(init);
 
   function init() {
     bindEvents();
@@ -589,6 +589,106 @@
     return candidateGarmentEntries(candidate).map((item) => item.name);
   }
 
+  const canonicalAccessoryLabels = {
+    footwear: { loafersOxfords: "乐福鞋或牛津鞋", minimalSneakers: "极简板鞋", kittenHeels: "低跟单鞋", boots: "短靴" },
+    leatherGoods: { structuredTote: "挺括托特包", shoulderBag: "腋下包", crossbody: "斜挎包", slimBelt: "细腰带" },
+    jewelry: { pearls: "珍珠饰品", coolSilver: "冷银饰品", warmGold: "暖金饰品", naturalResin: "天然材质饰品", eyewear: "眼镜" },
+    textile: { silkScarf: "真丝小方巾", cashmereScarf: "羊绒围巾", none: "无" }
+  };
+
+  const canonicalGarmentLabels = {
+    form: { separatesTrouser: "分体裤装", separatesSkirt: "分体裙装", onePieceDress: "一件式" },
+    topFit: { fitted: "修身", regular: "合体", oversized: "宽松" },
+    bottomCut: { straightLeg: "直筒裤", wideLeg: "阔腿裤", tapered: "锥形裤", aLineSkirt: "A字裙", straightSkirt: "直筒裙" },
+    dressCut: { aLineMidi: "A字中长", shirtDress: "衬衫裙", wrapDress: "裹身裙", columnDress: "直筒裙" },
+    neckline: { vNeck: "V领", uNeck: "U领", boatNeck: "船领", squareNeck: "方领", crewNeck: "小圆领或立领" },
+    waistline: { raised: "偏高腰位", natural: "自然腰位", relaxed: "松弛腰线" },
+    sleeve: { short: "短袖", threeQuarter: "七分袖", long: "长袖" }
+  };
+
+  function canonicalAccessoryName(type, value) {
+    return canonicalAccessoryLabels[type]?.[value] || value || "未配置";
+  }
+
+  function canonicalColorHex(name) {
+    const known = (state.ruleSet.colorLibrary || []).find((color) => color.name === name)?.hex;
+    if (known) return known;
+    const tones = [
+      [/黑|炭/, "#34383a"], [/白|象牙|奶油/, "#eeeae0"], [/灰/, "#9ba0a0"], [/蓝|藏青/, "#738d9d"],
+      [/紫|丁香/, "#a99cb7"], [/绿|薄荷|橄榄|鼠尾草/, "#8d9b86"], [/红|铁锈|豆沙/, "#a66d67"],
+      [/粉|桃/, "#d6a6a6"], [/驼|卡其|焦糖|杏|燕麦|米|金/, "#b99b75"], [/黄|橙/, "#c69a52"]
+    ];
+    return tones.find(([pattern]) => pattern.test(name || ""))?.[1] || "#b8b8b2";
+  }
+
+  function renderColorSpectrum(candidate) {
+    const spectrum = candidate.canonicalOutput?.color?.nearFacePalette;
+    if (!spectrum || ![...(spectrum.preferred || []), ...(spectrum.compatible || [])].length) return "";
+    const rows = [
+      ["首选", spectrum.preferred || []],
+      ["平替", spectrum.compatible || []],
+      ["避开", spectrum.forbidden || []]
+    ];
+    return `<span class="color-spectrum-control">
+      <button type="button" class="color-spectrum-trigger" aria-label="查看近脸颜色容错色谱">色谱</button>
+      <span class="color-spectrum-popover" role="tooltip">${rows.map(([label, colors]) => `<span class="color-spectrum-row"><b>${label}</b><span>${colors.slice(0, 5).map((color) => `<i title="${escapeHtml(color)}" style="--spectrum-color:${escapeHtml(canonicalColorHex(color))}"></i><em>${escapeHtml(color)}</em>`).join("") || `<em>未配置</em>`}</span></span>`).join("")}</span>
+    </span>`;
+  }
+
+  function isOnePieceCandidate(candidate) {
+    return candidate.form === "onePieceDress" || Boolean(candidate.garments?.dress);
+  }
+
+  function onePieceDetails(candidate) {
+    const garment = candidate.canonicalOutput?.garment || {};
+    const framework = candidate.canonicalOutput?.framework || {};
+    const hemByCut = { aLineMidi: "中长裙摆", shirtDress: "中长裙摆", wrapDress: "中长裙摆", columnDress: "中长裙摆" };
+    return [
+      ["裙型", canonicalGarmentLabels.dressCut[garment.dressCut || candidate.dressCut] || "连衣裙"],
+      ["领口", canonicalGarmentLabels.neckline[garment.neckline] || candidate.neckline || "常规领口"],
+      ["腰部", canonicalGarmentLabels.waistline[garment.waistline] || translateValue(candidate.waist)],
+      ["裙摆", hemByCut[garment.dressCut || candidate.dressCut] || "中长裙摆"],
+      ["袖长", canonicalGarmentLabels.sleeve[framework.sleeve || candidate.sleeve] || translateValue(candidate.sleeve)],
+      ["外搭", candidate.garments?.outer || "无外层"]
+    ];
+  }
+
+  function renderOnePieceComponent(candidate, roles) {
+    const role = roleForGarment(roles, "dress") || roles[0] || {};
+    return `<section class="one-piece-component" data-component="one-piece">
+      <div class="one-piece-heading"><span>一件式主体</span><strong>${escapeHtml(candidate.garments?.dress || "连衣裙")}</strong><span class="garment-color-pill"><i style="background:${escapeHtml(role.hex || "#ccc")}"></i>${escapeHtml(role.colorName || "基础色")}</span>${renderColorSpectrum(candidate)}</div>
+      <div class="one-piece-specs">${onePieceDetails(candidate).map(([label, value]) => `<span><small>${label}</small><strong>${escapeHtml(value)}</strong></span>`).join("")}</div>
+    </section>`;
+  }
+
+  function candidateAccessoryLayers(candidate) {
+    const accessories = candidate.canonicalOutput?.accessories || {};
+    const footwear = accessories.footwear ? canonicalAccessoryName("footwear", accessories.footwear) : "";
+    const conditional = accessories.leatherGoods === "slimBelt" && ["defined", "raised"].includes(candidate.waist)
+      ? [canonicalAccessoryName("leatherGoods", accessories.leatherGoods)] : [];
+    const optional = [
+      accessories.leatherGoods !== "slimBelt" ? canonicalAccessoryName("leatherGoods", accessories.leatherGoods) : "",
+      canonicalAccessoryName("jewelry", accessories.jewelry),
+      accessories.textile !== "none" ? canonicalAccessoryName("textile", accessories.textile) : ""
+    ].filter((value) => value && value !== "未配置");
+    return { footwear, conditional, optional };
+  }
+
+  function renderAccessoryLayers(candidate) {
+    const layers = candidateAccessoryLayers(candidate);
+    return `<div class="wearing-layers">
+      <div class="wearing-layer is-required"><span>完整穿着</span><strong>${escapeHtml(layers.footwear ? `鞋履：${layers.footwear}` : "鞋履待确认")}</strong></div>
+      ${layers.conditional.length ? `<div class="wearing-layer is-conditional"><span>条件必需</span><strong>${layers.conditional.map(escapeHtml).join("、")}</strong></div>` : ""}
+      <div class="wearing-layer is-optional"><span>进阶选配</span><strong>${layers.optional.length ? layers.optional.map(escapeHtml).join("、") : "无需额外配饰"}</strong></div>
+    </div>`;
+  }
+
+  function renderPatternTag(candidate) {
+    const pattern = candidate.patternDetail;
+    if (!pattern) return `<span class="pattern-tag is-plain">纯色或低存在感纹理</span>`;
+    return `<span class="pattern-tag" title="${escapeHtml(`${pattern.scale}尺度 · ${pattern.contrast}对比 · 用于${pattern.placement}`)}">${escapeHtml(pattern.name)} · ${escapeHtml(pattern.placement)}</span>`;
+  }
+
   function renderIllustration(illustration, candidate) {
     const model = illustration || {};
     const layers = model.layers || [];
@@ -708,25 +808,28 @@
           <span class="candidate-name">${escapeHtml(cand.name || `方案 ${index + 1}`)}</span>
         </h3>
 
-        <!-- Garments & Color Combined List -->
-        <div class="garment-color-list">
+        ${isOnePieceCandidate(cand) ? renderOnePieceComponent(cand, roles) : `<div class="garment-color-list">
           ${garments.map((comp) => {
             const role = roleForGarment(roles, comp.category) || roles[0] || {};
-            const catIcon = comp.category === "outer" ? "🦺" : comp.category === "bottom" ? "👖" : comp.category === "dress" ? "👗" : "🧥";
+            const categoryName = comp.category === "outer" ? "外层" : comp.category === "bottom" ? "下装" : comp.category === "dress" ? "连衣裙" : "上装";
             return `
               <div class="garment-color-item">
-                <span class="garment-icon">${catIcon}</span>
+                <span class="garment-category">${categoryName}</span>
                 <div class="garment-info">
                   <strong class="garment-name">${escapeHtml(comp.name)}</strong>
                   <span class="garment-color-pill">
                     <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
                     ${escapeHtml(role.colorName || "基础色")} ${role.ratio ? `${role.ratio}%` : ""}
                   </span>
+                  ${comp.category === "top" || comp.category === "dress" ? renderColorSpectrum(cand) : ""}
                 </div>
               </div>
             `;
           }).join("")}
-        </div>
+        </div>`}
+
+        <div class="candidate-secondary-line">${renderPatternTag(cand)}</div>
+        ${renderAccessoryLayers(cand)}
 
         <!-- 1-line Spec Pills -->
         <div class="candidate-spec-pills">
@@ -784,6 +887,14 @@
               ${candidates.map((c) => `<td><div style="display:flex;align-items:center;gap:6px;"><span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}</span><span>${escapeHtml(c.palette?.name || "经典配色")}</span></div></td>`).join("")}
             </tr>
             <tr>
+              <td class="table-row-label">花色重点</td>
+              ${candidates.map((c) => `<td>${escapeHtml(c.patternDetail ? `${c.patternDetail.name} · ${c.patternDetail.placement}` : "纯色或低存在感纹理")}</td>`).join("")}
+            </tr>
+            <tr>
+              <td class="table-row-label">鞋履与选配</td>
+              ${candidates.map((c) => { const layers = candidateAccessoryLayers(c); return `<td>鞋履：${escapeHtml(layers.footwear || "待确认")}；选配：${escapeHtml(layers.optional.join("、") || "无需额外配饰")}</td>`; }).join("")}
+            </tr>
+            <tr>
               <td class="table-row-label">核心考量</td>
               ${candidates.map((c) => `<td>${escapeHtml(c.expectedEffect || c.differenceSummary || "按当前输入生成")}</td>`).join("")}
             </tr>
@@ -818,6 +929,10 @@
                   </span>
                   <span>${escapeHtml(c.palette?.name || "经典配色")}</span>
                 </div>
+              </div>
+              <div class="mobile-candidate-row">
+                <span class="mobile-candidate-label">花色重点</span>
+                <span>${escapeHtml(c.patternDetail ? `${c.patternDetail.name} · ${c.patternDetail.placement}` : "纯色或低存在感纹理")}</span>
               </div>
               <div class="mobile-candidate-row">
                 <span class="mobile-candidate-label">核心考量</span>
@@ -855,33 +970,20 @@
       `;
     }).join("");
 
-    const accessoryLabels = {
-      footwear: { loafersOxfords: "乐福/牛津鞋", minimalSneakers: "极简板鞋", kittenHeels: "低跟单鞋", boots: "短靴" },
-      leatherGoods: { structuredTote: "挺括托特包", shoulderBag: "腋下包", crossbody: "斜挎包", slimBelt: "细腰带" },
-      jewelry: { pearls: "珍珠", coolSilver: "冷银", warmGold: "暖金", naturalResin: "天然材质", eyewear: "眼镜" },
-      textile: { silkScarf: "真丝小方巾", cashmereScarf: "羊绒围巾", none: "无" }
-    };
-    const accessoryNames = { footwear: "鞋履", leatherGoods: "箱包皮具", jewelry: "首饰", textile: "织物软配" };
     const canonicalAccessories = cand.canonicalOutput?.accessories || {};
-    const accessoriesHtml = Object.entries(canonicalAccessories)
-      .filter(([, value]) => value !== undefined && value !== null && value !== "")
-      .map(([key, value]) => `<span><small>${escapeHtml(accessoryNames[key] || key)}</small><strong>${escapeHtml(accessoryLabels[key]?.[value] || value)}</strong></span>`)
-      .join("");
-
-    const canonicalLabels = {
-      form: { separatesTrouser: "分体裤装", separatesSkirt: "分体裙装", onePieceDress: "一件式" },
-      topFit: { fitted: "修身", regular: "合体", oversized: "宽松" },
-      bottomCut: { straightLeg: "直筒裤", wideLeg: "阔腿裤", tapered: "锥形裤", aLineSkirt: "A字裙", straightSkirt: "直筒裙" },
-      dressCut: { aLineMidi: "A字中长", shirtDress: "衬衫裙", wrapDress: "裹身裙", columnDress: "直筒裙" }
-    };
+    const accessoryLayers = candidateAccessoryLayers(cand);
+    const footwearHtml = canonicalAccessories.footwear ? `<span><small>鞋履</small><strong>${escapeHtml(canonicalAccessoryName("footwear", canonicalAccessories.footwear))}</strong></span>` : "";
+    const conditionalAccessoriesHtml = accessoryLayers.conditional.map((value) => `<span><small>条件必需</small><strong>${escapeHtml(value)}</strong></span>`).join("");
+    const optionalAccessoriesHtml = accessoryLayers.optional.map((value) => `<span><strong>${escapeHtml(value)}</strong></span>`).join("") || `<span><strong>无需额外配饰</strong></span>`;
     const canonicalFramework = cand.canonicalOutput?.framework || {};
     const canonicalGarment = cand.canonicalOutput?.garment || {};
     const canonicalGarmentHtml = [
-      ["方案形态", canonicalLabels.form[canonicalFramework.form]],
-      ["上装松紧", canonicalLabels.topFit[canonicalGarment.topFit]],
-      ["下装版型", canonicalLabels.bottomCut[canonicalGarment.bottomCut]],
-      ["连身裙型", canonicalLabels.dressCut[canonicalGarment.dressCut]]
+      ["方案形态", canonicalGarmentLabels.form[canonicalFramework.form]],
+      ["上装松紧", isOnePieceCandidate(cand) ? null : canonicalGarmentLabels.topFit[canonicalGarment.topFit]],
+      ["下装版型", isOnePieceCandidate(cand) ? null : canonicalGarmentLabels.bottomCut[canonicalGarment.bottomCut]],
+      ["连身裙型", isOnePieceCandidate(cand) ? canonicalGarmentLabels.dressCut[canonicalGarment.dressCut] : null]
     ].filter(([, value]) => value).map(([label, value]) => `<span><small>${label}</small><strong>${value}</strong></span>`).join("");
+    const onePieceSpecHtml = isOnePieceCandidate(cand) ? `<div class="dialog-one-piece-spec">${onePieceDetails(cand).map(([label, value]) => `<span><small>${label}</small><strong>${escapeHtml(value)}</strong></span>`).join("")}</div>` : "";
 
     const paletteHtml = roles.map((role) => `
       <span>
@@ -920,12 +1022,20 @@
 
       <section class="dialog-section">
         <h3>完整穿着单品</h3>
-        <div class="dialog-garments">${garmentsHtml}${canonicalGarmentHtml}${accessoriesHtml}</div>
+        <div class="dialog-garments">${garmentsHtml}${canonicalGarmentHtml}${footwearHtml}${conditionalAccessoriesHtml}</div>
+        ${onePieceSpecHtml}
+        <div class="dialog-pattern-line"><span>花色重点</span>${renderPatternTag(cand)}</div>
+      </section>
+
+      <section class="dialog-section optional-accessory-section">
+        <h3>进阶选配建议</h3>
+        <div class="dialog-garments">${optionalAccessoriesHtml}</div>
       </section>
 
       <section class="dialog-section">
         <h3>配色与占比</h3>
         <div class="dialog-palette">${paletteHtml}</div>
+        <div class="dialog-color-spectrum">${renderColorSpectrum(cand)}</div>
       </section>
 
       <section class="dialog-section">

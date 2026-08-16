@@ -284,11 +284,16 @@
       { id: "environment", name: "环境特征", type: "modifier", fieldId: "context.environment" }
     ],
     color: [
+      { id: "skin-tone", name: "肤色底调", type: "matrixAxis", matrixId: "color", axisField: "appearance.skinTone", outputFields: ["color.nearFacePalette", "color.distribution", "accessories.jewelry"] },
+      { id: "hair-depth", name: "发色深浅", type: "matrixAxis", matrixId: "color", axisField: "appearance.hairDepth", outputFields: ["color.contrastMode", "color.nearFacePalette", "color.distribution"] },
       { id: "color-joint", name: "肤色底调 × 发色深浅", type: "matrix", matrixId: "color" },
       { id: "skin-value", name: "肤色明度", type: "modifier", fieldId: "appearance.skinValue" },
       { id: "hair-tone", name: "发色色调", type: "modifier", fieldId: "appearance.hairTone" }
     ],
     body: [
+      { id: "shoulder-hip", name: "横向轮廓", type: "matrixAxis", matrixId: "body", axisField: "body.shoulderHipBalance", outputFields: ["garment.silhouette", "garment.topFit", "garment.bottomCut", "garment.dressCut"] },
+      { id: "leg-ratio", name: "腿身分布", type: "matrixAxis", matrixId: "body", axisField: "body.legRatio", outputFields: ["garment.waistline", "garment.bottomCut", "garment.dressCut", "garment.silhouette"] },
+      { id: "bone-frame", name: "骨架量感", type: "matrixAxis", matrixId: "body", axisField: "body.boneFrame", outputFields: ["garment.topFit", "framework.materialWeight", "garment.silhouette"] },
       { id: "body-joint", name: "横向轮廓 × 腿身分布 × 骨架量感", type: "matrix", matrixId: "body" },
       { id: "waist", name: "腰线特征", type: "modifier", fieldId: "body.waistDefinition" }
     ],
@@ -336,6 +341,8 @@
     branchSelection: {},
     canonicalBranchSelection: {},
     canonicalGroupSelection: {},
+    configRuleMode: "atomic",
+    overviewExpandedGroups: {},
     overviewFocus: null,
     personalModuleSelection: {},
     personalValueSelections: {},
@@ -361,6 +368,13 @@
     });
 
     $("#overviewView").addEventListener("click", (event) => {
+      const toggle = event.target.closest("button[data-overview-toggle]");
+      if (toggle) {
+        const groupId = toggle.dataset.overviewToggle;
+        state.overviewExpandedGroups[groupId] = !state.overviewExpandedGroups[groupId];
+        renderOverview();
+        return;
+      }
       const target = event.target.closest("button[data-overview-target]");
       if (!target) return;
       const route = canonicalOverviewRoute(target.dataset.overviewInput, target.dataset.overviewOutput, target.dataset.overviewTarget);
@@ -368,9 +382,25 @@
       state.selectedId = relId;
       state.selectedTier1 = getTier1ForRelation(relId);
       state.overviewFocus = { inputId: target.dataset.overviewInput, outputId: target.dataset.overviewOutput };
-      if (route.groupId) state.canonicalGroupSelection[relId] = route.groupId;
+      if (route.groupId) {
+        state.canonicalGroupSelection[relId] = route.groupId;
+        const routeGroup = canonicalBranchGroups(relId).find((group) => group.id === route.groupId);
+        if (routeGroup) state.configRuleMode = routeGroup.branches.some((branch) => canonicalBranchMode(branch) === "joint") ? "joint" : "atomic";
+      }
       state.mode = "configure";
       renderAll();
+    });
+
+    $("#configRuleMode")?.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-config-rule-mode]");
+      if (!button || button.dataset.configRuleMode === state.configRuleMode) return;
+      state.configRuleMode = button.dataset.configRuleMode;
+      state.overviewFocus = null;
+      const category = inputTier1Categories.find((item) => item.id === state.selectedTier1) || inputTier1Categories[0];
+      const available = relationsForCategory(category);
+      if (!available.some((relation) => relation.id === state.selectedId)) state.selectedId = available[0]?.id || "temperature";
+      renderRelationPicker();
+      renderEditor();
     });
 
     const tier1Nav = $("#configTier1Tabs");
@@ -381,8 +411,9 @@
         state.selectedTier1 = btn.dataset.tier1Id;
         state.overviewFocus = null;
         const cat = inputTier1Categories.find((c) => c.id === state.selectedTier1);
-        if (cat && cat.relations.length) {
-          state.selectedId = cat.relations[0].id;
+        const available = relationsForCategory(cat);
+        if (available.length) {
+          state.selectedId = available[0].id;
         }
         renderRelationPicker();
         renderEditor();
@@ -757,6 +788,43 @@
     });
   }
 
+  function aggregateOverviewRelation(rows, relationId, label) {
+    const members = rows.filter((row) => row.relationId === relationId);
+    if (!members.length) return null;
+    const priority = { strong: 3, medium: 2, light: 1 };
+    const overview = {};
+    overviewGroups.forEach((domain) => {
+      overview[domain.id] = {};
+      domain.fields.forEach((field) => {
+        const levels = members.map((row) => row.overview?.[domain.id]?.[field.id]).filter(Boolean);
+        const level = levels.sort((left, right) => priority[right] - priority[left])[0];
+        if (level) overview[domain.id][field.id] = level;
+      });
+    });
+    return {
+      ...members[0],
+      label,
+      mappingId: members[0].mappingId,
+      hard: members.some((row) => row.hard),
+      overview,
+      aggregateRelation: relationId,
+      aggregateCount: members.length
+    };
+  }
+
+  function overviewDisplayRows() {
+    const rows = canonicalOverviewRows();
+    const compactRelations = { goal: "调整目标", boundaries: "拒绝边界" };
+    const inserted = new Set();
+    return rows.flatMap((row) => {
+      const relationId = row.relationId;
+      if (!compactRelations[relationId] || state.overviewExpandedGroups[relationId]) return [row];
+      if (inserted.has(relationId)) return [];
+      inserted.add(relationId);
+      return [aggregateOverviewRelation(rows, relationId, compactRelations[relationId])].filter(Boolean);
+    });
+  }
+
   function canonicalInputDefinition(fieldId) {
     return CANONICAL_INPUTS.find((field) => field.id === fieldId) || null;
   }
@@ -892,6 +960,24 @@
     }).filter((group) => group.branches.length);
   }
 
+  function canonicalBranchMode(branch) {
+    return canonicalBranchConditionParts(branch).length > 1 ? "joint" : "atomic";
+  }
+
+  function canonicalGroupsForMode(relationId, mode = state.configRuleMode) {
+    return canonicalBranchGroups(relationId).map((group) => ({
+      ...group,
+      branches: group.branches.filter((branch) => canonicalBranchMode(branch) === mode)
+    })).filter((group) => group.branches.length);
+  }
+
+  function relationsForCategory(category, mode = state.configRuleMode) {
+    return (category?.relations || []).filter((relation) => {
+      if (!isCanonicalRelation(relation.id)) return mode === "atomic";
+      return canonicalGroupsForMode(relation.id, mode).length > 0;
+    });
+  }
+
   function canonicalBranches(relationId) {
     return canonicalBranchGroups(relationId).flatMap((group) => group.branches);
   }
@@ -901,7 +987,7 @@
   }
 
   function selectedCanonicalGroup(relationId) {
-    const groups = canonicalBranchGroups(relationId);
+    const groups = canonicalGroupsForMode(relationId);
     const selectedId = state.canonicalGroupSelection[relationId];
     const group = groups.find((item) => item.id === selectedId) || groups[0] || null;
     if (group) state.canonicalGroupSelection[relationId] = group.id;
@@ -910,7 +996,7 @@
 
   function selectedCanonicalBranch(relationId, groupId = null) {
     const group = groupId
-      ? canonicalBranchGroups(relationId).find((item) => item.id === groupId)
+      ? canonicalGroupsForMode(relationId).find((item) => item.id === groupId)
       : selectedCanonicalGroup(relationId);
     const branches = group?.branches || [];
     const selectionKey = `${relationId}:${group?.id || "default"}`;
@@ -1123,20 +1209,21 @@
     const group = selectedCanonicalGroup(business.id);
     const relationOutputs = canonicalImpactOutputIds(business.id, null, group?.inputFields).map(canonicalOutputDefinition).filter(Boolean);
     const branchLabel = canonicalBranchEntryLabel(branch);
+    const isJoint = state.configRuleMode === "joint";
     const thenEditor = branch.kind === "modifier" ? renderCanonicalModifierThen(business, branch) : renderCanonicalMatrixThen(business, branch);
     return `
       <section class="rule-summary-module canonical-rule-summary">
         <div class="rule-summary-submodule relation-impact-submodule">
-          <div class="rule-summary-heading"><span class="module-index">01</span><div><strong>关系影响输出</strong></div></div>
+          <div class="rule-summary-heading"><span class="module-index">01</span><div><strong>${isJoint ? "协同关系影响输出" : "输入项影响输出"}</strong></div></div>
           <div class="scope-pill-list">${relationOutputs.map((output) => `<span class="scope-pill ${state.overviewFocus?.outputId === output.id ? "is-overview-focus" : ""}">${escapeHtml(output.label)}</span>`).join("") || `<span class="scope-pill">暂无已连接结果</span>`}</div>
         </div>
         <div class="rule-summary-submodule branch-output-submodule">
-          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>当前分支具体输出</strong><small>${escapeHtml(branchLabel)}</small></div></div>
+          <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>${isJoint ? "当前矩阵行输出" : "当前取值输出"}</strong><small>${escapeHtml(branchLabel)}</small></div></div>
           <div class="branch-output-grid">${renderCanonicalCurrentOutputs(branch)}</div>
         </div>
       </section>
       <section class="rule-config-module canonical-rule-config">
-        <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>条件 / 结果 / 依据</small></div>
+        <div class="rule-config-heading"><span>03</span><strong>${isJoint ? "协同裁决配置" : "单项规则配置"}</strong><small>条件 / 结果 / 依据</small></div>
         <article class="natural-rule-card canonical-natural-rule-card" data-canonical-branch="${escapeHtml(branch.key)}">
           <section class="rule-clause rule-clause--when">
             <div class="clause-heading"><span class="clause-prefix">WHEN</span><strong>满足条件</strong></div>
@@ -1200,7 +1287,7 @@
   }
 
   function renderOverview() {
-    const rows = canonicalOverviewRows();
+    const rows = overviewDisplayRows();
     const groupSpans = rows.reduce((acc, row) => { acc[row.groupId] = (acc[row.groupId] || 0) + 1; return acc; }, {});
     let previousGroup = null;
     $("#overviewMatrix").innerHTML = `
@@ -1218,7 +1305,7 @@
         const groupCell = row.groupId === previousGroup ? "" : `<th class="overview-group-label" rowspan="${groupSpans[row.groupId]}"><span>${escapeHtml(row.groupName)}</span></th>`;
         previousGroup = row.groupId;
         return `<tr class="${row.hard ? "is-hard" : ""}">${groupCell}
-        <th class="overview-row-label"><span>${escapeHtml(row.label)}</span>${row.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}</th>
+        <th class="overview-row-label"><span>${escapeHtml(row.label)}</span>${row.aggregateRelation ? `<button type="button" class="overview-expand-button" data-overview-toggle="${escapeHtml(row.aggregateRelation)}" aria-label="展开${escapeHtml(row.label)}的${row.aggregateCount}个字段">展开 ${row.aggregateCount}</button>` : (["goal.endpoint", "boundaries.rejectSkirt"].includes(row.mappingId) && state.overviewExpandedGroups[row.relationId]) ? `<button type="button" class="overview-expand-button" data-overview-toggle="${escapeHtml(row.relationId)}" aria-label="收起${escapeHtml(row.label)}字段">收起</button>` : ""}${row.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}</th>
         ${overviewGroups.flatMap((domain) => domain.fields.map((field) => renderOverviewImpact(row, domain, field))).join("")}
       </tr>`;
       }).join("")}</tbody>`;
@@ -1241,6 +1328,7 @@
               <strong>${escapeHtml(row.groupName)} · ${escapeHtml(row.label)}</strong>
               ${row.hard ? `<em>边界</em>` : `<em class="soft-tag">搭配</em>`}
             </div>
+            ${row.aggregateRelation ? `<button type="button" class="overview-expand-button" data-overview-toggle="${escapeHtml(row.aggregateRelation)}">展开 ${row.aggregateCount}</button>` : (["goal.endpoint", "boundaries.rejectSkirt"].includes(row.mappingId) && state.overviewExpandedGroups[row.relationId]) ? `<button type="button" class="overview-expand-button" data-overview-toggle="${escapeHtml(row.relationId)}">收起</button>` : ""}
           </div>
           <div class="mobile-relation-impacts">
             ${impacts.map(i => {
@@ -1297,9 +1385,16 @@
       state.selectedTier1 = getTier1ForRelation(state.selectedId) || "context";
     }
     const currentCat = inputTier1Categories.find((cat) => cat.id === state.selectedTier1) || inputTier1Categories[0];
-    if (!currentCat.relations.some((r) => r.id === state.selectedId)) {
-      state.selectedId = currentCat.relations[0]?.id || "temperature";
+    const availableRelations = relationsForCategory(currentCat);
+    if (!availableRelations.some((r) => r.id === state.selectedId)) {
+      state.selectedId = availableRelations[0]?.id || "temperature";
     }
+
+    $$("#configRuleMode button[data-config-rule-mode]").forEach((button) => {
+      const active = button.dataset.configRuleMode === state.configRuleMode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
 
     const tier1Nav = $("#configTier1Tabs");
     if (tier1Nav) {
@@ -1312,13 +1407,14 @@
     const allRels = businessRelations();
     const tier2Nav = $("#configTier2Chips");
     if (tier2Nav) {
-      tier2Nav.innerHTML = currentCat.relations.map((relItem) => {
+      tier2Nav.innerHTML = availableRelations.map((relItem) => {
         const fullRel = allRels.find((r) => r.id === relItem.id);
         const isActive = relItem.id === state.selectedId;
-        const canonicalGroups = isCanonicalRelation(relItem.id) ? canonicalBranchGroups(relItem.id) : [];
+        const canonicalGroups = isCanonicalRelation(relItem.id) ? canonicalGroupsForMode(relItem.id) : [];
         const canonicalCount = canonicalGroups.flatMap((group) => group.branches).length;
         const branchCount = canonicalCount || fullRel?.branchCount || 0;
-        const countLabel = canonicalUsesGroupLevel(canonicalGroups) ? `${canonicalGroups.length}组 · ${branchCount}分支` : `${branchCount}个分支`;
+        const unit = state.configRuleMode === "joint" ? "矩阵行" : "取值";
+        const countLabel = canonicalUsesGroupLevel(canonicalGroups) ? `${canonicalGroups.length}项 · ${branchCount}${unit}` : `${branchCount}${unit}`;
         return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${countLabel}</small></button>`;
       }).join("");
     }
@@ -1332,17 +1428,19 @@
     if (tier3Nav) {
       const business = businessRelationById(state.selectedId);
       if (isCanonicalRelation(state.selectedId)) {
-        const groups = canonicalBranchGroups(state.selectedId);
+        const groups = canonicalGroupsForMode(state.selectedId);
         const group = selectedCanonicalGroup(state.selectedId);
         const selected = selectedCanonicalBranch(state.selectedId, group?.id);
-        const usesGroupLevel = canonicalUsesGroupLevel(groups);
-        if (tier3Label) tier3Label.textContent = usesGroupLevel ? "条件分组" : "具体分支";
+        const usesGroupLevel = groups.length > 0;
+        const tier4Label = $("#configTier4Label");
+        if (tier3Label) tier3Label.textContent = state.configRuleMode === "joint" ? "协同关系" : "输入项";
+        if (tier4Label) tier4Label.textContent = state.configRuleMode === "joint" ? "矩阵条件" : "输入取值";
         if (usesGroupLevel) {
           tier3Nav.innerHTML = groups.map((item) => `<button type="button" role="tab" aria-selected="${item.id === group?.id}" class="config-tier3-btn config-tier3-module-btn ${item.id === group?.id ? "is-active" : ""}" data-canonical-group-id="${escapeHtml(item.id)}">
-            <span class="chip-status-dot is-active"></span><span>${escapeHtml(item.name)}</span><small>${item.branches.length}个分支</small>
+            <span class="chip-status-dot is-active"></span><span>${escapeHtml(item.name)}</span><small>${item.branches.length}${state.configRuleMode === "joint" ? "行" : "个取值"}</small>
           </button>`).join("");
           if (tier4Row) tier4Row.hidden = false;
-          if (tier4Nav) tier4Nav.innerHTML = group ? renderCanonicalBranchCollection(group, selected) : `<span class="config-tier3-empty">暂无具体分支</span>`;
+          if (tier4Nav) tier4Nav.innerHTML = group ? renderCanonicalBranchCollection(group, selected) : `<span class="config-tier3-empty">暂无可配置内容</span>`;
         } else {
           tier3Nav.innerHTML = group ? renderCanonicalBranchCollection(group, selected) : `<span class="config-tier3-empty">暂无具体分支</span>`;
         }

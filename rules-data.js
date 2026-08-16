@@ -98,6 +98,14 @@
     }
   ];
 
+  const patternLibrary = [
+    { id: "maritimeStripe", name: "海魂条纹", styles: ["casual", "cityboy", "minimal"], placement: "上装", scale: "中等", contrast: "中等" },
+    { id: "princeOfWales", name: "威尔士亲王格", styles: ["urban", "retro"], placement: "外层", scale: "细密", contrast: "低" },
+    { id: "houndstooth", name: "千鸟格", styles: ["retro", "urban"], placement: "下装", scale: "细密", contrast: "中等" },
+    { id: "frenchPolkaDot", name: "法式波点", styles: ["elegant", "retro"], placement: "连身裙", scale: "小", contrast: "中等" },
+    { id: "smallFloral", name: "小碎花", styles: ["elegant", "retro"], placement: "连身裙", scale: "小", contrast: "低" }
+  ];
+
   const parameters = [
     {
       id: "context.temperatureRange",
@@ -1569,6 +1577,7 @@
       components,
       colorLibrary,
       palettePlans,
+      patternLibrary,
       trendDirections,
       tests
     }

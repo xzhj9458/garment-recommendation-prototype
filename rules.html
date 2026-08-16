@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>穿搭推荐规则管理</title>
-  <link rel="stylesheet" href="styles.css?v=logic-2.0">
-  <script defer src="rules-data.js?v=logic-2.0"></script>
-  <script defer src="canonical-data.js?v=logic-2.0"></script>
-  <script defer src="canonical-input-adapter.js?v=logic-2.0"></script>
-  <script defer src="canonical-rule-engine.js?v=logic-2.0"></script>
-  <script defer src="canonical-output-adapter.js?v=logic-2.0"></script>
-  <script defer src="rule-engine.js?v=logic-2.0"></script>
-  <script defer src="rules-app.js?v=logic-2.0"></script>
+  <link rel="stylesheet" href="styles.css?v=logic-2.1">
+  <script defer src="rules-data.js?v=logic-2.1"></script>
+  <script defer src="canonical-data.js?v=logic-2.1"></script>
+  <script defer src="canonical-input-adapter.js?v=logic-2.1"></script>
+  <script defer src="canonical-rule-engine.js?v=logic-2.1"></script>
+  <script defer src="canonical-output-adapter.js?v=logic-2.1"></script>
+  <script defer src="rule-engine.js?v=logic-2.1"></script>
+  <script defer src="rules-app.js?v=logic-2.1"></script>
 </head>
 <body class="rules-page">
   <header class="app-header">
@@ -61,6 +61,10 @@
     </section>
 
     <section class="rules-mode-view configure-view" id="configureView" hidden>
+      <div class="config-rule-mode" id="configRuleMode" role="tablist" aria-label="规则类型">
+        <button class="is-active" type="button" role="tab" aria-selected="true" data-config-rule-mode="atomic">单项规则</button>
+        <button type="button" role="tab" aria-selected="false" data-config-rule-mode="joint">协同矩阵</button>
+      </div>
       <div class="config-tier-bar">
         <div class="config-tier-row config-tier1-row">
           <span class="config-tier-label">一级分类</span>
@@ -71,12 +75,12 @@
           <nav class="config-tier2-chips" id="configTier2Chips" aria-label="具体业务关系" role="tablist"></nav>
         </div>
         <div class="config-tier-row config-tier3-row">
-          <span class="config-tier-label" id="configTier3Label">具体分支</span>
-          <nav class="config-tier3-chips" id="configTier3Chips" aria-label="具体子规则分支" role="tablist"></nav>
+          <span class="config-tier-label" id="configTier3Label">输入项</span>
+          <nav class="config-tier3-chips" id="configTier3Chips" aria-label="具体输入项" role="tablist"></nav>
         </div>
         <div class="config-tier-row config-tier4-row" id="configTier4Row" hidden>
-          <span class="config-tier-label" id="configTier4Label">具体分支</span>
-          <nav class="config-tier3-chips config-tier4-chips" id="configTier4Chips" aria-label="具体子规则分支" role="tablist"></nav>
+          <span class="config-tier-label" id="configTier4Label">输入取值</span>
+          <nav class="config-tier3-chips config-tier4-chips" id="configTier4Chips" aria-label="具体输入取值" role="tablist"></nav>
         </div>
       </div>
 

@@ -107,6 +107,7 @@
     normalized.outfitOutputs ||= clone(DATA.defaultRuleSet.outfitOutputs || []);
     normalized.colorLibrary ||= clone(DATA.defaultRuleSet.colorLibrary || []);
     normalized.palettePlans ||= clone(DATA.defaultRuleSet.palettePlans || []);
+    normalized.patternLibrary ||= clone(DATA.defaultRuleSet.patternLibrary || []);
     normalized.trendDirections ||= clone(DATA.defaultRuleSet.trendDirections || []);
     normalized.conditionFields ||= clone(DATA.defaultRuleSet.conditionFields || []);
     normalized.resultFields ||= clone(DATA.defaultRuleSet.resultFields || []);
@@ -880,6 +881,20 @@
     return { candidates: selected.slice(0, 3), blocked, conflicts: [] };
   }
 
+  function resolveClassicPattern(ruleSet, style, family, onePiece) {
+    const matches = (ruleSet.patternLibrary || []).filter((pattern) => (pattern.styles || []).includes(style));
+    if (!matches.length) return null;
+    const familyOrder = ["straight", "tailored", "soft", "relaxed", "street", "retro"];
+    const pattern = matches[Math.max(0, familyOrder.indexOf(family)) % matches.length];
+    return {
+      id: pattern.id,
+      name: pattern.name,
+      placement: onePiece ? "连身裙" : pattern.placement,
+      scale: pattern.scale,
+      contrast: pattern.contrast
+    };
+  }
+
   function createCandidate({ family, top, outer, bottom, dress, input, derived, decision, ruleSet, palettePlanId }) {
     const familyMeta = {
       straight: { line: "连续直线", focus: "保持纵向连贯" },
@@ -902,6 +917,7 @@
     const boundPalette = bindPaletteToGarments(palette, outer.attributes.outerKind, Boolean(dress));
     const nameParts = [dress?.name || top?.name, outer.attributes.outerKind === "none" ? null : outer.name, dress ? null : bottom?.name].filter(Boolean);
     const components = [dress || top, outer.attributes.outerKind === "none" ? null : outer, dress ? null : bottom].filter(Boolean).map((component) => clone(component));
+    const patternDetail = resolveClassicPattern(ruleSet, input.preference?.style, family, Boolean(dress));
     const relevantRule = (trace) => {
       const familyValues = [
         ...(trace.actions || []).filter((action) => action.field === "preferences.family" && ["ADD", "BOOST"].includes(action.type)).map((action) => action.value),
@@ -955,6 +971,7 @@
       neckline: decision.requirements.neckline || "常规领口",
       faceEffect: decision.requirements.faceEffect || "脸型待确认",
       pattern: decision.requirements.pattern || "低存在感纹理",
+      patternDetail,
       finish: decision.requirements.finish || "按场合保持整洁",
       trend: decision.requirements.trend || "none",
       trendName: decision.requirements.trendName || "未指定潮流",

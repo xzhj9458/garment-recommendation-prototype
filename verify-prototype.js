@@ -272,6 +272,15 @@ async function choose(page, pathName, value) {
     assert(onePieceUi.forms.every((form) => form === "onePieceDress") && onePieceUi.dressIds.every(Boolean), "一件式轨道仍由上下装伪装组装");
     assert(onePieceUi.componentCategories.every((categories) => categories.includes("dress") && !categories.includes("top") && !categories.includes("bottom")), "一件式候选仍混入上装或下装组件");
     assert((await demo.page.locator(".candidate-card").first().innerText()).includes("连衣裙"), "一件式候选没有在案例卡片显示真实连衣裙单品");
+    assert(await demo.page.locator(".one-piece-component").count() === 3, "一件式候选没有使用专属信息组件");
+    assert(await demo.page.locator(".one-piece-component .one-piece-specs span").count() === 18, "一件式组件没有完整展示裙型、领口、腰部、裙摆、袖长和外搭");
+    assert(await demo.page.locator(".color-spectrum-trigger").count() >= 3, "方案卡片没有提供近脸颜色容错色谱");
+    assert(await demo.page.locator(".wearing-layer.is-required").count() === 3 && await demo.page.locator(".wearing-layer.is-optional").count() === 3, "鞋履与进阶选配没有分层展示");
+    assert(await demo.page.locator(".candidate-card .pattern-tag").count() === 3, "候选方案没有显示规范花色状态");
+    await demo.page.locator(".detail-button").first().click();
+    assert(await demo.page.locator(".dialog-one-piece-spec").count() === 1, "方案详情缺少一件式专属规格");
+    assert(await demo.page.locator(".optional-accessory-section").count() === 1, "方案详情没有独立的进阶选配区域");
+    await demo.page.locator("[data-close-dialog]").click();
 
     const canonicalDressMapping = await demo.page.evaluate(() => {
       const input = structuredClone(window.GarmentRuleEngine.Store.loadInput());
@@ -328,22 +337,28 @@ async function choose(page, pathName, value) {
       return {
         tests: tests.length,
         failed: tests.filter((test) => !test.pass).map((test) => test.id),
+        patterns: (data.patternLibrary || []).map((pattern) => pattern.name),
         validationErrors: validation.errors,
         catchesDangling: engine.validateRuleSet(broken).errors.some((error) => error.type === "missing_condition_field"),
         constraints: constrained.constraints
       };
     });
     assert(ruleChecks.tests >= 7 && ruleChecks.failed.length === 0, "规则回归用例存在失败");
+    assert(JSON.stringify(ruleChecks.patterns) === JSON.stringify(["海魂条纹", "威尔士亲王格", "千鸟格", "法式波点", "小碎花"]), "五类经典花色字典不完整");
     assert(ruleChecks.validationErrors.length === 0, `当前规则集校验失败：${JSON.stringify(ruleChecks.validationErrors)}`);
     assert(ruleChecks.catchesDangling, "规则校验器没有捕获悬空条件字段");
     assert(JSON.stringify(ruleChecks.constraints) === JSON.stringify({ coverage: "full", contactTexture: "soft", mobility: "required" }), "三项穿着约束没有进入规范规则结果");
     assert(!(await rules.page.locator("#configureView").isVisible()), "规则配置与总览仍然同时挤在主工作区");
-    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 27, "规则总览没有逐项展示 27 个规范输入字段");
+    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 19, "规则总览没有将目标与边界收敛为两个聚合入口");
+    assert(await rules.page.locator('#overviewMatrix [data-overview-toggle="goal"], #overviewMatrix [data-overview-toggle="boundaries"]').count() === 2, "目标与边界缺少展开入口");
     assert(await rules.page.locator("#overviewMatrix thead tr").count() === 2, "规则总览没有使用两层结果表头");
     const overviewHeaderText = await rules.page.locator("#overviewMatrix thead").innerText();
     assert(["穿着框架", "服装样式", "鞋包配饰", "穿着约束", "颜色搭配"].every((label) => overviewHeaderText.includes(label)), "规则总览 21 项规范输出表头不完整");
     assert(!(await rules.page.locator("#overviewMatrix thead").innerText()).includes("候选处理"), "规则总览仍把候选处理作为横向字段");
     assert(await rules.page.locator("#overviewMatrix .overview-impact-cell.is-strong").count() > 0, "规则总览没有展示直接影响色块");
+    await rules.page.locator('#overviewMatrix [data-overview-toggle="goal"]').click();
+    await rules.page.locator('#overviewMatrix [data-overview-toggle="boundaries"]').click();
+    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 27, "展开后没有恢复 27 个规范输入字段");
     const overviewNames = await rules.page.locator("#overviewMatrix tbody .overview-row-label > span").allInnerTexts();
     const expectedOrder = await rules.page.evaluate(() => window.GarmentCanonicalData.fieldRegistry.inputs.map((field) => field.label));
     assert(JSON.stringify(overviewNames) === JSON.stringify(expectedOrder), `规则总览排序不正确：${overviewNames.join("、")}`);
@@ -378,28 +393,32 @@ async function choose(page, pathName, value) {
     assert(Math.abs(overviewWidth - configWidth) <= 1, `总览与配置视图宽度不一致 (${overviewWidth} vs ${configWidth})`);
     assert(Math.abs(overviewLeft - configLeft) <= 1, `总览与配置视图左对齐不一致 (${overviewLeft} vs ${configLeft})`);
     assert((await rules.page.locator("#editorTitle").innerText()) === "潮流方向", "总览没有定位到对应的潮流配置");
+    await rules.page.locator('[data-config-rule-mode="atomic"]').click();
+    await rules.page.locator('#configTier1Tabs button[data-tier1-id="preference"]').click();
+    await rules.page.locator('#configTier2Chips button[data-tier2-id="trend"]').click();
     assert(await rules.page.locator('#configTier1Tabs button[data-tier1-id="preference"].is-active').count() === 1, "一级分类未同步为风格偏好");
     assert(await rules.page.locator('#configTier2Chips button[data-tier2-id="trend"].is-active').count() === 1, "二级关系未同步为潮流方向");
     assert(await rules.page.locator("#configTier1Tabs button[data-tier1-id]").count() === 4, "一级分类导航缺少 4 个主分类");
     assert(await rules.page.locator('#configTier2Chips button[data-tier2-id="palette"]').count() === 1, "色系偏好没有作为独立二级关系");
     assert(await rules.page.locator(".relationship-main").count() === 0, "关系配置仍保留重复的关系列表容器");
     assert(await rules.page.locator("#ruleTableBody").count() === 0, "关系配置仍保留业务关系表格");
-    assert((await rules.page.locator("#configTier3Label").innerText()) === "条件分组", "潮流方向没有按单条件与联合条件分组");
-    assert(await rules.page.locator("#configTier3Chips button[data-canonical-group-id]").count() === 2, "潮流方向缺少方向与表达强度条件组");
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "输入项", "单项规则没有显示具体输入项层级");
+    assert(await rules.page.locator("#configTier3Chips button[data-canonical-group-id]").count() === 2, "潮流方向缺少方向与表达强度输入项");
     assert(!(await rules.page.locator("#configTier4Row").isHidden()), "潮流方向的第四层具体分支未显示");
     assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 3, "潮流方向没有展示三个单条件分支");
     const trendEditorText = await rules.page.locator("#editorContent").innerText();
-    assert(["关系影响输出", "当前分支具体输出", "满足条件", "输出结果", "配置依据"].every((label) => trendEditorText.includes(label)), "潮流方向没有使用统一规则配置结构");
+    assert(["输入项影响输出", "当前取值输出", "满足条件", "输出结果", "配置依据"].every((label) => trendEditorText.includes(label)), "潮流方向没有使用统一单项规则结构");
     assert(!/MOD-|utilityLayering|relaxedTailoring|sheerLayering/.test(trendEditorText), "潮流方向配置暴露了内部规则编号或英文枚举");
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="personal"]').click();
+    await rules.page.locator('[data-config-rule-mode="joint"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').click();
-    assert((await rules.page.locator("#configTier3Label").innerText()) === "条件分组", "面部色彩没有区分联合规则与单条件修饰");
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "协同关系", "面部色彩联合规则没有进入协同矩阵模式");
     const colorGroupLabels = await rules.page.locator("#configTier3Chips button[data-canonical-group-id] span:last-of-type").allInnerTexts();
-    assert(JSON.stringify(colorGroupLabels) === JSON.stringify(["肤色底调 × 发色深浅", "肤色明度", "发色色调"]), `面部色彩条件分组不正确：${JSON.stringify(colorGroupLabels)}`);
+    assert(JSON.stringify(colorGroupLabels) === JSON.stringify(["肤色底调 × 发色深浅"]), `面部色彩协同关系不正确：${JSON.stringify(colorGroupLabels)}`);
     assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 15, "面部色彩联合规则没有展示15个组合分支");
     const personalSkinText = await rules.page.locator("#editorContent").innerText();
-    assert(personalSkinText.includes("关系影响输出") && personalSkinText.includes("当前分支具体输出") && personalSkinText.includes("规则配置"), "个人特征没有使用统一的01/02/03规则模块");
+    assert(personalSkinText.includes("协同关系影响输出") && personalSkinText.includes("当前矩阵行输出") && personalSkinText.includes("协同裁决配置"), "个人特征没有使用统一的协同矩阵结构");
     assert(personalSkinText.includes("全身对比度") && personalSkinText.includes("近脸安全色") && personalSkinText.includes("60-30-10配比"), "面部色彩没有展示从联合输入到颜色输出的完整链路");
     assert(await rules.page.locator(".canonical-personal-branch-selector").count() === 0, "具体分支仍重复出现在规则编辑器内部");
     assert(await rules.page.locator(".canonical-structured-value").count() === 2 && await rules.page.locator("[data-canonical-matrix-field]").count() === 4, "近脸颜色或60-30-10配色仍不可完整配置");
@@ -411,17 +430,22 @@ async function choose(page, pathName, value) {
 
     await rules.page.locator('#configTier2Chips button[data-tier2-id="body"]').click();
     const bodyGroupLabels = await rules.page.locator("#configTier3Chips button[data-canonical-group-id] span:last-of-type").allInnerTexts();
-    assert(JSON.stringify(bodyGroupLabels) === JSON.stringify(["横向轮廓 × 腿身分布 × 骨架量感", "腰线特征"]), "体型比例没有区分联合规则与腰线单条件修饰");
+    assert(JSON.stringify(bodyGroupLabels) === JSON.stringify(["横向轮廓 × 腿身分布 × 骨架量感"]), "体型比例协同矩阵仍混入单项规则");
     assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 27, "身体联合规则没有展示27个组合分支");
     assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("下装版型"), "腿身分布没有展示对应规范输出结果");
+    await rules.page.locator('[data-config-rule-mode="atomic"]').click();
+    await rules.page.locator('#configTier2Chips button[data-tier2-id="body"]').click();
+    const atomicBodyGroups = await rules.page.locator("#configTier3Chips button[data-canonical-group-id] span:last-of-type").allInnerTexts();
+    assert(JSON.stringify(atomicBodyGroups) === JSON.stringify(["横向轮廓", "腿身分布", "骨架量感", "腰线特征"]), "体型比例单项入口没有按四个独立输入字段拆分");
     await rules.page.locator('#configTier3Chips button[data-canonical-group-id="waist"]').click();
     assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 3, "腰线特征没有展示三个单条件分支");
 
     await rules.page.locator('#configTier2Chips button[data-tier2-id="face"]').click();
     assert((await rules.page.locator("#editorTitle").innerText()) === "脸型特征", "点击二级导航未切换到脸型特征");
-    assert((await rules.page.locator("#configTier3Label").innerText()) === "具体分支", "脸型单条件规则不应增加条件分组层");
-    assert(await rules.page.locator("#configTier3Chips button[data-canonical-branch-key]").count() === 6, "脸型没有展开六个规范条件分支");
-    assert(await rules.page.locator("#configTier4Row").isHidden(), "脸型单条件规则错误显示第四层");
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "输入项", "脸型单项规则没有显示输入项层级");
+    assert(await rules.page.locator('#configTier3Chips button[data-canonical-group-id="face"]').count() === 1, "脸型输入项入口不唯一");
+    assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 6, "脸型没有展开六个规范输入取值");
+    assert(!(await rules.page.locator("#configTier4Row").isHidden()), "脸型输入取值层没有显示");
     assert((await rules.page.locator(".canonical-when-statement").innerText()).includes("脸型轮廓"), "脸型关系没有锁定脸型条件");
     assert(await rules.page.locator(".rule-clause--when input, .rule-clause--when select").count() === 0, "分支入口条件仍可在配置区修改");
     assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("领口方向"), "脸型关系没有展示规范领口输出");
@@ -434,16 +458,18 @@ async function choose(page, pathName, value) {
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="context"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();
-    assert((await rules.page.locator("#configTier3Label").innerText()) === "具体分支", "场景条件三级导航没有恢复为具体分支");
-    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 6, "近期气温没有收敛为6个单条件分支");
-    const tier3Labels = await rules.page.locator("#configTier3Chips button[data-tier3-id]").allInnerTexts();
-    assert(tier3Labels.every((label) => !/层数|袖长|外层|覆盖|厚薄|场合/.test(label)), "温度分支入口混入了场合或具体推荐结果");
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "输入项", "场景条件没有显示输入项层级");
+    assert(await rules.page.locator("#configTier3Chips button[data-canonical-group-id]").count() === 1, "近期气温没有形成唯一输入项入口");
+    assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 6, "近期气温没有收敛为6个单条件取值");
+    const tier4Labels = await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").allInnerTexts();
+    assert(tier4Labels.every((label) => !/层数|袖长|外层|覆盖|厚薄|场合/.test(label)), "温度输入取值入口混入了场合或具体推荐结果");
     assert((await rules.page.locator("#editorContent").innerText()).includes("输出结果"), "配置编辑器没有形成输入到结果的闭环");
-    assert((await rules.page.locator("#editorContent").innerText()).includes("具体输出"), "当前分支没有展示具体输出模块");
+    assert((await rules.page.locator("#editorContent").innerText()).includes("当前取值输出"), "当前输入取值没有展示输出模块");
     await rules.page.locator('[data-canonical-matrix-value="framework.layerCount"]').selectOption("2");
 
+    await rules.page.locator('[data-config-rule-mode="joint"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="scenarioJoint"]').click();
-    assert((await rules.page.locator("#configTier3Label").innerText()) === "条件分组", "场景联合规则没有显式显示联合条件组");
+    assert((await rules.page.locator("#configTier3Label").innerText()) === "协同关系", "场景联合规则没有进入协同矩阵模式");
     assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 30, "场景联合规则没有展示30个气温与场合组合分支");
     await rules.page.locator('#configTier4Chips button[data-canonical-branch-key="matrix:scenario:S01"]').click();
     const coldSynopsis = await rules.page.locator(".branch-output-submodule").innerText();
@@ -454,9 +480,11 @@ async function choose(page, pathName, value) {
     await rules.page.locator('[data-canonical-matrix-value="framework.layerCount"]').selectOption("2");
     assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("2层"), "修改具体输出后当前分支摘要没有同步刷新");
     assert(await rules.page.locator(".action-type-details").count() === 0, "统一规则编辑器仍显示重复的作用方式控件");
+    await rules.page.locator('[data-config-rule-mode="atomic"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="environment"]').click();
-    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 2, "环境特征没有作为独立关系展示两个修饰分支");
+    assert(await rules.page.locator("#configTier4Chips button[data-canonical-branch-key]").count() === 2, "环境特征没有作为独立关系展示两个修饰取值");
     assert((await rules.page.locator("#editorContent").innerText()).includes("环境特征"), "环境特征分支没有形成独立配置内容");
+    await rules.page.locator('[data-config-rule-mode="joint"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="scenarioJoint"]').click();
     await rules.page.locator('#configTier4Chips button[data-canonical-branch-key="matrix:scenario:S01"]').click();
 

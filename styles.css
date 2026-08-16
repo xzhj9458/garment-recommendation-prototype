@@ -1441,10 +1441,11 @@ button {
   gap: 6px;
 }
 
-.garment-icon {
-  font-size: 12px;
-  flex: 0 0 16px;
-  text-align: center;
+.garment-category {
+  flex: 0 0 34px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
 }
 
 .garment-info {
@@ -1482,6 +1483,202 @@ button {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+}
+
+.one-piece-component {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+}
+
+.one-piece-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.one-piece-heading > span:first-child {
+  flex: 0 0 auto;
+  color: var(--green-dark);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.one-piece-heading > strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.one-piece-specs,
+.dialog-one-piece-spec {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.one-piece-specs span,
+.dialog-one-piece-spec span {
+  min-width: 0;
+}
+
+.one-piece-specs small,
+.dialog-one-piece-spec small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.one-piece-specs strong,
+.dialog-one-piece-spec strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.color-spectrum-control {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.color-spectrum-trigger {
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--green-border);
+  border-radius: 4px;
+  color: var(--green-dark);
+  background: var(--surface);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.color-spectrum-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  display: none;
+  width: 300px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.color-spectrum-control:hover .color-spectrum-popover,
+.color-spectrum-control:focus-within .color-spectrum-popover {
+  display: grid;
+  gap: 7px;
+}
+
+.color-spectrum-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+}
+
+.color-spectrum-row > b {
+  padding-top: 2px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.color-spectrum-row > span {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 5px;
+}
+
+.color-spectrum-row i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+  background: var(--spectrum-color);
+}
+
+.color-spectrum-row em {
+  margin-right: 4px;
+  color: var(--text-soft);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.candidate-secondary-line {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.pattern-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 7px;
+  border: 1px solid #c8b59d;
+  border-radius: 4px;
+  color: #655443;
+  background: #f5f1eb;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.pattern-tag.is-plain {
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+
+.wearing-layers {
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+}
+
+.wearing-layer {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 23px;
+  padding: 2px 6px;
+  border-left: 2px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.wearing-layer.is-required { border-left-color: var(--green); }
+.wearing-layer.is-conditional { border-left-color: #9d7a44; }
+.wearing-layer.is-optional { border-left-color: var(--blue); }
+
+.wearing-layer span {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.wearing-layer strong {
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Spec Pills */
@@ -2088,8 +2285,49 @@ button {
 .configure-view {
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   min-width: 0;
+}
+
+.config-rule-mode {
+  display: flex;
+  gap: 2px;
+  padding: 7px max(var(--page-gutter), calc((100% - var(--content-max-width)) / 2));
+  border-bottom: 1px solid var(--border-subtle);
+  background: #f3f5f3;
+}
+
+.config-rule-mode button {
+  min-width: 92px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-soft);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.config-rule-mode button.is-active {
+  border-color: var(--green-border);
+  color: var(--green-dark);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.overview-expand-button {
+  min-height: 20px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--green-dark);
+  background: var(--surface);
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .config-tier-bar {
@@ -3593,6 +3831,38 @@ button {
   font-size: 11px;
 }
 
+.dialog-one-piece-spec {
+  margin: 6px 0;
+  padding: 8px;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+}
+
+.dialog-one-piece-spec small { font-size: 9px; }
+.dialog-one-piece-spec strong { margin-top: 2px; font-size: 11px; }
+
+.dialog-pattern-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.dialog-pattern-line > span:first-child {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.optional-accessory-section {
+  background: #f7f9fa;
+}
+
+.dialog-color-spectrum {
+  margin-top: 7px;
+}
+
 .dialog-palette {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4102,6 +4372,10 @@ button {
     padding: 6px var(--page-gutter);
   }
 
+  .config-rule-mode {
+    padding: 6px var(--page-gutter);
+  }
+
   .config-tier-row {
     gap: 6px;
   }
@@ -4130,6 +4404,17 @@ button {
 
   .config-tier3-group {
     flex: 0 0 auto;
+  }
+
+  .color-spectrum-popover {
+    right: 0;
+    left: auto;
+    width: min(300px, calc(100vw - 40px));
+  }
+
+  .one-piece-specs,
+  .dialog-one-piece-spec {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .canonical-action-row,
