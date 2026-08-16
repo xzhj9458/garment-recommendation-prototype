@@ -1430,11 +1430,38 @@
     attributes.silhouette ||= family;
     if (component.category === "top") {
       attributes.topFit ||= family === "tailored" ? "fitted" : ["relaxed", "street"].includes(family) ? "oversized" : "regular";
+      attributes.fitProfile ||= attributes.topFit;
+      attributes.shoulderWidth ||= attributes.topFit === "oversized" ? "broad" : attributes.topFit === "fitted" ? "narrow" : "balanced";
+      attributes.hemWidth ||= attributes.topFit === "oversized" ? "wide" : attributes.topFit === "fitted" ? "compact" : "regular";
+      attributes.length ||= /长袖|中长|长款/.test(name) ? "hip" : "waist";
+      attributes.sleeveWidth ||= attributes.topFit === "oversized" ? "wide" : "regular";
+    }
+    if (component.category === "outer") {
+      attributes.outerStyle ||= /西装/.test(name) ? "blazer" : /风衣/.test(name) ? "trench" : /大衣|中长/.test(name) ? "coat" : /夹克|工装/.test(name) ? "jacket" : /开衫|针织/.test(name) ? "cardigan" : "minimalJacket";
+      attributes.length ||= attributes.outerKind === "warm" || /中长|大衣/.test(name) ? "long" : "short";
+      attributes.collarStyle ||= /西装|翻领|风衣/.test(name) ? "notched" : /开衫|无领/.test(name) ? "open" : "stand";
+      attributes.lapel ||= attributes.outerStyle === "blazer" || attributes.outerStyle === "trench";
+      attributes.closure ||= attributes.outerStyle === "blazer" ? "singleButton" : attributes.outerStyle === "trench" ? "doubleBreasted" : "openFront";
+      attributes.belt ||= attributes.outerStyle === "trench";
     }
     if (component.category === "bottom" && attributes.bottomType !== "short") {
       attributes.bottomCut ||= attributes.bottomType === "skirt"
         ? component.id.includes("SOFT-REGULAR") ? "straightSkirt" : "aLineSkirt"
         : ["relaxed", "street"].includes(family) ? "wideLeg" : family === "tailored" ? "tapered" : "straightLeg";
+    }
+    if (component.category === "bottom") {
+      attributes.legWidth ||= attributes.bottomType === "skirt" ? "skirt" : attributes.bottomCut === "wideLeg" ? "wide" : attributes.bottomCut === "tapered" ? "tapered" : "straight";
+      attributes.length ||= attributes.coverage === "light" ? "short" : attributes.coverage === "regular" ? "cropped" : "full";
+      attributes.rise ||= attributes.waistPosition === "raised" ? "high" : attributes.waistPosition === "relaxed" ? "low" : "mid";
+      attributes.hemWidth ||= attributes.bottomType === "skirt" ? "flare" : attributes.legWidth;
+      attributes.drape ||= family === "soft" ? "fluid" : family === "relaxed" ? "easy" : "structured";
+      attributes.pleats ||= family === "retro" || /褶/.test(name);
+    }
+    if (component.category === "dress") {
+      attributes.length ||= "midi";
+      attributes.hemWidth ||= attributes.dressCut === "columnDress" ? "narrow" : attributes.dressCut === "shirtDress" ? "regular" : "flare";
+      attributes.waistTreatment ||= attributes.waistPosition === "raised" ? "defined" : attributes.waistPosition === "relaxed" ? "released" : "natural";
+      attributes.drape ||= attributes.dressCut === "wrapDress" || family === "soft" ? "fluid" : "structured";
     }
   });
 

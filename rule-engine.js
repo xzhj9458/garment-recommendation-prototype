@@ -1106,7 +1106,10 @@
       colorChroma: decision.requirements.colorChroma,
       palettePlanId: palette?.id || null,
       palette: boundPalette,
-      illustration: buildIllustration(top, outer, bottom, dress, decision, boundPalette, family),
+      illustration: buildIllustration(top, outer, bottom, dress, decision, boundPalette, family, {
+        patternDetail,
+        accessories: decision.canonicalAccessories || {}
+      }),
       styleName: decision.requirements.styleName || "未限定风格",
       silhouette: decision.requirements.silhouette || familyMeta.line,
       detail: decision.requirements.detail || "与风格匹配的细节",
@@ -1167,27 +1170,104 @@
 
   function bindPaletteToGarments(palette, outerKind, onePiece = false) {
     if (!palette) return null;
-    const roles = palette.roles.map((item) => ({
+    const roles = palette.roles || [];
+    const byRole = (role) => roles.find((item) => item.role === role) || null;
+    const nearFace = byRole("nearFace") || roles[0] || null;
+    const main = byRole("main") || nearFace;
+    const secondary = byRole("secondary") || byRole("accent") || main;
+    const accent = byRole("accent") || secondary || main;
+    const visibleOuter = outerKind !== "none";
+    const assignments = onePiece
+      ? [
+        { id: "dress", layerKind: "dress", role: main ? main.role : null, color: main },
+        ...(visibleOuter ? [{ id: "outer", layerKind: "outer", role: (byRole("secondary") || accent)?.role || null, color: byRole("secondary") || accent }] : []),
+        { id: "accent", layerKind: "accessory", role: accent?.role || null, color: accent }
+      ]
+      : [
+        { id: "top", layerKind: "top", role: nearFace?.role || null, color: nearFace },
+        ...(visibleOuter ? [{ id: "outer", layerKind: "outer", role: main?.role || null, color: main }] : []),
+        { id: "bottom", layerKind: "bottom", role: (visibleOuter ? secondary : main)?.role || null, color: visibleOuter ? secondary : main },
+        { id: "accent", layerKind: "accessory", role: accent?.role || null, color: accent }
+      ];
+    const regions = assignments.map((assignment) => ({
+      id: assignment.id,
+      layerKind: assignment.layerKind,
+      role: assignment.role,
+      colorId: assignment.color?.color?.id || assignment.color?.colorId || null,
+      colorName: assignment.color?.colorName || "基础色",
+      hex: assignment.color?.hex || null,
+      ratio: Number(assignment.color?.ratio || 0),
+      source: assignment.color ? "palette-role" : "unresolved"
+    }));
+    const unresolved = regions.filter((region) => !region.hex).map((region) => region.id);
+    const assignedRegionIds = new Map();
+    regions.forEach((region) => {
+      if (region.layerKind !== "accessory") assignedRegionIds.set(region.layerKind, region.id);
+    });
+    const boundRoles = roles.map((item) => ({
       ...item,
       garment: onePiece
-        ? item.role === "main" && outerKind !== "none" ? "外层" : ["nearFace", "main", "secondary"].includes(item.role) ? "连身裙" : "点缀"
-        : item.role === "nearFace" ? "上装" : item.role === "main" && outerKind !== "none" ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
+        ? item.role === "main" && visibleOuter ? "外层" : item.role === "main" || item.role === "nearFace" ? "连身裙" : "点缀"
+        : item.role === "nearFace" ? "上装" : item.role === "main" && visibleOuter ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
     }));
-    return { ...palette, roles };
+    return {
+      ...palette,
+      roles: boundRoles,
+      regions,
+      mapping: {
+        complete: unresolved.length === 0,
+        unresolved,
+        ratioTotal: regions.filter((region) => region.layerKind !== "accessory").reduce((sum, region) => sum + region.ratio, 0),
+        assignedRegionIds: Object.fromEntries(assignedRegionIds)
+      }
+    };
   }
 
-  function buildIllustration(top, outer, bottom, dress, decision, palette, family) {
-    const roles = palette?.roles || [];
-    const colorFor = (garment, fallback) => {
-      const role = roles.find((item) => item.garment === garment);
-      return { hex: role?.hex || fallback, colorName: role?.colorName || "基础色" };
-    };
+  function buildIllustration(top, outer, bottom, dress, decision, palette, family, options = {}) {
     const outerKind = outer?.attributes?.outerKind || "none";
     const bottomType = dress ? "dress" : bottom?.attributes?.bottomType || "trouser";
-    const topColor = dress ? colorFor("连身裙", "#dedbd1") : colorFor("上装", "#dedbd1");
-    const outerColor = colorFor("外层", "#a8b1af");
-    const bottomColor = dress ? topColor : colorFor("下装", "#4c5961");
+    const regions = palette?.regions || [];
+    const regionFor = (id, fallback) => {
+      const region = regions.find((item) => item.id === id);
+      return {
+        hex: region?.hex || fallback,
+        colorName: region?.colorName || "待确认",
+        ratio: region?.ratio || 0,
+        source: region?.source || "unresolved"
+      };
+    };
+    const topColor = dress ? regionFor("dress", "#dedbd1") : regionFor("top", "#dedbd1");
+    const outerColor = regionFor("outer", "#a8b1af");
+    const bottomColor = dress ? topColor : regionFor("bottom", "#4c5961");
     const bodyComponent = dress || bottom;
+    const requestedPatternTarget = options.patternDetail?.placement === "外层" ? "outer" : options.patternDetail?.placement === "下装" ? "bottom" : options.patternDetail?.placement === "连身裙" ? "dress" : "top";
+    const patternTarget = requestedPatternTarget === "outer" && outerKind === "none"
+      ? (dress ? "dress" : "bottom")
+      : requestedPatternTarget;
+    const pattern = options.patternDetail ? {
+      ...options.patternDetail,
+      requestedTarget: requestedPatternTarget,
+      target: patternTarget,
+      renderMode: "repeat"
+    } : null;
+    const canonicalAccessories = options.accessories || {};
+    const accessories = [
+      { kind: "footwear", key: canonicalAccessories.footwear || null, required: true, visible: Boolean(canonicalAccessories.footwear), region: "accent" },
+      { kind: "bag", key: canonicalAccessories.leatherGoods || null, required: false, visible: Boolean(canonicalAccessories.leatherGoods && canonicalAccessories.leatherGoods !== "none"), region: "accent" },
+      { kind: "jewelry", key: canonicalAccessories.jewelry || null, required: false, visible: Boolean(canonicalAccessories.jewelry), region: "accent" },
+      { kind: "textile", key: canonicalAccessories.textile || null, required: false, visible: Boolean(canonicalAccessories.textile && canonicalAccessories.textile !== "none"), region: "accent" }
+    ];
+    const geometry = {
+      top: top?.attributes || null,
+      outer: outer?.attributes || null,
+      bottom: bottom?.attributes || null,
+      dress: dress?.attributes || null
+    };
+    const validation = {
+      colorComplete: Boolean(palette?.mapping?.complete),
+      paletteRatioTotal: palette?.mapping?.ratioTotal || 0,
+      warnings: palette?.mapping?.unresolved?.length ? ["部分颜色未能从配色方案解析"] : []
+    };
     return {
       type: "outfit-schematic",
       form: dress ? "onePieceDress" : decision.requirements.canonicalForm,
@@ -1196,45 +1276,36 @@
       waist: decision.requirements.waist || bodyComponent?.attributes?.waistPosition || "natural",
       line: decision.requirements.line || bodyComponent?.attributes?.lineDirection || "balanced",
       neckline: decision.requirements.neckline || (dress || top)?.attributes?.neckline || "regular",
+      colorMap: {
+        regions,
+        ratioTotal: validation.paletteRatioTotal,
+        complete: validation.colorComplete
+      },
+      pattern,
+      accessories,
+      geometry,
+      validation,
       layers: [
         dress
           ? {
-            id: "dress",
-            kind: "dress",
-            type: "dress",
-            dressCut: dress.attributes.dressCut,
-            visible: true,
+            id: "dress", kind: "dress", type: "dress", dressCut: dress.attributes.dressCut, visible: true,
             sleeve: decision.requirements.sleeve || dress.attributes.sleeve || "regular",
-            color: topColor.hex,
-            colorName: topColor.colorName
+            color: topColor.hex, colorName: topColor.colorName, ratio: topColor.ratio, attributes: dress.attributes
           }
           : {
-            id: "top",
-            kind: "top",
-            type: "top",
-            visible: true,
+            id: "top", kind: "top", type: "top", visible: true,
             sleeve: decision.requirements.sleeve || top?.attributes?.sleeve || "regular",
-            color: topColor.hex,
-            colorName: topColor.colorName
+            color: topColor.hex, colorName: topColor.colorName, ratio: topColor.ratio, attributes: top?.attributes || {}
           },
         {
-          id: "outer",
-          kind: "outer",
-          type: outerKind,
-          visible: outerKind !== "none",
-          length: outerKind === "warm" ? "long" : "short",
-          color: outerColor.hex,
-          colorName: outerColor.colorName
+          id: "outer", kind: "outer", type: outerKind, visible: outerKind !== "none",
+          length: outer?.attributes?.length || (outerKind === "warm" ? "long" : "short"),
+          color: outerColor.hex, colorName: outerColor.colorName, ratio: outerColor.ratio, attributes: outer?.attributes || {}
         },
         dress ? null : {
-          id: "bottom",
-          kind: "bottom",
-          type: bottomType,
-          bottomType,
-          visible: true,
+          id: "bottom", kind: "bottom", type: bottomType, bottomType, visible: true,
           coverage: decision.requirements.coverage || bottom?.attributes?.coverage || "regular",
-          color: bottomColor.hex,
-          colorName: bottomColor.colorName
+          color: bottomColor.hex, colorName: bottomColor.colorName, ratio: bottomColor.ratio, attributes: bottom?.attributes || {}
         }
       ].filter(Boolean)
     };

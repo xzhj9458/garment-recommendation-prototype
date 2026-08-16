@@ -713,30 +713,16 @@
   function renderIllustration(illustration, candidate) {
     const model = illustration || {};
     const layers = model.layers || [];
-    const roles = candidate.palette?.roles || [];
-
-    const getAccurateColor = (kind, fallback) => {
-      // 1. Direct role/garment match
-      const direct = roles.find((r) => r.garment === kind || (r.role && String(r.role).toLowerCase() === String(kind).toLowerCase()));
-      if (direct && direct.hex) return direct.hex;
-      // 2. Semantic category mappings
-      if (kind === "上装" || kind === "top" || kind === "内搭") {
-        const near = roles.find((r) => r.role === "nearFace" || r.role === "top");
-        if (near && near.hex) return near.hex;
-      }
-      if (kind === "外层" || kind === "outer") {
-        const out = roles.find((r) => r.garment === "外层" || r.role === "outer" || r.role === "main");
-        if (out && out.hex) return out.hex;
-      }
-      if (kind === "下装" || kind === "bottom") {
-        const bot = roles.find((r) => r.role === "main" || r.role === "bottom");
-        if (bot && bot.hex) return bot.hex;
-      }
-      if (kind === "连身裙" || kind === "dress") {
-        const dr = roles.find((r) => r.garment === "连身裙" || r.role === "main" || r.role === "nearFace");
-        if (dr && dr.hex) return dr.hex;
-      }
-      return roles[0]?.hex || fallback;
+    const colorRegions = model.colorMap?.regions || candidate.palette?.regions || [];
+    const regionColors = new Map(colorRegions.map((region) => [region.id, region]));
+    const colorFor = (regionId, fallback) => {
+      const region = regionColors.get(regionId);
+      return {
+        hex: region?.hex || fallback,
+        colorName: region?.colorName || "待确认",
+        ratio: Number(region?.ratio || 0),
+        resolved: Boolean(region?.hex)
+      };
     };
 
     const topLayer = layers.find((layer) => layer.kind === "top") || {};
@@ -745,10 +731,11 @@
     const bottomLayer = layers.find((layer) => layer.kind === "bottom") || {};
     const isDress = Boolean(dressLayer.visible) || candidate.form === "onePieceDress" || Boolean(candidate.garments?.dress);
 
-    const topColor = isDress ? getAccurateColor("连身裙", dressLayer.color || "#e8e5dc") : getAccurateColor("上装", topLayer.color || "#e8e5dc");
-    const outerColor = getAccurateColor("外层", outerLayer.color || "#8d9b86");
-    const bottomColor = isDress ? topColor : getAccurateColor("下装", bottomLayer.color || "#34383a");
-    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none" && Boolean(candidate.garments?.outer && candidate.garments.outer !== "无外层");
+    const topColor = isDress ? colorFor("dress", dressLayer.color || "#e8e5dc") : colorFor("top", topLayer.color || "#e8e5dc");
+    const outerColor = colorFor("outer", outerLayer.color || "#8d9b86");
+    const bottomColor = isDress ? topColor : colorFor("bottom", bottomLayer.color || "#34383a");
+    const accentColor = colorFor("accent", "#5b5149");
+    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none" && Boolean(outerLayer.type);
 
     const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
     const bottomCut = candidate.canonicalOutput?.garment?.bottomCut || candidate.bottomCut || "straightLeg";
@@ -757,22 +744,29 @@
     const neckline = model.neckline || candidate.neckline || "regular";
     const waist = model.waist || candidate.waist || "natural";
     const line = model.line || candidate.line || "balanced";
-
-    // Detect patterns for textures
-    const candidateName = String(candidate.name || "") + String(candidate.title || "") + Object.values(candidate.garments || {}).join(" ");
-    const hasStripe = candidateName.includes("条纹") || candidateName.includes("海魂");
-    const hasPlaid = candidateName.includes("格纹") || candidateName.includes("亲王格") || candidateName.includes("千鸟格");
-
-    // Accessories
-    const footwearKey = candidate.canonicalOutput?.accessories?.footwear || "loafersOxfords";
-    const bagKey = candidate.canonicalOutput?.accessories?.leatherGoods || "structuredTote";
+    const topAttributes = topLayer.attributes || model.geometry?.top || {};
+    const outerAttributes = outerLayer.attributes || model.geometry?.outer || {};
+    const bottomAttributes = bottomLayer.attributes || model.geometry?.bottom || {};
+    const dressAttributes = dressLayer.attributes || model.geometry?.dress || {};
+    const pattern = model.pattern || (candidate.patternDetail ? { ...candidate.patternDetail, target: "top" } : null);
+    const patternTarget = pattern?.target || "top";
+    const accessories = model.accessories || [];
+    const accessoryKey = (kind, fallback = null) => accessories.find((item) => item.kind === kind)?.key || candidate.canonicalOutput?.accessories?.[kind === "bag" ? "leatherGoods" : kind] || fallback;
+    const footwearKey = accessoryKey("footwear", "loafersOxfords");
+    const bagKey = accessoryKey("bag", null);
+    const jewelryKey = accessoryKey("jewelry", null);
+    const textileKey = accessoryKey("textile", null);
 
     // Sleeve Geometry
+    const shoulderWidth = topAttributes.shoulderWidth === "broad" ? 22 : topAttributes.shoulderWidth === "narrow" ? 15 : 18;
+    const armWidth = topAttributes.sleeveWidth === "wide" ? 10 : 8;
+    const shoulderLeft = 110 - shoulderWidth;
+    const shoulderRight = 110 + shoulderWidth;
     const armPath = sleeve === "short"
-      ? `<path d="M90 64 L74 94 M130 64 L146 94" fill="none" stroke="${topColor}" stroke-width="12" stroke-linecap="round"/>`
+      ? `<path d="M${shoulderLeft} 65 L${shoulderLeft - 17} 94 M${shoulderRight} 65 L${shoulderRight + 17} 94" fill="none" stroke="${topColor.hex}" stroke-width="${armWidth}" stroke-linecap="round"/>`
       : sleeve === "threeQuarter"
-        ? `<path d="M90 64 L71 108 M130 64 L149 108" fill="none" stroke="${topColor}" stroke-width="12" stroke-linecap="round"/>`
-        : `<path d="M90 64 L71 124 M130 64 L149 124" fill="none" stroke="${topColor}" stroke-width="12" stroke-linecap="round"/>`;
+        ? `<path d="M${shoulderLeft} 65 L${shoulderLeft - 19} 108 M${shoulderRight} 65 L${shoulderRight + 19} 108" fill="none" stroke="${topColor.hex}" stroke-width="${armWidth}" stroke-linecap="round"/>`
+        : `<path d="M${shoulderLeft} 65 L${shoulderLeft - 19} 124 M${shoulderRight} 65 L${shoulderRight + 19} 124" fill="none" stroke="${topColor.hex}" stroke-width="${armWidth}" stroke-linecap="round"/>`;
 
     // Neckline Geometry
     const necklineText = String(neckline);
@@ -795,87 +789,117 @@
         ? `<path d="M88 ${waistY} L132 ${waistY}" stroke="#ffffff" stroke-opacity="0.75" stroke-width="2" stroke-dasharray="4 3"/>`
         : "";
 
-    // Trousers & Skirt Shapes
-    const trouserShape = bottomCut === "wideLeg"
-      ? `<path d="M78 148 L142 148 L148 238 L114 238 L110 166 L106 238 L72 238 Z" fill="${bottomColor}"/>`
-      : bottomCut === "tapered"
-        ? `<path d="M82 148 L138 148 L131 238 L112 238 L110 168 L108 238 L89 238 Z" fill="${bottomColor}"/>`
-        : `<path d="M82 148 L138 148 L137 238 L113 238 L110 168 L107 238 L83 238 Z" fill="${bottomColor}"/>`;
+    // Trousers & Skirt Shapes: widths and lengths come from the component attributes.
+    const legWidth = bottomAttributes.legWidth || (bottomCut === "wideLeg" ? "wide" : bottomCut === "tapered" ? "tapered" : "straight");
+    const trouserShape = legWidth === "wide"
+      ? `<path d="M76 148 L144 148 L151 238 L114 238 L110 168 L106 238 L69 238 Z" fill="${bottomColor.hex}"/>`
+      : legWidth === "tapered"
+        ? `<path d="M82 148 L138 148 L132 238 L112 238 L110 168 L108 238 L88 238 Z" fill="${bottomColor.hex}"/>`
+        : `<path d="M82 148 L138 148 L138 238 L113 238 L110 168 L107 238 L82 238 Z" fill="${bottomColor.hex}"/>`;
 
     const bottomShape = bottomType === "skirt" || bottomCut === "aLineSkirt" || bottomCut === "straightSkirt"
-      ? `<path d="M80 148 L140 148 L158 234 Q110 244 62 234 Z" fill="${bottomColor}"/>`
+      ? bottomAttributes.hemWidth === "narrow" || bottomCut === "straightSkirt"
+        ? `<path d="M84 148 L136 148 L139 236 Q110 240 81 236 Z" fill="${bottomColor.hex}"/>`
+        : `<path d="M80 148 L140 148 L158 234 Q110 244 62 234 Z" fill="${bottomColor.hex}"/>`
       : bottomType === "short"
-        ? `<path d="M80 148 L140 148 L145 204 L114 204 L110 176 L106 204 L75 204 Z" fill="${bottomColor}"/>`
+        ? `<path d="M80 148 L140 148 L145 204 L114 204 L110 176 L106 204 L75 204 Z" fill="${bottomColor.hex}"/>`
         : trouserShape;
 
     // Dress Shapes
     const dressShape = {
-      aLineMidi: `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor}"/>`,
-      shirtDress: `<path d="M92 58 L128 58 L138 107 L144 235 Q110 241 76 235 L82 107 Z" fill="${topColor}"/><path d="M110 74 L110 226" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2"/><path d="M102 60 L110 68 L118 60" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.8"/>`,
-      wrapDress: `<path d="M92 58 L128 58 L140 108 L156 234 Q110 245 64 234 L80 108 Z" fill="${topColor}"/><path d="M94 66 L124 114 L88 128" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>`,
-      columnDress: `<path d="M92 58 L128 58 L136 108 L138 235 Q110 240 82 235 L84 108 Z" fill="${topColor}"/>`
-    }[dressCut] || `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor}"/>`;
+      aLineMidi: `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor.hex}"/>`,
+      shirtDress: `<path d="M92 58 L128 58 L138 107 L144 235 Q110 241 76 235 L82 107 Z" fill="${topColor.hex}"/><path d="M110 74 L110 226" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2"/><path d="M102 60 L110 68 L118 60" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.8"/>`,
+      wrapDress: `<path d="M92 58 L128 58 L140 108 L156 234 Q110 245 64 234 L80 108 Z" fill="${topColor.hex}"/><path d="M94 66 L124 114 L88 128" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>`,
+      columnDress: `<path d="M92 58 L128 58 L136 108 L138 235 Q110 240 82 235 L84 108 Z" fill="${topColor.hex}"/>`
+    }[dressCut] || `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor.hex}"/>`;
 
-    // Outer Shape
-    const outerShape = `<path d="M84 56 L64 90 L74 174 L146 174 L156 90 L136 56 L124 74 L96 74 Z" fill="${outerColor}" opacity="0.96"/>
-      <path d="M96 56 L104 88 L110 88 L116 88 L124 56" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.5"/>`;
+    // Outer Shape: distinguish blazer, trench, coat, cardigan and jacket.
+    const outerStyle = outerAttributes.outerStyle || (outerKind === "warm" ? "coat" : "minimalJacket");
+    const outerShape = outerStyle === "blazer"
+      ? `<path d="M84 56 L64 86 L70 172 L150 172 L156 86 L136 56 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.96"/><path d="M96 57 L104 88 L110 80 L116 88 L124 57" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2"/><path d="M80 130 L140 130" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.4"/>`
+      : outerStyle === "trench"
+        ? `<path d="M84 56 L64 88 L70 216 L150 216 L156 88 L136 56 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.96"/><path d="M96 56 L104 88 L110 82 L116 88 L124 56" fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="2"/><path d="M72 142 L148 142" stroke="#ffffff" stroke-opacity="0.58" stroke-width="2.5"/><path d="M76 102 L92 96 M144 102 L128 96" stroke="#ffffff" stroke-opacity="0.42" stroke-width="2"/>`
+        : outerStyle === "coat"
+          ? `<path d="M84 56 L62 92 L70 218 Q110 224 150 218 L158 92 L136 56 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.97"/><path d="M95 56 L104 88 L110 82 L116 88 L125 56" fill="none" stroke="#ffffff" stroke-opacity="0.62" stroke-width="2.2"/>`
+          : outerStyle === "cardigan"
+            ? `<path d="M86 57 L66 90 L76 178 L98 178 L98 82 L110 74 L122 82 L122 178 L144 178 L154 90 L134 57 L122 75 L98 75 Z" fill="${outerColor.hex}" opacity="0.94"/><path d="M110 75 L110 178" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.6"/>`
+            : `<path d="M86 58 L68 88 L76 164 L144 164 L152 88 L134 58 L122 74 L98 74 Z" fill="${outerColor.hex}" opacity="0.96"/><path d="M96 58 L104 86 L110 80 L116 86 L124 58" fill="none" stroke="#ffffff" stroke-opacity="0.48" stroke-width="1.7"/>`;
 
     // Concrete Footwear
     const footwearSvg = {
-      loafersOxfords: `<path d="M86 240 L103 240 L102 249 L85 249 Z M117 240 L134 240 L135 249 L118 249 Z" fill="#2d2926"/><line x1="91" y1="243" x2="98" y2="243" stroke="#d4af37" stroke-width="1.5"/><line x1="122" y1="243" x2="129" y2="243" stroke="#d4af37" stroke-width="1.5"/>`,
-      kittenHeels: `<path d="M86 241 L104 241 L101 250 L89 250 Z M116 241 L134 241 L131 250 L119 250 Z" fill="#3a2f2b"/><path d="M88 250 L87 254 M132 250 L133 254" stroke="#3a2f2b" stroke-width="2"/>`,
-      boots: `<path d="M85 232 L103 232 L103 249 L85 249 Z M117 232 L135 232 L135 249 L117 249 Z" fill="#24211f"/>`,
-      minimalSneakers: `<path d="M86 240 L103 240 L102 249 L85 249 Z M117 240 L134 240 L135 249 L118 249 Z" fill="#ece8df"/><line x1="85" y1="248" x2="103" y2="248" stroke="#ffffff" stroke-width="2"/><line x1="117" y1="248" x2="135" y2="248" stroke="#ffffff" stroke-width="2"/>`
-    }[footwearKey] || `<path d="M86 240 L103 240 L102 249 L85 249 Z M117 240 L134 240 L135 249 L118 249 Z" fill="#2d2926"/>`;
+      loafersOxfords: `<path d="M84 239 Q94 236 104 241 L102 251 L83 251 Q82 246 84 239 Z M116 241 Q126 236 136 239 L138 251 L119 251 Z" fill="${accentColor.hex}"/><line x1="90" y1="244" x2="99" y2="244" stroke="#d4af37" stroke-width="1.4"/><line x1="121" y1="244" x2="130" y2="244" stroke="#d4af37" stroke-width="1.4"/>`,
+      kittenHeels: `<path d="M84 240 Q94 237 104 242 L101 250 L87 250 Z M116 242 Q126 237 136 240 L133 250 L119 250 Z" fill="${accentColor.hex}"/><path d="M88 250 L87 255 M132 250 L133 255" stroke="${accentColor.hex}" stroke-width="2"/>`,
+      boots: `<path d="M84 226 L104 226 L104 250 L84 250 Z M116 226 L136 226 L136 250 L116 250 Z" fill="${accentColor.hex}"/><path d="M84 232 L104 232 M116 232 L136 232" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>`,
+      minimalSneakers: `<path d="M84 240 Q94 237 104 241 L102 250 L83 250 Z M116 241 Q126 237 136 240 L138 250 L119 250 Z" fill="#eeeae0" stroke="${accentColor.hex}" stroke-opacity="0.45"/><line x1="85" y1="248" x2="103" y2="248" stroke="#ffffff" stroke-width="2"/><line x1="117" y1="248" x2="135" y2="248" stroke="#ffffff" stroke-width="2"/>`
+    }[footwearKey] || `<path d="M84 239 Q94 236 104 241 L102 251 L83 251 Z M116 241 Q126 236 136 239 L138 251 L119 251 Z" fill="${accentColor.hex}"/>`;
 
     // Concrete Bags
     const bagSvg = {
-      structuredTote: `<rect x="146" y="136" width="26" height="34" rx="2" fill="#5c4433"/><path d="M153 136 Q159 122 165 136" fill="none" stroke="#423023" stroke-width="2"/>`,
-      shoulderBag: `<path d="M138 86 Q146 108 148 120 L162 118 Q158 102 146 84 Z" fill="#6d4c38"/>`,
-      crossbody: `<line x1="94" y1="58" x2="146" y2="132" stroke="#4a3629" stroke-width="2.2"/><rect x="140" y="128" width="22" height="18" rx="3" fill="#634835"/>`,
-      slimBelt: `<rect x="86" y="125" width="48" height="4" rx="1" fill="#7a583e"/>`
+      structuredTote: `<rect x="146" y="136" width="26" height="34" rx="2" fill="${accentColor.hex}"/><path d="M153 136 Q159 122 165 136" fill="none" stroke="${accentColor.hex}" stroke-width="2.4"/>`,
+      shoulderBag: `<path d="M138 86 Q146 108 148 120 L162 118 Q158 102 146 84 Z" fill="${accentColor.hex}"/>`,
+      crossbody: `<line x1="94" y1="58" x2="146" y2="132" stroke="${accentColor.hex}" stroke-width="2.2"/><rect x="140" y="128" width="22" height="18" rx="3" fill="${accentColor.hex}"/>`,
+      slimBelt: `<rect x="86" y="125" width="48" height="4" rx="1" fill="${accentColor.hex}"/>`
     }[bagKey] || "";
 
+    const jewelrySvg = jewelryKey && jewelryKey !== "none" ? `<circle cx="110" cy="91" r="3" fill="${accentColor.hex}"/><path d="M101 78 Q110 92 119 78" fill="none" stroke="${accentColor.hex}" stroke-width="1.2"/><circle cx="97" cy="58" r="2" fill="${accentColor.hex}"/><circle cx="123" cy="58" r="2" fill="${accentColor.hex}"/>` : "";
+    const textileSvg = textileKey && textileKey !== "none" ? `<path d="M98 76 L110 92 L122 76 L118 72 L110 83 L102 72 Z" fill="${accentColor.hex}" opacity="0.92"/><path d="M103 83 L98 106 M117 83 L122 106" stroke="${accentColor.hex}" stroke-width="2"/>` : "";
+
     const svgId = `illu-${Math.random().toString(36).slice(2, 7)}`;
+    const patternInk = pattern?.contrast === "低" ? "#243746" : "#ffffff";
+    const patternOpacity = pattern?.contrast === "低" ? "0.24" : "0.38";
+    const topPath = topAttributes.fitProfile === "oversized"
+      ? "M86 56 L134 56 L148 94 L142 152 L78 152 L72 94 Z"
+      : topAttributes.fitProfile === "fitted"
+        ? "M96 56 L124 56 L138 94 L134 152 L86 152 L82 94 Z"
+        : "M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z";
+    const patternShapes = {
+      top: `<path d="${topPath}" fill="url(#pattern-${svgId})"/>`,
+      outer: `<path d="M84 56 L64 90 L74 174 L146 174 L156 90 L136 56 L124 74 L96 74 Z" fill="url(#pattern-${svgId})" opacity="0.72"/>`,
+      bottom: `<path d="M76 148 L144 148 L151 238 L114 238 L110 168 L106 238 L69 238 Z" fill="url(#pattern-${svgId})" opacity="0.72"/>`,
+      dress: dressShape.replace(/fill="#[A-Fa-f0-9]+"/g, `fill="url(#pattern-${svgId})"`)
+    }[patternTarget] || "";
 
     return `
       <div class="outfit-illustration" data-illustration-type="${escapeHtml(model.type || "outfit-schematic")}">
         <svg class="illustration-svg" viewBox="0 0 220 264" role="img" aria-label="${escapeHtml(candidate.title || "穿搭方案效果图")}">
           <defs>
-            <pattern id="stripe-${svgId}" width="16" height="6" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="3" x2="16" y2="3" stroke="#253e58" stroke-width="2.5" stroke-opacity="0.8"/>
-            </pattern>
-            <pattern id="plaid-${svgId}" width="12" height="12" patternUnits="userSpaceOnUse">
-              <path d="M0 0h12v12H0z" fill="none"/>
-              <path d="M0 0h12M0 4h12M0 8h12M0 0v12M4 0v12M8 0v12" stroke="#483d37" stroke-width="0.75" stroke-opacity="0.35"/>
+            <filter id="shadow-${svgId}" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-color="#1f2933" flood-opacity="0.18"/></filter>
+            <pattern id="pattern-${svgId}" width="${pattern?.id === "maritimeStripe" ? 16 : 12}" height="${pattern?.id === "maritimeStripe" ? 6 : 12}" patternUnits="userSpaceOnUse">
+              ${pattern?.id === "maritimeStripe" ? `<line x1="0" y1="3" x2="16" y2="3" stroke="${patternInk}" stroke-width="2.2" stroke-opacity="${patternOpacity}"/>` : ""}
+              ${pattern?.id === "princeOfWales" || pattern?.id === "houndstooth" ? `<path d="M0 0h12v12H0z" fill="none"/><path d="M0 0h12M0 4h12M0 8h12M0 0v12M4 0v12M8 0v12" stroke="${patternInk}" stroke-width="0.75" stroke-opacity="${patternOpacity}"/>` : ""}
+              ${pattern?.id === "frenchPolkaDot" ? `<circle cx="3" cy="3" r="1.8" fill="${patternInk}" fill-opacity="${patternOpacity}"/><circle cx="9" cy="9" r="1.8" fill="${patternInk}" fill-opacity="${patternOpacity}"/>` : ""}
+              ${pattern?.id === "smallFloral" ? `<circle cx="3" cy="3" r="1.3" fill="${patternInk}" fill-opacity="${patternOpacity}"/><path d="M3 1v4M1 3h4" stroke="${patternInk}" stroke-width="0.8" stroke-opacity="${patternOpacity}"/>` : ""}
             </pattern>
           </defs>
 
-          <!-- Stylized French Hair & Neck -->
+          <!-- Stylized head, hair, neck and hands: a neutral garment figure, not a photo-real person. -->
+          <ellipse cx="110" cy="35" rx="9" ry="12" fill="#ecd8c8" stroke="#d4b8a2" stroke-width="0.8"/>
           <ellipse cx="110" cy="20" rx="7" ry="5" fill="#2d2926"/>
           <path d="M96 34 C94 20 126 20 124 34 C126 40 122 46 118 48 C120 38 116 28 110 28 C104 28 100 38 102 48 C98 46 94 40 96 34 Z" fill="#2d2926"/>
           <path d="M101 34 Q110 49 119 34 L117 58 Q110 62 103 58 Z" fill="#ecd8c8"/>
           <path d="M103 58 Q110 62 117 58" stroke="#d4b8a2" stroke-width="1.2" fill="none" opacity="0.6"/>
 
-          <!-- Base Body / Dress -->
-          ${isDress ? dressShape : `<path d="M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z" fill="${topColor}"/>`}
+          <ellipse cx="110" cy="254" rx="45" ry="4.5" fill="#1f2933" fill-opacity="0.1"/>
 
-          <!-- Pattern Texture Overlays -->
-          ${hasStripe && !isDress ? `<path d="M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z" fill="url(#stripe-${svgId})"/>` : ""}
-          ${hasPlaid && !isDress ? `<path d="M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z" fill="url(#plaid-${svgId})"/>` : ""}
+          <!-- Base Body / Dress -->
+          <g filter="url(#shadow-${svgId})">
+            ${isDress ? dressShape : `<path d="${topPath}" fill="${topColor.hex}"/>`}
+            ${patternTarget === "top" || patternTarget === "dress" ? patternShapes : ""}
+          </g>
 
           <!-- Arms -->
           ${armPath}
+          <circle cx="${shoulderLeft - 19}" cy="${sleeve === "short" ? 94 : sleeve === "threeQuarter" ? 108 : 124}" r="3.4" fill="#ecd8c8"/>
+          <circle cx="${shoulderRight + 19}" cy="${sleeve === "short" ? 94 : sleeve === "threeQuarter" ? 108 : 124}" r="3.4" fill="#ecd8c8"/>
 
           <!-- Outer Layer -->
-          ${outerVisible ? outerShape : ""}
-          ${outerVisible && hasPlaid ? `<path d="M84 56 L64 90 L74 174 L146 174 L156 90 L136 56 L124 74 L96 74 Z" fill="url(#plaid-${svgId})"/>` : ""}
+          ${outerVisible ? `<g filter="url(#shadow-${svgId})">${outerShape}${patternTarget === "outer" ? patternShapes : ""}</g>` : ""}
 
           <!-- Bottom Separates -->
-          ${isDress ? "" : bottomShape}
+          ${isDress ? "" : `<g filter="url(#shadow-${svgId})">${bottomShape}${patternTarget === "bottom" ? patternShapes : ""}</g>`}
 
           <!-- Legs -->
-          <path d="M96 235 L96 242 M124 235 L124 242" stroke="#ecd8c8" stroke-width="6" stroke-linecap="round"/>
+          <path d="M96 235 L96 241 M124 235 L124 241" stroke="#ecd8c8" stroke-width="5" stroke-linecap="round"/>
 
           <!-- Concrete Footwear -->
           ${footwearSvg}
@@ -883,11 +907,16 @@
           <!-- Concrete Handbag -->
           ${bagSvg}
 
+          <!-- Jewelry and textile detail -->
+          ${jewelrySvg}
+          ${textileSvg}
+
           <!-- Neckline, Waistline Markers -->
           ${necklinePath}
           ${waistMark}
         </svg>
         <span class="illustration-caption">${escapeHtml(model.layerCount || candidate.layerCount || 1)}层 · ${escapeHtml(model.silhouette || candidate.silhouette || "整体轮廓")} · ${escapeHtml(translateValue(sleeve))}</span>
+        ${model.validation?.colorComplete === false ? `<span class="illustration-warning">颜色待确认</span>` : ""}
       </div>
     `;
   }

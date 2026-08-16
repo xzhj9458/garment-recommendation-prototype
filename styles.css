@@ -1395,6 +1395,13 @@ button {
   line-height: 1.2;
 }
 
+.illustration-warning {
+  color: #9a5b18;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
 .candidate-card-meta {
   display: flex;
   align-items: center;

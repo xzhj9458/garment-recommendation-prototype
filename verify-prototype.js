@@ -46,6 +46,27 @@ async function choose(page, pathName, value) {
     assert(await demo.page.locator(".analysis-surface").count() === 0, "案例页仍保留独立本次影响区域");
     assert(await demo.page.locator(".candidate-card").count() === 3, "默认输入没有生成三个完整方案");
     assert(await demo.page.locator(".outfit-illustration").count() === 3, "候选方案没有生成简易效果图");
+    const illustrationContract = await demo.page.evaluate(() => {
+      const result = window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished());
+      return result.candidates.map((candidate) => ({
+        colorMap: candidate.illustration?.colorMap || null,
+        layers: candidate.illustration?.layers || [],
+        pattern: candidate.illustration?.pattern || null,
+        accessories: candidate.illustration?.accessories || [],
+        geometry: candidate.illustration?.geometry || null,
+        validation: candidate.illustration?.validation || null
+      }));
+    });
+    assert(illustrationContract.every((item) => item.colorMap?.regions?.length >= 3), "效果图没有输出明确的颜色区域映射");
+    assert(illustrationContract.every((item) => item.validation?.colorComplete === true), "效果图颜色映射仍存在未解析的静默回退");
+    assert(illustrationContract.every((item) => item.layers.every((layer) => layer.color && layer.colorName)), "效果图图层没有绑定颜色名称和色值");
+    assert(illustrationContract.every((item) => item.pattern?.target), "效果图没有输出花色目标区域");
+    assert(illustrationContract.every((item) => item.accessories.some((accessory) => accessory.kind === "footwear")), "效果图没有输出鞋履配饰层");
+    assert(illustrationContract.every((item) => item.geometry?.top || item.geometry?.dress), "效果图没有消费组件版型属性");
+    assert(new Set(illustrationContract.map((item) => item.geometry?.outer?.outerStyle || item.geometry?.bottom?.legWidth || item.geometry?.dress?.hemWidth)).size >= 2, "不同候选没有形成可辨识的版型几何差异");
+    const firstIllustrationSvg = await demo.page.locator(".candidate-card").first().locator(".illustration-svg").innerHTML();
+    assert(firstIllustrationSvg.includes("shadow-") && firstIllustrationSvg.includes("pattern-"), "效果图没有渲染投影或花色图案定义");
+    assert(firstIllustrationSvg.includes("<rect") || firstIllustrationSvg.includes("<path"), "效果图没有渲染可识别的服装或配饰形状");
     const desktopLayout = await demo.page.evaluate(() => {
       const input = document.querySelector(".demo-column-input").getBoundingClientRect();
       const results = document.querySelector(".demo-column-results").getBoundingClientRect();
