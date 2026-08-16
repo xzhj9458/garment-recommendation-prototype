@@ -236,7 +236,7 @@
         <span class="snapshot-label">已选条件</span>
         <div class="snapshot-badges">
           <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温、场合与环境">场景: ${escapeHtml([tempLabel, occasionLabel, environmentLabel].filter(Boolean).join(" · "))}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底色与体型脸型">特征: ${escapeHtml(skinToneLabel)} · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底调与体型脸型">特征: ${escapeHtml(skinToneLabel)} · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格、色系与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(paletteLabel)} · ${escapeHtml(trendLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="调整目标与方向">目标: ${escapeHtml(goalLabel)}</button>
           <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="身体与穿着边界">边界: ${escapeHtml(boundaryLabel)}</button>
@@ -267,12 +267,12 @@
       </div>`;
     } else if (group === "personal") {
       const appearanceFields = [
-        ["肤色", [["appearance.skinTone", "肤色底色"], ["appearance.skinValue", "肤色明度"]]],
-        ["发色", [["appearance.hairTone", "发色冷暖"], ["appearance.hairDepth", "发色深浅"]]]
+        ["肤色", [["appearance.skinTone", "肤色底调"], ["appearance.skinValue", "肤色明度"]]],
+        ["发色", [["appearance.hairTone", "发色色调"], ["appearance.hairDepth", "发色深浅"]]]
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>面部色彩</strong><span>肤色底色与发色深浅构成配色判断基础</span></div>
+          <div class="input-section-heading"><strong>面部色彩</strong><span>肤色底调与发色深浅构成配色判断基础</span></div>
           <div class="appearance-matrix-wrap">${appearanceFields.map(([label, fields]) => `
             <div class="appearance-row-card">
               <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>

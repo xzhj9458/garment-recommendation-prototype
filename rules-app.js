@@ -45,6 +45,15 @@
       ]
     },
     {
+      id: "constraints",
+      name: "穿着约束",
+      fields: [
+        { id: "coverage", outputId: "constraints.coverage", name: "覆盖要求" },
+        { id: "contactTexture", outputId: "constraints.contactTexture", name: "贴肤触感" },
+        { id: "mobility", outputId: "constraints.mobility", name: "活动便利" }
+      ]
+    },
+    {
       id: "color",
       name: "颜色搭配",
       fields: [
@@ -62,10 +71,11 @@
   };
 
   const businessDefinitions = [
-    { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期气温"], outputs: ["层数", "袖长", "外层", "覆盖程度", "材质厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", coverage: "strong", material: "strong" } }, hard: true },
-    { id: "occasion", name: "使用场合", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["正式完成度", "行动便利"], overview: { wear: { formality: "strong", movement: "medium" } } },
+    { id: "temperature", name: "温度与层次", topics: ["温度与层次"], inputs: ["近期气温"], outputs: ["穿着层数", "推荐袖长", "外层形态", "面料厚薄"], overview: { wear: { layerCount: "strong", sleeve: "strong", outer: "strong", material: "strong" } }, hard: true },
+    { id: "occasion", name: "使用场合", topics: ["场合要求"], inputs: ["使用场合"], outputs: ["方案形态", "鞋履风格", "箱包皮具"], overview: { wear: { formality: "strong", movement: "medium" } } },
+    { id: "scenarioJoint", name: "场景联合规则", topics: [], inputs: ["近期气温", "使用场合"], outputs: ["穿着框架", "鞋包配饰"], overview: {} },
     { id: "environment", name: "环境特征", topics: [], inputs: ["环境特征"], outputs: ["外层形态", "面料厚薄", "鞋履风格"], overview: {} },
-    { id: "color", name: "面部色彩", topics: ["整体色彩"], inputs: ["肤色底色", "肤色明度", "发色冷暖", "发色深浅"], outputs: ["全身对比度", "近脸安全色", "全身配色", "饰品质感"], overview: { color: { temperature: "strong", contrast: "strong", palette: "strong", placement: "medium" } } },
+    { id: "color", name: "面部色彩", topics: ["整体色彩"], inputs: ["肤色底调", "肤色明度", "发色色调", "发色深浅"], outputs: ["全身对比度", "近脸安全色", "全身配色", "饰品质感"], overview: { color: { temperature: "strong", contrast: "strong", palette: "strong", placement: "medium" } } },
     { id: "body", name: "体型比例", topics: ["身材与比例"], inputs: ["腿身分布", "腰线特征", "横向轮廓", "骨架量感"], outputs: ["整体廓形", "腰线设计", "上装松紧", "下装版型", "连身裙型", "面料厚薄"], overview: { style: { silhouette: "strong", length: "strong", waist: "strong", volume: "strong", details: "light" } } },
     { id: "face", name: "脸型特征", topics: ["脸型与领口"], inputs: ["脸型"], outputs: ["领口方向"], overview: { style: { neckline: "strong" } } },
     { id: "style", name: "风格方向", topics: ["风格方向"], inputs: ["风格方向"], outputs: ["外轮廓", "服装量感", "款式细节", "表面纹理"], overview: { style: { silhouette: "strong", volume: "strong", details: "strong" } } },
@@ -73,7 +83,7 @@
     { id: "formality", name: "正式程度", topics: ["正式程度"], inputs: ["正式程度"], outputs: ["结构完成度", "材质表面"], overview: { wear: { formality: "strong" }, style: { silhouette: "medium", details: "medium" } } },
     { id: "trend", name: "潮流方向", topics: ["潮流方向"], inputs: ["潮流方向", "表达强度"], outputs: ["外轮廓", "服装量感", "表面纹理", "款式细节"], overview: { style: { silhouette: "medium", volume: "medium", details: "strong" } } },
     { id: "goal", name: "调整目标", topics: ["本次偏好"], inputs: ["调整目标", "调整方向"], outputs: ["腰位", "线条方向", "配色对比"], overview: { style: { length: "medium", waist: "strong" }, color: { contrast: "medium" } } },
-    { id: "boundaries", name: "拒绝边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖程度", "行动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
+    { id: "boundaries", name: "拒绝边界", topics: ["拒绝与边界"], inputs: ["明确拒绝", "身体边界"], outputs: ["覆盖要求", "活动便利", "贴肤触感", "排除样式", "排除配色"], overview: { wear: { coverage: "strong", movement: "strong", material: "strong" }, style: { details: "strong" }, color: { contrast: "strong", palette: "strong" } }, hard: true }
   ];
 
   // Each business relation owns a bounded set of fields. The editor uses this
@@ -86,6 +96,10 @@
     occasion: {
       condition: ["input.context.occasion"],
       result: ["requirements.formalityMin", "requirements.movement", "requirements.material"]
+    },
+    scenarioJoint: {
+      condition: ["input.context.temperatureRange", "input.context.occasion"],
+      result: ["requirements.layerCount", "requirements.sleeve", "requirements.outer", "requirements.material", "requirements.formalityMin", "requirements.movement"]
     },
     color: {
       condition: ["input.appearance.skinTone", "input.appearance.skinValue", "input.appearance.hairTone", "input.appearance.hairDepth"],
@@ -132,6 +146,7 @@
       relations: [
         { id: "temperature", name: "近期气温", tag: "边界" },
         { id: "occasion", name: "使用场合", tag: "搭配" },
+        { id: "scenarioJoint", name: "场景联合", tag: "搭配" },
         { id: "environment", name: "环境特征", tag: "搭配" }
       ]
     },
@@ -242,6 +257,7 @@
   const canonicalRelationFields = {
     temperature: ["context.temperatureRange"],
     occasion: ["context.occasion"],
+    scenarioJoint: ["context.temperatureRange", "context.occasion"],
     environment: ["context.environment"],
     color: ["appearance.skinTone", "appearance.skinValue", "appearance.hairTone", "appearance.hairDepth"],
     body: ["body.legRatio", "body.waistDefinition", "body.shoulderHipBalance", "body.boneFrame"],
@@ -254,28 +270,50 @@
     boundaries: CANONICAL_INPUTS.filter((field) => field.id.startsWith("boundaries.")).map((field) => field.id)
   };
 
-  const canonicalMatrixRelations = {
-    temperature: ["scenario"],
-    occasion: ["scenario"],
-    color: ["color"],
-    body: ["body"],
-    face: ["face"],
-    style: ["style"],
-    boundaries: ["boundary"]
-  };
-
-  const canonicalPersonalModuleFields = {
-    color: {
-      skin: ["appearance.skinTone", "appearance.skinValue"],
-      hair: ["appearance.hairTone", "appearance.hairDepth"]
-    },
-    body: {
-      legRatio: ["body.legRatio"],
-      waist: ["body.waistDefinition"],
-      horizontal: ["body.shoulderHipBalance"],
-      boneFrame: ["body.boneFrame"]
-    },
-    face: { shape: ["face.shape"] }
+  const canonicalConditionGroupDefinitions = {
+    temperature: [
+      { id: "temperature", name: "近期气温", type: "matrixAxis", matrixId: "scenario", axisField: "context.temperatureRange", outputFields: ["framework.layerCount", "framework.sleeve", "framework.outer", "framework.materialWeight"] }
+    ],
+    occasion: [
+      { id: "occasion", name: "使用场合", type: "matrixAxis", matrixId: "scenario", axisField: "context.occasion", outputFields: ["framework.form", "accessories.footwear", "accessories.leatherGoods"] }
+    ],
+    scenarioJoint: [
+      { id: "scenario-joint", name: "气温 × 场合", type: "matrix", matrixId: "scenario", forceGroupLevel: true }
+    ],
+    environment: [
+      { id: "environment", name: "环境特征", type: "modifier", fieldId: "context.environment" }
+    ],
+    color: [
+      { id: "color-joint", name: "肤色底调 × 发色深浅", type: "matrix", matrixId: "color" },
+      { id: "skin-value", name: "肤色明度", type: "modifier", fieldId: "appearance.skinValue" },
+      { id: "hair-tone", name: "发色色调", type: "modifier", fieldId: "appearance.hairTone" }
+    ],
+    body: [
+      { id: "body-joint", name: "横向轮廓 × 腿身分布 × 骨架量感", type: "matrix", matrixId: "body" },
+      { id: "waist", name: "腰线特征", type: "modifier", fieldId: "body.waistDefinition" }
+    ],
+    face: [
+      { id: "face", name: "脸型", type: "matrix", matrixId: "face" }
+    ],
+    style: [
+      { id: "style", name: "风格方向", type: "matrix", matrixId: "style" }
+    ],
+    palette: [
+      { id: "palette", name: "色系偏好", type: "modifier", fieldId: "preference.palette" }
+    ],
+    formality: [
+      { id: "formality", name: "正式程度", type: "modifier", fieldId: "preference.formality" }
+    ],
+    trend: [
+      { id: "trend-direction", name: "潮流方向", type: "modifier", fieldId: "preference.trendDirection" },
+      { id: "trend-intensity", name: "方向 × 表达强度", type: "modifier", fieldId: "preference.trendIntensity" }
+    ],
+    goal: [
+      { id: "goal-joint", name: "调整目标 × 调整方向", type: "modifier", fieldId: "goal.direction", forceGroupLevel: true }
+    ],
+    boundaries: [
+      { id: "boundaries", name: "拒绝边界", type: "matrix", matrixId: "boundary" }
+    ]
   };
 
   const canonicalOperationLabels = {
@@ -297,6 +335,8 @@
     memberSelection: {},
     branchSelection: {},
     canonicalBranchSelection: {},
+    canonicalGroupSelection: {},
+    overviewFocus: null,
     personalModuleSelection: {},
     personalValueSelections: {},
     mode: "overview",
@@ -323,9 +363,12 @@
     $("#overviewView").addEventListener("click", (event) => {
       const target = event.target.closest("button[data-overview-target]");
       if (!target) return;
-      const relId = target.dataset.overviewTarget;
+      const route = canonicalOverviewRoute(target.dataset.overviewInput, target.dataset.overviewOutput, target.dataset.overviewTarget);
+      const relId = route.relationId;
       state.selectedId = relId;
       state.selectedTier1 = getTier1ForRelation(relId);
+      state.overviewFocus = { inputId: target.dataset.overviewInput, outputId: target.dataset.overviewOutput };
+      if (route.groupId) state.canonicalGroupSelection[relId] = route.groupId;
       state.mode = "configure";
       renderAll();
     });
@@ -336,6 +379,7 @@
         const btn = event.target.closest("button[data-tier1-id]");
         if (!btn) return;
         state.selectedTier1 = btn.dataset.tier1Id;
+        state.overviewFocus = null;
         const cat = inputTier1Categories.find((c) => c.id === state.selectedTier1);
         if (cat && cat.relations.length) {
           state.selectedId = cat.relations[0].id;
@@ -351,6 +395,7 @@
         const chip = event.target.closest("button[data-tier2-id]");
         if (!chip) return;
         state.selectedId = chip.dataset.tier2Id;
+        state.overviewFocus = null;
         renderRelationPicker();
         renderEditor();
       });
@@ -359,9 +404,9 @@
     const tier3Nav = $("#configTier3Chips");
     if (tier3Nav) {
       tier3Nav.addEventListener("click", (event) => {
-        const moduleChip = event.target.closest("button[data-personal-module-id]");
-        if (moduleChip) {
-          state.personalModuleSelection[state.selectedId] = moduleChip.dataset.personalModuleId;
+        const groupChip = event.target.closest("button[data-canonical-group-id]");
+        if (groupChip) {
+          state.canonicalGroupSelection[state.selectedId] = groupChip.dataset.canonicalGroupId;
           renderRelationPicker();
           renderEditor();
           return;
@@ -374,7 +419,8 @@
         const chip = event.target.closest("button[data-tier3-id]");
         if (!chip) return;
         if (chip.dataset.canonicalBranchKey) {
-          state.canonicalBranchSelection[state.selectedId] = chip.dataset.canonicalBranchKey;
+          const group = selectedCanonicalGroup(state.selectedId);
+          state.canonicalBranchSelection[`${state.selectedId}:${group?.id || "default"}`] = chip.dataset.canonicalBranchKey;
           renderRelationPicker();
           renderEditor();
           return;
@@ -388,6 +434,18 @@
           if (memberId && business) state.memberSelection[business.id] = memberId;
           state.branchSelection[relation.id] = chip.dataset.tier3Id;
         }
+        renderRelationPicker();
+        renderEditor();
+      });
+    }
+
+    const tier4Nav = $("#configTier4Chips");
+    if (tier4Nav) {
+      tier4Nav.addEventListener("click", (event) => {
+        const chip = event.target.closest("button[data-canonical-branch-key]");
+        if (!chip) return;
+        const group = selectedCanonicalGroup(state.selectedId);
+        state.canonicalBranchSelection[`${state.selectedId}:${group?.id || "default"}`] = chip.dataset.canonicalBranchKey;
         renderRelationPicker();
         renderEditor();
       });
@@ -739,7 +797,7 @@
   }
 
   function canonicalBranchConditionParts(branch) {
-    return branch.kind === "matrix" ? canonicalMatrixConditionParts(branch.source) : canonicalConditionParts(branch.source.when);
+    return branch.kind === "matrix" || branch.kind === "matrixAxis" ? canonicalMatrixConditionParts(branch.source) : canonicalConditionParts(branch.source.when);
   }
 
   function canonicalBranchEntryLabel(branch) {
@@ -762,69 +820,116 @@
     return state.canonicalRuleSet.modifiers.modifiers.find((modifier) => modifier.input === fieldId) || null;
   }
 
-  function canonicalBranchGroups(relationId, moduleId = null) {
-    const groups = [];
-    const relationFields = moduleId
-      ? (canonicalPersonalModuleFields[relationId]?.[moduleId] || [])
-      : (canonicalRelationFields[relationId] || []);
-    const matrixNames = {
-      scenario: "气温与场合组合",
-      color: "肤色与发色组合",
-      body: "身体轮廓组合",
-      face: "脸型条件",
-      style: "主风格路线",
-      boundary: "拒绝边界"
-    };
-    (canonicalMatrixRelations[relationId] || []).forEach((matrixId) => {
-      const matrix = canonicalMatrixById(matrixId);
-      if (!matrix) return;
-      groups.push({
-        id: `matrix:${matrixId}`,
-        name: matrixNames[matrixId] || matrix.name,
-        branches: (matrix.rows || []).map((row) => ({
-          key: `matrix:${matrixId}:${row.id}`,
-          kind: "matrix",
-          matrixId,
-          groupName: matrixNames[matrixId] || matrix.name,
-          source: row
-        }))
-      });
+  function canonicalComparableValue(value) {
+    return JSON.stringify(canonicalEditableValue(value));
+  }
+
+  function canonicalMatrixAxisBranches(definition) {
+    const matrix = canonicalMatrixById(definition.matrixId);
+    if (!matrix) return [];
+    const rowsByValue = new Map();
+    (matrix.rows || []).forEach((row) => {
+      const value = row.canonicalInputs?.[definition.axisField];
+      if (value === undefined) return;
+      if (!rowsByValue.has(value)) rowsByValue.set(value, []);
+      rowsByValue.get(value).push(row);
     });
-    relationFields.forEach((fieldId) => {
-      const modifier = canonicalModifierByInput(fieldId);
-      if (!modifier?.rules?.length) return;
-      const definition = canonicalInputDefinition(fieldId);
-      const rules = relationId === "goal" && fieldId === "goal.endpoint"
-        ? modifier.rules.filter((rule) => (rule.then || []).some((action) => action.outputField !== "trace"))
-        : modifier.rules;
-      if (!rules.length) return;
-      groups.push({
-        id: `modifier:${fieldId}`,
-        name: definition?.label || fieldId,
-        branches: rules.map((rule) => ({
-          key: `modifier:${fieldId}:${rule.id}`,
+    return Array.from(rowsByValue.entries()).map(([value, rows]) => {
+      const outputs = {};
+      (definition.outputFields || []).forEach((fieldId) => {
+        const values = rows.map((row) => row.canonicalOutputs?.[fieldId]).filter((item) => item !== undefined);
+        if (values.length === rows.length && values.every((item) => canonicalComparableValue(item) === canonicalComparableValue(values[0]))) {
+          outputs[fieldId] = values[0];
+        }
+      });
+      return {
+        key: `axis:${definition.matrixId}:${definition.axisField}:${value}`,
+        kind: "matrixAxis",
+        matrixId: definition.matrixId,
+        fieldId: definition.axisField,
+        groupName: definition.name,
+        sourceRows: rows,
+        source: {
+          id: `${definition.matrixId}-${definition.axisField}-${value}`,
+          canonicalInputs: { [definition.axisField]: value },
+          canonicalOutputs: outputs
+        }
+      };
+    });
+  }
+
+  function canonicalBranchGroups(relationId) {
+    const definitions = canonicalConditionGroupDefinitions[relationId] || [];
+    return definitions.map((definition) => {
+      let branches = [];
+      let inputFields = [];
+      if (definition.type === "matrix") {
+        const matrix = canonicalMatrixById(definition.matrixId);
+        inputFields = [...new Set((matrix?.rows || []).flatMap((row) => Object.keys(row.canonicalInputs || {})))];
+        branches = (matrix?.rows || []).map((row) => ({
+          key: `matrix:${definition.matrixId}:${row.id}`,
+          kind: "matrix",
+          matrixId: definition.matrixId,
+          groupName: definition.name,
+          source: row
+        }));
+      } else if (definition.type === "matrixAxis") {
+        inputFields = [definition.axisField];
+        branches = canonicalMatrixAxisBranches(definition);
+      } else if (definition.type === "modifier") {
+        const modifier = canonicalModifierByInput(definition.fieldId);
+        inputFields = [...new Set((modifier?.rules || []).flatMap((rule) => canonicalConditionParts(rule.when).map((part) => part.field)))];
+        branches = (modifier?.rules || []).map((rule) => ({
+          key: `modifier:${definition.fieldId}:${rule.id}`,
           kind: "modifier",
-          fieldId,
-          groupName: definition?.label || fieldId,
+          fieldId: definition.fieldId,
+          groupName: definition.name,
           modifier,
           source: rule
-        }))
-      });
-    });
-    return groups;
+        }));
+      }
+      return { ...definition, inputFields, branches };
+    }).filter((group) => group.branches.length);
   }
 
-  function canonicalBranches(relationId, moduleId = null) {
-    return canonicalBranchGroups(relationId, moduleId).flatMap((group) => group.branches);
+  function canonicalBranches(relationId) {
+    return canonicalBranchGroups(relationId).flatMap((group) => group.branches);
   }
 
-  function selectedCanonicalBranch(relationId, moduleId = null) {
-    const selectionKey = moduleId ? `${relationId}:${moduleId}` : relationId;
-    const branches = canonicalBranches(relationId, moduleId);
+  function canonicalUsesGroupLevel(groups) {
+    return groups.length > 1 || groups.some((group) => group.forceGroupLevel);
+  }
+
+  function selectedCanonicalGroup(relationId) {
+    const groups = canonicalBranchGroups(relationId);
+    const selectedId = state.canonicalGroupSelection[relationId];
+    const group = groups.find((item) => item.id === selectedId) || groups[0] || null;
+    if (group) state.canonicalGroupSelection[relationId] = group.id;
+    return group;
+  }
+
+  function selectedCanonicalBranch(relationId, groupId = null) {
+    const group = groupId
+      ? canonicalBranchGroups(relationId).find((item) => item.id === groupId)
+      : selectedCanonicalGroup(relationId);
+    const branches = group?.branches || [];
+    const selectionKey = `${relationId}:${group?.id || "default"}`;
     const selectedKey = state.canonicalBranchSelection[selectionKey];
     const branch = branches.find((item) => item.key === selectedKey) || branches[0] || null;
     if (branch) state.canonicalBranchSelection[selectionKey] = branch.key;
     return branch;
+  }
+
+  function canonicalOverviewRoute(inputId, outputId, fallbackRelationId) {
+    const relationIds = inputTier1Categories.flatMap((category) => category.relations.map((relation) => relation.id));
+    const orderedIds = [fallbackRelationId, ...relationIds.filter((relationId) => relationId !== fallbackRelationId)];
+    for (const relationId of orderedIds) {
+      const group = canonicalBranchGroups(relationId).find((item) => item.inputFields.includes(inputId)
+        && item.branches.some((branch) => canonicalBranchOutputItems(branch).some((output) => output.fieldId === outputId)));
+      if (group) return { relationId, groupId: group.id };
+    }
+    const fallbackGroup = canonicalBranchGroups(fallbackRelationId).find((group) => group.inputFields.includes(inputId));
+    return { relationId: fallbackRelationId, groupId: fallbackGroup?.id || null };
   }
 
   function isCanonicalRelation(relationId) {
@@ -903,10 +1008,15 @@
 
   function canonicalWhySummary(branch) {
     if (branch.kind === "modifier") return branch.source.why?.summary || "";
+    if (branch.kind === "matrixAxis") {
+      return branch.fieldId === "context.temperatureRange"
+        ? "近期气温单独确定稳定的层数、袖长、外层与材质厚薄；场合差异由场景联合规则继续细化。"
+        : "使用场合单独确定稳定的鞋履与箱包方向；温度差异由场景联合规则继续细化。";
+    }
     if (branch.source.why?.summary) return branch.source.why.summary;
     const defaults = {
       scenario: "气温决定热防护骨架，场合决定方案形态和鞋包完成度，两者共同形成场景基底。",
-      color: "肤色底色与发色深浅共同确定近脸安全色、全身对比和配色角色；肤色明度与发色冷暖再提供修饰。",
+      color: "肤色底调与发色深浅共同确定近脸安全色、全身对比和配色角色；肤色明度与发色色调再提供修饰。",
       body: "腿身分布、横向轮廓与骨架量感共同决定廓形、腰线、松紧和下装版型；腰线特征作为独立修饰条件。",
       face: "领口通过纵横线条和开合程度修饰脸型轮廓，同时协调耳饰与织物软配。",
       style: "主风格控制廓形与鞋履路线，但不得覆盖体型、气温和拒绝边界。",
@@ -925,7 +1035,7 @@
       : canonicalImpactOutputIds(business.id, branch);
     const definitions = branchIds.map(canonicalOutputDefinition).filter(Boolean);
     if (operation === "annotate") return definitions.filter((definition) => definition.kind === "object");
-    if (branch.kind === "matrix" && branch.matrixId !== "boundary") return definitions;
+    if ((branch.kind === "matrix" || branch.kind === "matrixAxis") && branch.matrixId !== "boundary") return definitions;
     return definitions.filter((definition) => definition.options?.length);
   }
 
@@ -934,7 +1044,8 @@
     return items.length ? items.map((item) => {
       const definition = canonicalOutputDefinition(item.fieldId);
       const value = canonicalOutputValueLabel(item.fieldId, item.value);
-      return `<div class="branch-output-item"><span>${escapeHtml(definition?.label || item.fieldId)}</span><strong>${escapeHtml(value)}</strong></div>`;
+      const isFocused = state.overviewFocus?.outputId === item.fieldId;
+      return `<div class="branch-output-item ${isFocused ? "is-overview-focus" : ""}"><span>${escapeHtml(definition?.label || item.fieldId)}</span><strong>${escapeHtml(value)}</strong></div>`;
     }).join("") : `<p class="muted-copy">当前分支不直接改写穿搭结果，仅保留规则追溯。</p>`;
   }
 
@@ -946,14 +1057,15 @@
     return `<div class="canonical-action-list">${entries.map(([fieldId, rawValue], index) => {
       const definition = canonicalOutputDefinition(fieldId);
       const value = canonicalEditableValue(rawValue);
+      const axisLocked = branch.kind === "matrixAxis";
       return `<div class="canonical-action-row ${definition.kind === "object" ? "is-structured" : ""}" data-canonical-matrix-row="${index}">
-        <label class="editor-field canonical-output-field"><span>影响内容</span><select data-canonical-matrix-field="${escapeHtml(fieldId)}">${canonicalSelectOptions(allowed.map((item) => [item.id, item.label]), fieldId)}</select></label>
+        <label class="editor-field canonical-output-field"><span>影响内容</span><select data-canonical-matrix-field="${escapeHtml(fieldId)}" ${axisLocked ? "disabled" : ""}>${canonicalSelectOptions(allowed.map((item) => [item.id, item.label]), fieldId)}</select></label>
         <span class="canonical-action-arrow" aria-hidden="true">→</span>
         ${definition.kind === "object" ? renderCanonicalStructuredValue(fieldId, value) : `<label class="editor-field canonical-output-value"><span>具体结果</span><select data-canonical-matrix-value="${escapeHtml(fieldId)}">${canonicalSelectOptions(definition.options, value)}</select></label>`}
-        <button class="icon-button is-danger" type="button" data-canonical-remove-output="${escapeHtml(fieldId)}" title="删除输出项" aria-label="删除输出项">×</button>
+        ${axisLocked ? "" : `<button class="icon-button is-danger" type="button" data-canonical-remove-output="${escapeHtml(fieldId)}" title="删除输出项" aria-label="删除输出项">×</button>`}
       </div>`;
     }).join("") || `<p class="muted-copy">当前分支尚未配置输出。</p>`}</div>
-      <button class="text-button canonical-add-action" type="button" data-canonical-add-output>＋ 添加输出结果</button>`;
+      ${branch.kind === "matrixAxis" ? "" : `<button class="text-button canonical-add-action" type="button" data-canonical-add-output>＋ 添加输出结果</button>`}`;
   }
 
   function renderCanonicalStructuredValue(fieldId, value) {
@@ -1007,25 +1119,16 @@
       <button class="text-button canonical-add-action" type="button" data-canonical-add-modifier-action>＋ 添加输出结果</button>`;
   }
 
-  function renderCanonicalPersonalBranchSelector(business, module, branch) {
-    const groups = canonicalBranchGroups(business.id, module.id);
-    return `<div class="canonical-personal-branch-selector">
-      <div class="canonical-personal-branch-heading"><strong>具体分支</strong><small>分支入口只展示输入条件，输出结果在下方统一配置。</small></div>
-      <div class="canonical-personal-branch-list">${groups.map((group) => `<section><span>${escapeHtml(group.name)}</span><div>${group.branches.map((item) => `<button type="button" class="config-tier3-btn ${item.key === branch.key ? "is-active" : ""}" data-canonical-branch-key="${escapeHtml(item.key)}">${escapeHtml(canonicalBranchEntryLabel(item))}</button>`).join("")}</div></section>`).join("")}</div>
-    </div>`;
-  }
-
-  function renderCanonicalEditor(business, branch, options = {}) {
-    const module = options.module || null;
-    const moduleFields = module ? (canonicalPersonalModuleFields[business.id]?.[module.id] || []).map((fieldId) => fieldId) : null;
-    const relationOutputs = canonicalImpactOutputIds(business.id, null, moduleFields).map(canonicalOutputDefinition).filter(Boolean);
+  function renderCanonicalEditor(business, branch) {
+    const group = selectedCanonicalGroup(business.id);
+    const relationOutputs = canonicalImpactOutputIds(business.id, null, group?.inputFields).map(canonicalOutputDefinition).filter(Boolean);
     const branchLabel = canonicalBranchEntryLabel(branch);
     const thenEditor = branch.kind === "modifier" ? renderCanonicalModifierThen(business, branch) : renderCanonicalMatrixThen(business, branch);
     return `
       <section class="rule-summary-module canonical-rule-summary">
         <div class="rule-summary-submodule relation-impact-submodule">
           <div class="rule-summary-heading"><span class="module-index">01</span><div><strong>关系影响输出</strong></div></div>
-          <div class="scope-pill-list">${relationOutputs.map((output) => `<span class="scope-pill">${escapeHtml(output.label)}</span>`).join("") || `<span class="scope-pill">暂无已连接结果</span>`}</div>
+          <div class="scope-pill-list">${relationOutputs.map((output) => `<span class="scope-pill ${state.overviewFocus?.outputId === output.id ? "is-overview-focus" : ""}">${escapeHtml(output.label)}</span>`).join("") || `<span class="scope-pill">暂无已连接结果</span>`}</div>
         </div>
         <div class="rule-summary-submodule branch-output-submodule">
           <div class="rule-summary-heading"><span class="module-index">02</span><div><strong>当前分支具体输出</strong><small>${escapeHtml(branchLabel)}</small></div></div>
@@ -1034,7 +1137,6 @@
       </section>
       <section class="rule-config-module canonical-rule-config">
         <div class="rule-config-heading"><span>03</span><strong>规则配置</strong><small>条件 / 结果 / 依据</small></div>
-        ${module ? renderCanonicalPersonalBranchSelector(business, module, branch) : ""}
         <article class="natural-rule-card canonical-natural-rule-card" data-canonical-branch="${escapeHtml(branch.key)}">
           <section class="rule-clause rule-clause--when">
             <div class="clause-heading"><span class="clause-prefix">WHEN</span><strong>满足条件</strong></div>
@@ -1046,7 +1148,7 @@
           </section>
           <section class="rule-clause rule-clause--why">
             <div class="clause-heading"><span class="clause-prefix">WHY</span><strong>配置依据</strong></div>
-            <label class="editor-field editor-field--wide"><span>业务说明</span><textarea rows="3" data-canonical-why>${escapeHtml(canonicalWhySummary(branch))}</textarea></label>
+            <label class="editor-field editor-field--wide"><span>业务说明</span><textarea rows="3" data-canonical-why ${branch.kind === "matrixAxis" ? "readonly" : ""}>${escapeHtml(canonicalWhySummary(branch))}</textarea></label>
           </section>
         </article>
       </section>`;
@@ -1091,7 +1193,7 @@
     const symbol = overviewImpactSymbols[level] || "●";
     const label = overviewImpactLabels[level] || "有关联";
     return `<td class="overview-impact-cell is-${escapeHtml(level)}">
-      <button type="button" class="overview-impact-btn is-${escapeHtml(level)}" data-overview-target="${escapeHtml(row.relationId)}" data-overview-domain="${escapeHtml(domain.id)}" data-overview-field="${escapeHtml(field.id)}" aria-label="${escapeHtml(row.label)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(row.label)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
+      <button type="button" class="overview-impact-btn is-${escapeHtml(level)}" data-overview-target="${escapeHtml(row.relationId)}" data-overview-input="${escapeHtml(row.mappingId)}" data-overview-output="${escapeHtml(field.outputId)}" aria-label="${escapeHtml(row.label)}对${escapeHtml(field.name)}：${escapeHtml(label)}" title="${escapeHtml(row.label)} → ${escapeHtml(field.name)} (${escapeHtml(label)})，点击前往配置">
         <span class="impact-symbol" aria-hidden="true">${symbol}</span>
       </button>
     </td>`;
@@ -1147,8 +1249,8 @@
               return `
                 <button type="button" class="mobile-impact-item is-${escapeHtml(i.level)}"
                   data-overview-target="${escapeHtml(row.relationId)}"
-                  data-overview-domain="${escapeHtml(i.domain.id)}" 
-                  data-overview-field="${escapeHtml(i.field.id)}"
+                  data-overview-input="${escapeHtml(row.mappingId)}"
+                  data-overview-output="${escapeHtml(i.field.outputId)}"
                   aria-label="${escapeHtml(row.label)}对${escapeHtml(i.field.name)}：${escapeHtml(label)}">
                   <span class="impact-field">${escapeHtml(i.field.name)}</span>
                   <div class="impact-status-wrap">
@@ -1164,13 +1266,37 @@
     }).join("");
   }
 
+  function renderCanonicalBranchButton(branch, selected, label = canonicalBranchEntryLabel(branch)) {
+    const isActive = branch.key === selected?.key;
+    return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn ${isActive ? "is-active" : ""}" data-tier3-id="${escapeHtml(branch.key)}" data-canonical-branch-key="${escapeHtml(branch.key)}" title="条件分支：${escapeHtml(canonicalBranchEntryLabel(branch))}">
+      <span class="chip-status-dot is-active"></span>
+      <span>${escapeHtml(label)}</span>
+    </button>`;
+  }
+
+  function renderCanonicalBranchCollection(group, selected) {
+    const shouldCluster = group.branches.length > 8 && group.branches.every((branch) => canonicalBranchConditionParts(branch).length > 1);
+    if (!shouldCluster) {
+      return `<section class="config-tier3-group is-single"><div class="config-tier3-group-items">${group.branches.map((branch) => renderCanonicalBranchButton(branch, selected)).join("")}</div></section>`;
+    }
+    const clusters = new Map();
+    group.branches.forEach((branch) => {
+      const parts = canonicalBranchConditionParts(branch);
+      const clusterLabel = parts[0]?.valueLabel || "其他条件";
+      if (!clusters.has(clusterLabel)) clusters.set(clusterLabel, []);
+      clusters.get(clusterLabel).push({ branch, label: parts.slice(1).map((part) => part.value === true ? part.fieldLabel : part.valueLabel).join(" × ") || canonicalBranchEntryLabel(branch) });
+    });
+    return Array.from(clusters.entries()).map(([label, items]) => `<section class="config-tier3-group is-grouped">
+      <span class="config-tier3-group-label">${escapeHtml(label)}</span>
+      <div class="config-tier3-group-items">${items.map((item) => renderCanonicalBranchButton(item.branch, selected, item.label)).join("")}</div>
+    </section>`).join("");
+  }
+
   function renderRelationPicker() {
     if (!state.selectedTier1) {
       state.selectedTier1 = getTier1ForRelation(state.selectedId) || "context";
     }
     const currentCat = inputTier1Categories.find((cat) => cat.id === state.selectedTier1) || inputTier1Categories[0];
-    const tier3Label = $("#configTier3Label");
-    if (tier3Label) tier3Label.textContent = state.selectedTier1 === "personal" ? "具体输入项" : "具体分支";
     if (!currentCat.relations.some((r) => r.id === state.selectedId)) {
       state.selectedId = currentCat.relations[0]?.id || "temperature";
     }
@@ -1189,49 +1315,40 @@
       tier2Nav.innerHTML = currentCat.relations.map((relItem) => {
         const fullRel = allRels.find((r) => r.id === relItem.id);
         const isActive = relItem.id === state.selectedId;
-        const canonicalCount = isCanonicalRelation(relItem.id) ? canonicalBranches(relItem.id).length : 0;
+        const canonicalGroups = isCanonicalRelation(relItem.id) ? canonicalBranchGroups(relItem.id) : [];
+        const canonicalCount = canonicalGroups.flatMap((group) => group.branches).length;
         const branchCount = canonicalCount || fullRel?.branchCount || 0;
-        const personalModuleCount = personalModulesFor(relItem.id).length;
-        const countLabel = state.selectedTier1 === "personal" && personalModuleCount ? `${personalModuleCount}个输入项` : `${branchCount}个分支`;
+        const countLabel = canonicalUsesGroupLevel(canonicalGroups) ? `${canonicalGroups.length}组 · ${branchCount}分支` : `${branchCount}个分支`;
         return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier2-btn ${isActive ? "is-active" : ""} ${relItem.tag === "边界" ? "is-hard-chip" : ""}" data-tier2-id="${escapeHtml(relItem.id)}"><span>${escapeHtml(relItem.name)}</span><small>${countLabel}</small></button>`;
       }).join("");
     }
 
     const tier3Nav = $("#configTier3Chips");
+    const tier3Label = $("#configTier3Label");
+    const tier4Row = $("#configTier4Row");
+    const tier4Nav = $("#configTier4Chips");
+    if (tier4Row) tier4Row.hidden = true;
+    if (tier4Nav) tier4Nav.innerHTML = "";
     if (tier3Nav) {
       const business = businessRelationById(state.selectedId);
-      if (state.selectedTier1 === "personal" && business) {
-        const modules = personalModulesFor(business.id);
-        const selectedModule = selectedPersonalModule(business);
-        tier3Nav.innerHTML = modules.map((module) => {
-          const isActive = module.id === selectedModule?.id;
-          const hasRuleBranch = canonicalBranches(business.id, module.id).length > 0 || Boolean(module.relationFamily);
-          return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn config-tier3-module-btn ${isActive ? "is-active" : ""}" data-personal-module-id="${escapeHtml(module.id)}" title="${hasRuleBranch ? "具体分支在配置区展开" : "查看该输入项如何进入服装输出"}">
-            <span class="chip-status-dot ${hasRuleBranch ? "is-active" : "is-derived"}"></span>
-            <span>${escapeHtml(module.name)}</span>
-          </button>`;
-        }).join("");
-        return;
-      }
       if (isCanonicalRelation(state.selectedId)) {
-        const selected = selectedCanonicalBranch(state.selectedId);
-        const groups = canonicalBranchGroups(state.selectedId).map((group) => {
-          const buttons = group.branches.map((branch) => {
-            const isActive = branch.key === selected?.key;
-            return `<button type="button" role="tab" aria-selected="${isActive}" class="config-tier3-btn ${isActive ? "is-active" : ""}" data-tier3-id="${escapeHtml(branch.key)}" data-canonical-branch-key="${escapeHtml(branch.key)}" title="条件分支：${escapeHtml(canonicalBranchEntryLabel(branch))}">
-              <span class="chip-status-dot is-active"></span>
-              <span>${escapeHtml(canonicalBranchEntryLabel(branch))}</span>
-            </button>`;
-          }).join("");
-          const showGroupName = canonicalBranchGroups(state.selectedId).length > 1;
-          return `<section class="config-tier3-group ${showGroupName ? "is-grouped" : "is-single"}">
-            ${showGroupName ? `<span class="config-tier3-group-label">${escapeHtml(group.name)}</span>` : ""}
-            <div class="config-tier3-group-items">${buttons}</div>
-          </section>`;
-        }).join("");
-        tier3Nav.innerHTML = groups || `<span class="config-tier3-empty">暂无具体分支</span>`;
+        const groups = canonicalBranchGroups(state.selectedId);
+        const group = selectedCanonicalGroup(state.selectedId);
+        const selected = selectedCanonicalBranch(state.selectedId, group?.id);
+        const usesGroupLevel = canonicalUsesGroupLevel(groups);
+        if (tier3Label) tier3Label.textContent = usesGroupLevel ? "条件分组" : "具体分支";
+        if (usesGroupLevel) {
+          tier3Nav.innerHTML = groups.map((item) => `<button type="button" role="tab" aria-selected="${item.id === group?.id}" class="config-tier3-btn config-tier3-module-btn ${item.id === group?.id ? "is-active" : ""}" data-canonical-group-id="${escapeHtml(item.id)}">
+            <span class="chip-status-dot is-active"></span><span>${escapeHtml(item.name)}</span><small>${item.branches.length}个分支</small>
+          </button>`).join("");
+          if (tier4Row) tier4Row.hidden = false;
+          if (tier4Nav) tier4Nav.innerHTML = group ? renderCanonicalBranchCollection(group, selected) : `<span class="config-tier3-empty">暂无具体分支</span>`;
+        } else {
+          tier3Nav.innerHTML = group ? renderCanonicalBranchCollection(group, selected) : `<span class="config-tier3-empty">暂无具体分支</span>`;
+        }
         return;
       }
+      if (tier3Label) tier3Label.textContent = "具体分支";
       const members = business?.mappingMembers || [];
       const groups = members.map((member) => {
         const branches = member.rules || (member.rule ? [member.rule] : []);
@@ -1265,15 +1382,15 @@
       return;
     }
 
-    const personalModule = state.selectedTier1 === "personal" ? selectedPersonalModule(business) : null;
-    if (personalModule && isCanonicalRelation(business.id)) {
+    if (isCanonicalRelation(business.id)) {
       $("#editorActions").hidden = true;
-      const branch = selectedCanonicalBranch(business.id, personalModule.id);
-      $("#editorContent").innerHTML = branch
-        ? renderCanonicalEditor(business, branch, { module: personalModule })
-        : `<div class="editor-empty"><strong>当前输入项暂无可配置分支</strong></div>`;
+      const group = selectedCanonicalGroup(business.id);
+      const branch = selectedCanonicalBranch(business.id, group?.id);
+      $("#editorContent").innerHTML = branch ? renderCanonicalEditor(business, branch) : `<div class="editor-empty"><strong>当前关系暂无可配置分支</strong></div>`;
       return;
     }
+
+    const personalModule = state.selectedTier1 === "personal" ? selectedPersonalModule(business) : null;
     const personalRelation = personalModule ? personalModuleRelation(business, personalModule) : null;
     $("#editorActions").hidden = personalModule ? !personalRelation : !business.mappingMembers.length;
 
@@ -1286,13 +1403,6 @@
       } else {
         $("#editorContent").innerHTML = renderPersonalCalculationEditor(business, personalModule);
       }
-      return;
-    }
-
-    if (isCanonicalRelation(business.id)) {
-      $("#editorActions").hidden = true;
-      const branch = selectedCanonicalBranch(business.id);
-      $("#editorContent").innerHTML = branch ? renderCanonicalEditor(business, branch) : `<div class="editor-empty"><strong>当前关系暂无可配置分支</strong></div>`;
       return;
     }
 
@@ -1796,8 +1906,8 @@
 
   function handleEditorChange(event) {
     const business = businessRelationById(state.selectedId);
-    const canonicalModule = state.selectedTier1 === "personal" ? selectedPersonalModule(business) : null;
-    const canonicalBranch = isCanonicalRelation(state.selectedId) ? selectedCanonicalBranch(state.selectedId, canonicalModule?.id) : null;
+    const canonicalGroup = isCanonicalRelation(state.selectedId) ? selectedCanonicalGroup(state.selectedId) : null;
+    const canonicalBranch = canonicalGroup ? selectedCanonicalBranch(state.selectedId, canonicalGroup.id) : null;
     if (canonicalBranch && handleCanonicalEditorChange(event, business, canonicalBranch)) return;
     const member = event.target.closest("select[data-member-select]");
     if (member && business) {
@@ -1864,8 +1974,8 @@
     const business = businessRelationById(state.selectedId);
     if (!business) return;
 
-    const canonicalModule = state.selectedTier1 === "personal" ? selectedPersonalModule(business) : null;
-    const canonicalBranch = isCanonicalRelation(state.selectedId) ? selectedCanonicalBranch(state.selectedId, canonicalModule?.id) : null;
+    const canonicalGroup = isCanonicalRelation(state.selectedId) ? selectedCanonicalGroup(state.selectedId) : null;
+    const canonicalBranch = canonicalGroup ? selectedCanonicalBranch(state.selectedId, canonicalGroup.id) : null;
     if (canonicalBranch && handleCanonicalEditorClick(event, business, canonicalBranch)) return;
 
     const personalValueButton = event.target.closest("button[data-personal-value-field]");
@@ -1966,6 +2076,13 @@
     return option ? option[0] : rawValue;
   }
 
+  function setCanonicalMatrixValue(row, fieldId, value) {
+    const outputs = row.canonicalOutputs ||= {};
+    const previous = outputs[fieldId];
+    if (previous && typeof previous === "object" && !Array.isArray(previous) && Object.prototype.hasOwnProperty.call(previous, "preferred")) previous.preferred = value;
+    else outputs[fieldId] = value;
+  }
+
   function handleCanonicalEditorChange(event, business, branch) {
     const matrixField = event.target.closest("[data-canonical-matrix-field]");
     if (matrixField && branch.kind === "matrix") {
@@ -1984,14 +2101,13 @@
     }
 
     const matrixValue = event.target.closest("[data-canonical-matrix-value]");
-    if (matrixValue && branch.kind === "matrix") {
+    if (matrixValue && (branch.kind === "matrix" || branch.kind === "matrixAxis")) {
       const fieldId = matrixValue.dataset.canonicalMatrixValue;
       const outputs = branch.source.canonicalOutputs ||= {};
       const definition = canonicalOutputDefinition(fieldId);
       const value = canonicalParsedOption(definition, matrixValue.value);
-      const previous = outputs[fieldId];
-      if (previous && typeof previous === "object" && !Array.isArray(previous) && Object.prototype.hasOwnProperty.call(previous, "preferred")) previous.preferred = value;
-      else outputs[fieldId] = value;
+      setCanonicalMatrixValue(branch.source, fieldId, value);
+      (branch.sourceRows || []).forEach((row) => setCanonicalMatrixValue(row, fieldId, value));
       markDirty();
       renderAll();
       return true;
@@ -2048,11 +2164,16 @@
     }
 
     const structuredValue = event.target.closest("[data-canonical-structured-field]");
-    if (structuredValue && branch.kind === "matrix") {
+    if (structuredValue && (branch.kind === "matrix" || branch.kind === "matrixAxis")) {
       const fieldId = structuredValue.dataset.canonicalStructuredField;
       const key = structuredValue.dataset.canonicalStructuredKey;
       const output = branch.source.canonicalOutputs[fieldId] ||= canonicalDefaultOutputValue(fieldId);
-      output[key] = structuredValue.value.split(/[、,，]/).map((item) => item.trim()).filter(Boolean);
+      const values = structuredValue.value.split(/[、,，]/).map((item) => item.trim()).filter(Boolean);
+      output[key] = values;
+      (branch.sourceRows || []).forEach((row) => {
+        const rowOutput = row.canonicalOutputs[fieldId] ||= canonicalDefaultOutputValue(fieldId);
+        rowOutput[key] = [...values];
+      });
       markDirty();
       renderAll();
       return true;
@@ -2069,15 +2190,6 @@
   }
 
   function handleCanonicalEditorClick(event, business, branch) {
-    const branchButton = event.target.closest("button[data-canonical-branch-key]");
-    if (branchButton) {
-      const module = state.selectedTier1 === "personal" ? selectedPersonalModule(business) : null;
-      const selectionKey = module ? `${business.id}:${module.id}` : business.id;
-      state.canonicalBranchSelection[selectionKey] = branchButton.dataset.canonicalBranchKey;
-      renderEditor();
-      return true;
-    }
-
     const removeOutput = event.target.closest("[data-canonical-remove-output]");
     if (removeOutput && branch.kind === "matrix") {
       const fieldId = removeOutput.dataset.canonicalRemoveOutput;

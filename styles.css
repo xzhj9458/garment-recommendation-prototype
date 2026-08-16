@@ -2281,6 +2281,12 @@ button {
   opacity: 0.5;
 }
 
+.config-tier3-btn small {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 500;
+}
+
 .config-tier3-module-btn {
   min-width: 84px;
   justify-content: center;
@@ -2471,6 +2477,13 @@ button {
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.branch-output-item.is-overview-focus,
+.scope-pill.is-overview-focus {
+  border-color: var(--green-dark);
+  background: var(--green-soft);
+  box-shadow: 0 0 0 1px rgba(37, 93, 72, 0.12);
 }
 
 .rule-config-module {
@@ -2962,60 +2975,6 @@ button {
 
 .canonical-add-action {
   margin-top: 7px;
-}
-
-.canonical-personal-branch-selector {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
-  margin-bottom: 9px;
-  padding: 8px 10px;
-  border: 1px solid #dbece2;
-  border-radius: var(--radius-md);
-  background: #f6fbf8;
-}
-
-.canonical-personal-branch-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.canonical-personal-branch-heading strong {
-  color: var(--text);
-  font-size: 11px;
-}
-
-.canonical-personal-branch-heading small {
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
-.canonical-personal-branch-list {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
-}
-
-.canonical-personal-branch-list > section {
-  display: grid;
-  flex: 0 0 auto;
-  gap: 4px;
-}
-
-.canonical-personal-branch-list > section > span {
-  color: var(--text-muted);
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.canonical-personal-branch-list > section > div {
-  display: flex;
-  gap: 6px;
 }
 
 .rule-clause {

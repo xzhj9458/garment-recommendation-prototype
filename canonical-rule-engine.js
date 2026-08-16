@@ -4,8 +4,8 @@
   const DATA = window.GarmentCanonicalData || {};
   const REGISTRY = DATA.fieldRegistry || {};
   const STORAGE_KEYS = {
-    draft: "garment-canonical-rules-draft",
-    published: "garment-canonical-rules-published"
+    draft: "garment-canonical-rules-draft-v2",
+    published: "garment-canonical-rules-published-v2"
   };
 
   function clone(value) {
@@ -196,6 +196,7 @@
       framework: { form: input["context.occasion"] === "social" ? "onePieceDress" : "separatesTrouser" },
       garment: { neckline: "crewNeck", bottomCut: "straightLeg", dressCut: null },
       accessories: {},
+      constraints: { coverage: "standard", contactTexture: "standard", mobility: "standard" },
       color: { distribution: { main: [], nearFace: [], accent: [] }, nearFacePalette: { preferred: [], compatible: [], forbidden: [] } },
       explanation: { summary: "统一规则结果", why: [], validation: [] },
       trace: { inputs: clone(input), rules: [], modifierRules: [], conflicts: [], missingInputs: [], pendingModifiers: [], fallback: false }
@@ -206,7 +207,7 @@
       result.trace.rules.push(scenario.id);
       Object.entries(scenario.canonicalOutputs || {}).forEach(([field, value]) => {
         const [group, key] = field.split(".");
-        if (result[group] && ["layerCount", "sleeve", "outer", "materialWeight", "footwear", "leatherGoods"].includes(key)) result[group][key] = clone(preferred(value));
+        if (result[group] && ["form", "layerCount", "sleeve", "outer", "materialWeight", "footwear", "leatherGoods"].includes(key)) result[group][key] = clone(preferred(value));
       });
     } else {
       result.trace.fallback = true;

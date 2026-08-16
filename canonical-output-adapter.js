@@ -122,6 +122,19 @@
       applied.push("framework.materialWeight->requirements.material");
     }
 
+    if (output.constraints?.coverage === "full") {
+      requirements.coverage = "full";
+      applied.push("constraints.coverage->requirements.coverage");
+    }
+    if (output.constraints?.contactTexture === "soft") {
+      requirements.texture = "smooth";
+      applied.push("constraints.contactTexture->requirements.texture");
+    }
+    if (output.constraints?.mobility === "required") {
+      requirements.movement = true;
+      applied.push("constraints.mobility->requirements.movement");
+    }
+
     const waist = { relaxed: "relaxed", natural: "natural", raised: "raised" }[output.garment?.waistline];
     if (waist) {
       requirements.waist = waist;

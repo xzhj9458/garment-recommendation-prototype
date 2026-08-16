@@ -917,7 +917,7 @@
       { item: "具体商品的尺码与纸样", affectsPlan: true, validation: "核对成衣肩、胸、腰、臀和关键长度，并试穿确认活动量。", failure: "关键部位尺寸不足、衣长落点偏离或动作受限。" },
       { item: "面料厚度、织法与垂坠度", affectsPlan: false, validation: `确认商品能实现“${decision.requirements.material}”且不过度蓬胀。`, failure: "实际面料过厚、过硬或蓬胀，改变了当前轮廓。" },
       ...(palette ? [{ item: `配色方案“${palette.name}”的实物呈现`, affectsPlan: false, validation: palette.validation || "在自然光下核对近脸色、主色和辅助色。", failure: "实物色温、明度或彩度偏离当前配色方向。" }] : []),
-      ...(unknownColor ? [{ item: "外观色彩事实不完整", affectsPlan: false, validation: "在自然光下确认肤色底色、肤色明度、发色冷暖和发色深浅。", failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。" }] : [])
+      ...(unknownColor ? [{ item: "外观色彩事实不完整", affectsPlan: false, validation: "在自然光下确认肤色底调、肤色明度、发色色调和发色深浅。", failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。" }] : [])
     ].map((item) => ({ ...item, field: item.item, impact: item.affectsPlan, howToVerify: item.validation, failureCondition: item.failure }));
 
     return {

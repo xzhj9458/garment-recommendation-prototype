@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>穿搭推荐规则管理</title>
-  <link rel="stylesheet" href="styles.css?v=relation-config-1.6">
-  <script defer src="rules-data.js"></script>
-  <script defer src="canonical-data.js"></script>
-  <script defer src="canonical-input-adapter.js"></script>
-  <script defer src="canonical-rule-engine.js"></script>
-  <script defer src="canonical-output-adapter.js"></script>
-  <script defer src="rule-engine.js"></script>
-  <script defer src="rules-app.js?v=relation-config-1.6"></script>
+  <link rel="stylesheet" href="styles.css?v=logic-2.0">
+  <script defer src="rules-data.js?v=logic-2.0"></script>
+  <script defer src="canonical-data.js?v=logic-2.0"></script>
+  <script defer src="canonical-input-adapter.js?v=logic-2.0"></script>
+  <script defer src="canonical-rule-engine.js?v=logic-2.0"></script>
+  <script defer src="canonical-output-adapter.js?v=logic-2.0"></script>
+  <script defer src="rule-engine.js?v=logic-2.0"></script>
+  <script defer src="rules-app.js?v=logic-2.0"></script>
 </head>
 <body class="rules-page">
   <header class="app-header">
@@ -73,6 +73,10 @@
         <div class="config-tier-row config-tier3-row">
           <span class="config-tier-label" id="configTier3Label">具体分支</span>
           <nav class="config-tier3-chips" id="configTier3Chips" aria-label="具体子规则分支" role="tablist"></nav>
+        </div>
+        <div class="config-tier-row config-tier4-row" id="configTier4Row" hidden>
+          <span class="config-tier-label" id="configTier4Label">具体分支</span>
+          <nav class="config-tier3-chips config-tier4-chips" id="configTier4Chips" aria-label="具体子规则分支" role="tablist"></nav>
         </div>
       </div>
 
