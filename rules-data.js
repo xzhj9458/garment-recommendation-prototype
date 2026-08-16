@@ -1289,6 +1289,36 @@
     }))
   ]);
 
+  const dressFamilies = [
+    ["straight", "简洁直线", 3],
+    ["soft", "柔和收放", 2],
+    ["relaxed", "自然留量", 1],
+    ["tailored", "利落剪裁", 4],
+    ["street", "都市箱型", 2],
+    ["retro", "复古收放", 3]
+  ];
+  const dressCuts = [
+    ["aLineMidi", "A字中长连衣裙"],
+    ["shirtDress", "衬衫连衣裙"],
+    ["wrapDress", "裹身连衣裙"],
+    ["columnDress", "直筒连衣裙"]
+  ];
+  const dressSleeves = [["long", "长袖"], ["threeQuarter", "七分袖"], ["short", "短袖"]];
+  const dressWaists = [["raised", "偏高腰"], ["natural", "自然腰"], ["relaxed", "松弛直身"]];
+  const dressComponents = dressFamilies.flatMap(([family, familyName, formality]) =>
+    dressCuts.flatMap(([dressCut, cutName]) =>
+      dressSleeves.flatMap(([sleeve, sleeveName]) =>
+        dressWaists.map(([waistPosition, waistName]) => ({
+          id: `DRESS-${family.toUpperCase()}-${dressCut.toUpperCase()}-${sleeve.toUpperCase()}-${waistPosition.toUpperCase()}`,
+          name: `${familyName}${sleeveName}${waistName}${cutName}`,
+          category: "dress",
+          enabled: true,
+          attributes: { family, dressCut, sleeve, waistPosition, formality, movement: true }
+        }))
+      )
+    )
+  );
+
   const components = [
     ...[
       ["TOP-LONG-STRAIGHT", "轻薄长袖衬衫", "top", "straight", "long", 3, true],
@@ -1356,7 +1386,8 @@
     ].map(([id, name, family, bottomType, coverage, formality, movement]) => ({
       id, name, category: "bottom", enabled: true, attributes: { family, bottomType, coverage, formality, movement }
     })),
-    ...formalComponents
+    ...formalComponents,
+    ...dressComponents
   ];
 
   const familyLine = {
@@ -1376,6 +1407,9 @@
     if (component.category === "top" && !attributes.coverage) {
       attributes.coverage = attributes.sleeve === "long" ? "full" : attributes.sleeve === "threeQuarter" ? "regular" : "light";
     }
+    if (component.category === "dress" && !attributes.coverage) {
+      attributes.coverage = attributes.sleeve === "long" ? "full" : attributes.sleeve === "threeQuarter" ? "regular" : "light";
+    }
     if (component.category === "outer" && !attributes.coverage) {
       attributes.coverage = attributes.outerKind === "warm" ? "full" : attributes.outerKind === "light" ? "regular" : "light";
     }
@@ -1386,33 +1420,51 @@
     attributes.texture ||= /针织|柔软|垂坠/.test(name) ? "soft" : "smooth";
     attributes.materialClass ||= attributes.outerKind === "warm" ? "warm" : attributes.sleeve === "short" ? "light" : "regular";
     attributes.silhouette ||= family;
+    if (component.category === "top") {
+      attributes.topFit ||= family === "tailored" ? "fitted" : ["relaxed", "street"].includes(family) ? "oversized" : "regular";
+    }
+    if (component.category === "bottom" && attributes.bottomType !== "short") {
+      attributes.bottomCut ||= attributes.bottomType === "skirt"
+        ? component.id.includes("SOFT-REGULAR") ? "straightSkirt" : "aLineSkirt"
+        : ["relaxed", "street"].includes(family) ? "wideLeg" : family === "tailored" ? "tapered" : "straightLeg";
+    }
   });
 
+  const bottomWaistLabels = { raised: "偏高腰", natural: "自然腰", relaxed: "松弛腰" };
+  const bottomWaistVariants = components
+    .filter((component) => component.category === "bottom")
+    .flatMap((component) => Object.entries(bottomWaistLabels)
+      .filter(([waistPosition]) => waistPosition !== component.attributes.waistPosition)
+      .map(([waistPosition, waistLabel]) => ({
+        ...component,
+        id: `${component.id}-WAIST-${waistPosition.toUpperCase()}`,
+        name: `${waistLabel}${component.name}`,
+        attributes: { ...component.attributes, waistPosition }
+      })));
+  components.push(...bottomWaistVariants);
+
   const defaultInput = {
-    context: { temperatureRange: "10_18", occasion: "commute" },
-    preference: { style: "urban", formality: 2, trendDirection: "relaxedTailoring", trendIntensity: "light" },
-    face: { shape: "unknown" },
+    context: { temperatureRange: "10_18", occasion: "commute", environment: ["none"] },
+    preference: { style: "urban", formality: "commute", palette: "any", trendDirection: "relaxedTailoring", trendIntensity: "light" },
+    face: { shape: "standard" },
     appearance: {
-      skinTemperature: 3,
-      hairTemperature: 3,
-      eyeTemperature: 2,
-      skinValue: 3,
-      hairValue: 1,
-      eyeValue: 1,
-      skinChroma: 2,
-      hairChroma: 2,
-      eyeChroma: 2
+      skinTone: "warmLean",
+      skinValue: "deep",
+      hairTone: "warm",
+      hairDepth: "light"
     },
     body: {
-      heightPresence: 3,
-      legRatio: 3,
-      waistDefinition: 2,
-      shoulderHipBalance: 3
+      legRatio: "longLegs",
+      waistDefinition: "moderate",
+      shoulderHipBalance: "hipDominant",
+      boneFrame: "medium"
     },
-    goal: { endpoint: "unknown", direction: "keep" },
+    goal: { endpoint: "", direction: "keep" },
     boundaries: {
       rejectSkirt: false,
+      rejectTight: false,
       rejectDefinedWaist: false,
+      rejectDeepNeck: false,
       rejectHighContrast: false,
       strictCoverage: false,
       movementFriendly: false,

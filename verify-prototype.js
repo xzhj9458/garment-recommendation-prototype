@@ -79,9 +79,23 @@ async function choose(page, pathName, value) {
     assert(await demo.page.locator('.snapshot-chip').count() === 5, "已选条件快照缺少分类");
     assert(await demo.page.locator('.snapshot-chip').nth(4).isVisible(), "已选条件快照的边界项被遮盖");
 
+    await demo.page.locator('button[data-group="context"]').click();
+    assert(await demo.page.locator('button[data-input-set-path="context.environment"]').count() === 3, "环境特征没有显示三个规范选项");
+    await demo.page.locator('button[data-input-set-path="context.environment"][data-input-set-value="acTransit"]').click();
+    const environmentState = await demo.page.evaluate(() => {
+      const input = window.GarmentRuleEngine.Store.loadInput();
+      const result = window.GarmentRuleEngine.run(input, window.GarmentRuleEngine.Store.loadPublished());
+      return { environment: input.context.environment, modifierRules: result.canonical?.result?.trace?.modifierRules || [] };
+    });
+    assert(JSON.stringify(environmentState.environment) === JSON.stringify(["acTransit"]), "常规环境没有与强空调环境互斥");
+    assert(environmentState.modifierRules.includes("MOD-ENV-AC"), "环境特征没有进入规范修饰规则");
+    await demo.page.locator('button[data-input-set-path="context.environment"][data-input-set-value="none"]').click();
+
     await demo.page.locator('button[data-group="personal"]').click();
-    assert(await demo.page.locator(".range-step").count() >= 65, "连续档位没有渲染为刻度按钮");
-    assert(await demo.page.locator(".range-endpoint").count() >= 26, "连续档位缺少两端极值标注");
+    assert(await demo.page.locator('[data-input-path^="appearance.eye"], [data-input-path$="Chroma"], [data-input-path="body.heightPresence"]').count() === 0, "已移除的瞳色、彩度或纵向高度仍出现在案例输入中");
+    assert(await demo.page.locator('button[data-input-path="body.boneFrame"]').count() === 3, "骨架量感没有显示三个规范选项");
+    assert(await demo.page.locator(".range-step").count() >= 26, "规范连续档位没有渲染为刻度按钮");
+    assert(await demo.page.locator(".range-endpoint").count() >= 16, "规范连续档位缺少两端极值标注");
     assert((await demo.page.locator(".range-track").first().innerText()).trim() === "", "连续档位中间刻度不应重复显示长文案");
     const inlineRangeState = await demo.page.evaluate(() => ({
       count: document.querySelectorAll(".appearance-matrix-wrap .range-form-item--inline").length,
@@ -90,29 +104,82 @@ async function choose(page, pathName, value) {
       radioCount: document.querySelectorAll(".appearance-matrix-wrap .range-step[role=radio]").length,
       checkedCount: document.querySelectorAll(".appearance-matrix-wrap .range-step[aria-checked=true]").length
     }));
-    assert(inlineRangeState.count === 9, "外观色彩没有将九个连续量统一为行内控件");
+    assert(inlineRangeState.count === 4, "面部色彩没有按肤色与发色的四个规范字段显示");
     assert(inlineRangeState.rowHeights.every((height) => height <= 36), "外观色彩行内控件仍占用过高的垂直空间");
     assert(!inlineRangeState.hasLegacyLabel, "外观色彩仍显示重复的冷暖字段文案");
-    assert(inlineRangeState.radioCount === 45 && inlineRangeState.checkedCount === 9, "外观色彩刻度缺少可访问的单选状态");
-    await choose(demo.page, "appearance.skinValue", "4");
-    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().appearance.skinValue === 4), "颜色输入没有写入规范化字段");
-    await choose(demo.page, "body.legRatio", "0");
-    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().body.legRatio === 0), "身体输入没有写入规范化字段");
+    assert(inlineRangeState.radioCount === 14 && inlineRangeState.checkedCount === 4, "面部色彩刻度缺少可访问的单选状态");
+    await choose(demo.page, "appearance.skinValue", "deep");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().appearance.skinValue === "deep"), "颜色输入没有写入规范字段");
+    const canonicalBridge = await demo.page.evaluate(() => {
+      const input = window.GarmentRuleEngine.Store.loadInput();
+      const result = window.GarmentRuleEngine.run(input, window.GarmentRuleEngine.Store.loadPublished());
+      return {
+        present: Boolean(result.canonical?.result),
+        skinValue: result.canonical?.migration?.input?.["appearance.skinValue"],
+        canonicalContrast: result.canonical?.result?.color?.contrastMode,
+        legacyContrast: result.requirements?.colorContrast,
+        applied: result.canonicalOverlay?.applied || [],
+        deferred: result.canonicalOverlay?.deferred || [],
+        paletteMatch: result.canonicalOverlay?.paletteMatch || null,
+        selectedPaletteId: result.requirements?.palettePlanId,
+        candidatePaletteIds: result.candidates.map((candidate) => candidate.palette?.id),
+        pendingModifiers: result.canonical?.result?.trace?.pendingModifiers || [],
+        modifierRules: result.canonical?.result?.trace?.modifierRules || []
+      };
+    });
+    assert(canonicalBridge.present, "统一规则参考引擎未接入案例运行页");
+    assert(canonicalBridge.skinValue === "deep", "肤色明度没有直接进入核心契约");
+    assert(canonicalBridge.canonicalContrast === "medium" && canonicalBridge.legacyContrast === "中等", "规范配色对比度未覆盖旧候选契约");
+    assert(canonicalBridge.applied.includes("color.contrastMode->requirements.colorContrast"), "规范输出适配器未记录配色覆盖来源");
+    assert(canonicalBridge.paletteMatch?.matched === true, "Canonical color output did not match a renderable palette plan");
+    assert(canonicalBridge.paletteMatch.planId === canonicalBridge.selectedPaletteId, "Legacy palette resolution overwrote the canonical palette match");
+    assert(canonicalBridge.candidatePaletteIds.includes(canonicalBridge.selectedPaletteId), "Candidates did not use the canonical palette match");
+    assert(!canonicalBridge.deferred.includes("color.distribution/nearFacePalette"), "Completed color mapping is still marked as deferred");
+    const canonicalFormBridge = await demo.page.evaluate(() => {
+      const result = window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished());
+      return {
+        form: result.canonical?.result?.framework?.form,
+        bottomTypes: result.candidates.map((candidate) => candidate.bottomType)
+      };
+    });
+    assert(canonicalFormBridge.form === "separatesTrouser", "规范方案形态未进入候选约束");
+    assert(canonicalFormBridge.bottomTypes.every((type) => type === "trouser"), "分体裤装仍生成了非裤装候选");
+    assert(canonicalBridge.pendingModifiers.length === 0, "已批准修饰规则仍被标记为待审核");
+    assert(canonicalBridge.modifierRules.includes("MOD-SKIN-VALUE-DEEP"), "统一规则参考引擎未执行肤色明度修饰");
+    await choose(demo.page, "body.legRatio", "longTorso");
+    assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().body.legRatio === "longTorso"), "身体输入没有写入规范字段");
+    await choose(demo.page, "body.boneFrame", "large");
+    const boneFrameState = await demo.page.evaluate(() => {
+      const input = window.GarmentRuleEngine.Store.loadInput();
+      const result = window.GarmentRuleEngine.run(input, window.GarmentRuleEngine.Store.loadPublished());
+      return {
+        value: input.body.boneFrame,
+        rules: result.canonical?.result?.trace?.rules || [],
+        candidates: result.candidates.length,
+        blocked: result.blocked,
+        conflicts: result.conflicts,
+        requirements: result.requirements
+      };
+    });
+    assert(boneFrameState.value === "large" && boneFrameState.rules.some((ruleId) => /^B\d+/.test(ruleId)), "骨架量感没有进入身体决策矩阵");
+    assert(boneFrameState.candidates > 0, `骨架量感组合没有生成候选：${JSON.stringify(boneFrameState)}`);
     const defaultIllustration = await demo.page.locator(".candidate-card").first().locator(".illustration-svg").innerHTML();
     await choose(demo.page, "face.shape", "long");
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().face.shape === "long"), "脸型输入没有写入规范化字段");
     const faceIllustration = await demo.page.locator(".candidate-card").first().locator(".illustration-svg").innerHTML();
     assert(defaultIllustration !== faceIllustration, "脸型变化没有改变效果图中的领口表现");
     const beforeColor = await demo.page.evaluate(() => window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished()).candidates.map((candidate) => candidate.palette?.name));
-    await choose(demo.page, "appearance.skinTemperature", "0");
+    await choose(demo.page, "appearance.skinTone", "cool");
     const afterColor = await demo.page.evaluate(() => window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished()).candidates.map((candidate) => candidate.palette?.name));
-    assert(JSON.stringify(beforeColor) !== JSON.stringify(afterColor), "切换外观色温没有改变候选配色");
-    assert(await demo.page.locator('.appearance-matrix-wrap button[data-input-path="appearance.skinTemperature"][aria-checked="true"]').getAttribute("data-value") === "0", "行内色温刻度没有同步当前选中状态");
+    assert(JSON.stringify(beforeColor) !== JSON.stringify(afterColor), "切换肤色底色没有改变候选配色");
+    assert(await demo.page.locator('.appearance-matrix-wrap button[data-input-path="appearance.skinTone"][aria-checked="true"]').getAttribute("data-value") === "cool", "肤色底色刻度没有同步当前选中状态");
     assert(await demo.page.locator('.appearance-matrix-wrap .range-form-item--inline').first().locator(".range-current").count() === 0, "选中极值时仍重复显示当前语义");
     const beforeGoalIllustrations = await demo.page.locator(".candidate-card .illustration-svg").evaluateAll((elements) => elements.map((element) => element.innerHTML));
     await demo.page.locator('button[data-group="goal-boundaries"]').click();
     assert((await demo.page.locator('button[data-group="goal-boundaries"]').innerText()) === "目标边界", "目标边界分类名称未统一");
     assert(await demo.page.locator('button[data-input-path="goal.endpoint"]').count() > 0 && await demo.page.locator('button[data-input-path="goal.direction"]').count() > 0, "调整目标与调整方向没有统一为按钮组");
+    assert(await demo.page.locator('input[data-input-boolean^="boundaries."]').count() === 8, "拒绝边界没有完整显示八个规范字段");
+    assert(await demo.page.locator('input[data-input-boolean="boundaries.rejectTight"], input[data-input-boolean="boundaries.rejectDeepNeck"]').count() === 2, "新增的紧绷与低领边界缺失");
     await demo.page.locator('button[data-input-path="goal.endpoint"][data-value="waist"]').click();
     await demo.page.locator('button[data-input-path="goal.direction"][data-value="strengthen"]').click();
     assert(await demo.page.evaluate(() => window.GarmentRuleEngine.Store.loadInput().goal.endpoint === "waist"), "目标输入没有写入规范化字段");
@@ -130,15 +197,15 @@ async function choose(page, pathName, value) {
 
     await demo.page.locator(".detail-button").first().click();
     const detailText = await demo.page.locator("#candidateDetailContent").innerText();
-    assert(detailText.includes("简易效果图") && detailText.includes("完整穿着单品") && detailText.includes("怎么验证") && !detailText.includes("undefined"), "方案详情没有消费完整候选契约");
+    assert(detailText.includes("简易效果图") && detailText.includes("完整穿着单品") && detailText.includes("方案形态") && detailText.includes("鞋履") && detailText.includes("怎么验证") && !detailText.includes("undefined"), "方案详情没有消费完整候选契约");
     await demo.page.locator("[data-close-dialog]").click();
 
     const paletteState = await demo.page.evaluate(() => {
       const result = window.GarmentRuleEngine.run(window.GarmentPrototypeData.defaultInput, window.GarmentRuleEngine.Store.loadPublished());
-      return result.candidates.map((candidate) => ({ name: candidate.palette?.name, contrast: candidate.colorContrast, chroma: candidate.colorChroma }));
+      return result.candidates.map((candidate) => ({ name: candidate.palette?.name, contrast: candidate.colorContrast }));
     });
     assert(new Set(paletteState.map((item) => item.name)).size >= 2, "完整方案没有形成不同配色路线");
-    assert(paletteState.every((item) => item.contrast === "中等" && item.chroma === "中等"), "候选配色与分析强度不一致");
+    assert(paletteState.every((item) => item.contrast === "中等"), "候选配色与规范对比度不一致");
 
     await demo.page.locator('button[data-group="preference"]').click();
     const preferenceLayout = await demo.page.evaluate(() => {
@@ -147,17 +214,18 @@ async function choose(page, pathName, value) {
         display: getComputedStyle(stack).display,
         direction: getComputedStyle(stack).flexDirection,
         styleButtons: document.querySelectorAll('[data-input-path="preference.style"]').length,
-        trendCards: document.querySelectorAll('[data-input-path="preference.trendDirection"].trend-option-card').length,
+        paletteButtons: document.querySelectorAll('[data-input-path="preference.palette"]').length,
+        trendButtons: document.querySelectorAll('[data-input-path="preference.trendDirection"]').length,
         styleColumns: getComputedStyle(document.querySelector(".option-scale--choice-flow .pill-segment-control")).gridTemplateColumns.split(" ").length,
-        trendColumns: getComputedStyle(document.querySelector(".trend-option-list")).gridTemplateColumns.split(" ").length,
-        trendDescriptions: document.querySelectorAll(".trend-option-card small").length
+        trendColumns: getComputedStyle(document.querySelector('[data-input-path="preference.trendDirection"]').parentElement).gridTemplateColumns.split(" ").length,
+        trendDescriptions: document.querySelectorAll('[data-input-path="preference.trendDirection"] small').length
       };
     });
     assert(preferenceLayout.display === "flex" && preferenceLayout.direction === "column", "风格偏好没有改为通栏单列流");
-    assert(preferenceLayout.styleButtons >= 5 && preferenceLayout.trendCards >= 4, "风格偏好通栏选项没有完整渲染");
+    assert(preferenceLayout.styleButtons === 8 && preferenceLayout.paletteButtons === 4 && preferenceLayout.trendButtons === 4, "风格偏好没有完整渲染规范字段选项");
     assert(preferenceLayout.styleColumns === 4 && preferenceLayout.trendColumns === 4, "风格和潮流选项没有使用统一的四列网格");
     assert(preferenceLayout.trendDescriptions === 0, "潮流方向按钮仍包含输入区说明文案");
-    assert(await demo.page.locator('button[data-input-path="preference.trendDirection"]').count() >= 4, "潮流方向没有读取动态资料库");
+    assert(await demo.page.locator('button[data-input-path="preference.trendDirection"]').count() === 4, "潮流方向没有读取规范字段注册表");
     assert(await demo.page.locator('button[data-input-path="preference.trendIntensity"]').count() === 2, "选定潮流后没有表达强度");
     const summaryBeforeTrend = await demo.page.evaluate(() => ({
       snapshotHeight: document.querySelector("#conditionSnapshot").getBoundingClientRect().height,
@@ -190,6 +258,46 @@ async function choose(page, pathName, value) {
     const warmText = await demo.page.locator(".candidate-card").first().innerText();
     assert(warmText.includes("短袖") && warmText.includes("无外层"), "温度没有改变袖长与外层");
 
+    await choose(demo.page, "context.occasion", "social");
+    const onePieceUi = await demo.page.evaluate(() => {
+      const result = window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished());
+      return {
+        canonicalForm: result.canonical?.result?.framework?.form,
+        forms: result.candidates.map((candidate) => candidate.form),
+        dressIds: result.candidates.map((candidate) => candidate.dressId),
+        componentCategories: result.candidates.map((candidate) => candidate.components.map((component) => component.category))
+      };
+    });
+    assert(onePieceUi.canonicalForm === "onePieceDress", "聚会场合没有进入规范一件式轨道");
+    assert(onePieceUi.forms.every((form) => form === "onePieceDress") && onePieceUi.dressIds.every(Boolean), "一件式轨道仍由上下装伪装组装");
+    assert(onePieceUi.componentCategories.every((categories) => categories.includes("dress") && !categories.includes("top") && !categories.includes("bottom")), "一件式候选仍混入上装或下装组件");
+    assert((await demo.page.locator(".candidate-card").first().innerText()).includes("连衣裙"), "一件式候选没有在案例卡片显示真实连衣裙单品");
+
+    const canonicalDressMapping = await demo.page.evaluate(() => {
+      const input = structuredClone(window.GarmentRuleEngine.Store.loadInput());
+      input.body.boneFrame = "medium";
+      input.body.legRatio = "longTorso";
+      const result = window.GarmentRuleEngine.run(input, window.GarmentRuleEngine.Store.loadPublished());
+      const rejectedInput = structuredClone(input);
+      rejectedInput.boundaries.rejectSkirt = true;
+      const rejected = window.GarmentRuleEngine.run(rejectedInput, window.GarmentRuleEngine.Store.loadPublished());
+      return {
+        canonicalDressCut: result.canonical?.result?.garment?.dressCut,
+        canonicalWaist: result.canonical?.result?.garment?.waistline,
+        candidateDressCuts: result.candidates.map((candidate) => candidate.dressCut),
+        candidateWaists: result.candidates.map((candidate) => candidate.waist),
+        applied: result.canonicalOverlay?.applied || [],
+        rejectedForm: rejected.canonical?.result?.framework?.form,
+        rejectedCandidateForms: rejected.candidates.map((candidate) => candidate.form)
+      };
+    });
+    assert(Boolean(canonicalDressMapping.canonicalDressCut), "完整身体输入没有生成规范连身裙型");
+    assert(canonicalDressMapping.candidateDressCuts.every((cut) => cut === canonicalDressMapping.canonicalDressCut), "规范连身裙型没有约束实际连衣裙单品");
+    assert(canonicalDressMapping.candidateWaists.every((waist) => waist === canonicalDressMapping.canonicalWaist), "规范腰线没有约束实际连衣裙单品");
+    assert(canonicalDressMapping.applied.includes("garment.dressCut->requirements.canonicalDressCut"), "连身裙型映射没有记录规范来源");
+    assert(canonicalDressMapping.rejectedForm === "separatesTrouser" && canonicalDressMapping.rejectedCandidateForms.every((form) => form === "separatesTrouser"), "拒绝裙装没有熔断一件式候选");
+    await choose(demo.page, "context.occasion", "commute");
+
     const demoNavCenter = await demo.page.locator(".page-nav").evaluate((element) => {
       const rect = element.getBoundingClientRect();
       return rect.left + rect.width / 2;
@@ -209,26 +317,32 @@ async function choose(page, pathName, value) {
       const engine = window.GarmentRuleEngine;
       const data = window.GarmentPrototypeData.defaultRuleSet;
       const tests = engine.runTests(data);
+      const validation = engine.validateRuleSet(data);
       const broken = engine.clone(data);
       broken.decisionRules[0].conditions[0].field = "input.missingField";
       return {
         tests: tests.length,
         failed: tests.filter((test) => !test.pass).map((test) => test.id),
+        validationErrors: validation.errors,
         catchesDangling: engine.validateRuleSet(broken).errors.some((error) => error.type === "missing_condition_field")
       };
     });
     assert(ruleChecks.tests >= 7 && ruleChecks.failed.length === 0, "规则回归用例存在失败");
+    assert(ruleChecks.validationErrors.length === 0, `当前规则集校验失败：${JSON.stringify(ruleChecks.validationErrors)}`);
     assert(ruleChecks.catchesDangling, "规则校验器没有捕获悬空条件字段");
     assert(!(await rules.page.locator("#configureView").isVisible()), "规则配置与总览仍然同时挤在主工作区");
-    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 10, "规则总览没有展示十类业务关系");
+    assert(await rules.page.locator("#overviewMatrix tbody tr").count() === 27, "规则总览没有逐项展示 27 个规范输入字段");
     assert(await rules.page.locator("#overviewMatrix thead tr").count() === 2, "规则总览没有使用两层结果表头");
-    assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("穿着框架") && (await rules.page.locator("#overviewMatrix thead").innerText()).includes("服装样式") && (await rules.page.locator("#overviewMatrix thead").innerText()).includes("颜色搭配"), "规则总览结果大类表头不完整");
+    const overviewHeaderText = await rules.page.locator("#overviewMatrix thead").innerText();
+    assert(["穿着框架", "服装样式", "鞋包配饰", "颜色搭配"].every((label) => overviewHeaderText.includes(label)), "规则总览 18 项规范输出表头不完整");
     assert(!(await rules.page.locator("#overviewMatrix thead").innerText()).includes("候选处理"), "规则总览仍把候选处理作为横向字段");
     assert(await rules.page.locator("#overviewMatrix .overview-impact-cell.is-strong").count() > 0, "规则总览没有展示直接影响色块");
     const overviewNames = await rules.page.locator("#overviewMatrix tbody .overview-row-label > span").allInnerTexts();
-    const expectedOrder = ["近期温度", "使用场合", "外观色彩", "体型比例", "脸型特征", "风格方向", "正式程度", "潮流方向", "调整目标", "拒绝边界"];
+    const expectedOrder = await rules.page.evaluate(() => window.GarmentCanonicalData.fieldRegistry.inputs.map((field) => field.label));
     assert(JSON.stringify(overviewNames) === JSON.stringify(expectedOrder), `规则总览排序不正确：${overviewNames.join("、")}`);
-    assert((await rules.page.locator("#overviewMatrix thead").innerText()).includes("层数") && await rules.page.locator('#overviewMatrix tr:has(th span:text-is("近期温度")) .overview-impact-cell.is-strong').count() >= 4, "总览没有展示温度对穿着框架的具体影响");
+    assert(["环境特征", "骨架量感", "色系偏好", "拒绝紧绷贴身", "拒绝低领开阔"].every((label) => overviewNames.includes(label)), "规则总览缺少新增规范字段");
+    assert(["瞳色色调", "瞳色明度", "瞳色彩度", "纵向高度"].every((label) => !overviewNames.includes(label)), "规则总览仍展示已退出契约的旧字段");
+    assert(overviewHeaderText.includes("层数") && await rules.page.locator('#overviewMatrix tr:has(th span:text-is("近期气温范围")) .overview-impact-cell.is-strong').count() >= 4, "总览没有展示温度对穿着框架的具体影响");
 
     const rulesNavCenter = await rules.page.locator(".page-nav").evaluate((element) => {
       const rect = element.getBoundingClientRect();
@@ -250,43 +364,47 @@ async function choose(page, pathName, value) {
     assert(await rules.page.locator('#configTier1Tabs button[data-tier1-id="preference"].is-active').count() === 1, "一级分类未同步为风格偏好");
     assert(await rules.page.locator('#configTier2Chips button[data-tier2-id="trend"].is-active').count() === 1, "二级关系未同步为潮流方向");
     assert(await rules.page.locator("#configTier1Tabs button[data-tier1-id]").count() === 4, "一级分类导航缺少 4 个主分类");
+    assert(await rules.page.locator('#configTier2Chips button[data-tier2-id="palette"]').count() === 1, "色系偏好没有作为独立二级关系");
     assert(await rules.page.locator(".relationship-main").count() === 0, "关系配置仍保留重复的关系列表容器");
     assert(await rules.page.locator("#ruleTableBody").count() === 0, "关系配置仍保留业务关系表格");
-    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 3, "潮流方向没有作为动态分支管理");
+    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 7, "潮流方向没有完整展示方向与表达强度分支");
     const trendEditorText = await rules.page.locator("#editorContent").innerText();
-    assert(trendEditorText.includes("理念来源") && trendEditorText.includes("会优先使用的服装路线"), "潮流方向配置缺少理念与服装映射");
+    assert(["关系影响输出", "当前分支具体输出", "满足条件", "输出结果", "配置依据"].every((label) => trendEditorText.includes(label)), "潮流方向没有使用统一规则配置结构");
+    assert(!/MOD-|utilityLayering|relaxedTailoring|sheerLayering/.test(trendEditorText), "潮流方向配置暴露了内部规则编号或英文枚举");
 
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="personal"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').click();
     assert((await rules.page.locator("#configTier3Label").innerText()) === "具体输入项", "个人特征三级导航没有标记为具体输入项");
-    assert((await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').innerText()).includes("3个输入项"), "外观色彩没有按输入项数量展示");
+    assert((await rules.page.locator('#configTier2Chips button[data-tier2-id="color"]').innerText()).includes("2个输入项"), "面部色彩没有按规范输入项数量展示");
     const colorModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
-    assert(JSON.stringify(colorModuleLabels) === JSON.stringify(["肤色", "发色", "瞳色"]), "外观色彩没有按输入模块展开");
+    assert(JSON.stringify(colorModuleLabels) === JSON.stringify(["肤色", "发色"]), `面部色彩没有按肤色与发色展开：${JSON.stringify(colorModuleLabels)}`);
     assert(colorModuleLabels.every((label) => !/冷|暖|低|中等|高/.test(label)), "外观色彩仍把条件选项当作三级模块");
     const personalSkinText = await rules.page.locator("#editorContent").innerText();
     assert(personalSkinText.includes("关系影响输出") && personalSkinText.includes("当前分支具体输出") && personalSkinText.includes("规则配置"), "个人特征没有使用统一的01/02/03规则模块");
-    assert(personalSkinText.includes("当前输入分支") && personalSkinText.includes("服装冷暖属性") && personalSkinText.includes("近脸色") && personalSkinText.includes("主色"), "肤色没有展示从输入到具体服装颜色的完整链路");
-    assert(await rules.page.locator(".personal-input-row").count() === 3 && await rules.page.locator(".output-color-swatch").count() >= 3, "肤色输入项或配色角色没有具体化展示");
+    assert(personalSkinText.includes("肤色与发色组合") && personalSkinText.includes("全身对比度") && personalSkinText.includes("近脸安全色") && personalSkinText.includes("60-30-10配比"), "肤色没有展示从规范输入到颜色输出的完整链路");
+    assert(await rules.page.locator(".canonical-personal-branch-list button").count() === 18, "肤色没有展示15个综合色彩分支与3个明度修饰分支");
+    assert(await rules.page.locator(".canonical-structured-value").count() === 2 && await rules.page.locator("[data-canonical-matrix-field]").count() === 4, "近脸颜色或60-30-10配色仍不可完整配置");
     assert(!personalSkinText.includes("模块影响输出") && !personalSkinText.includes("模块条件范围") && !personalSkinText.includes("推导配置"), "个人特征仍保留专用模块标题");
+    const preferredColorInput = rules.page.locator('[data-canonical-structured-field="color.nearFacePalette"][data-canonical-structured-key="preferred"]');
+    await preferredColorInput.fill("海军蓝、雾蓝");
+    await preferredColorInput.press("Tab");
+    assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("海军蓝、雾蓝"), "修改近脸首选色后当前分支摘要没有同步");
 
     await rules.page.locator('#configTier2Chips button[data-tier2-id="body"]').click();
     const bodyModuleLabels = await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts();
-    assert(JSON.stringify(bodyModuleLabels) === JSON.stringify(["纵向高度", "腿身分布", "腰线特征", "横向轮廓"]), "体型比例没有按身材输入项展开");
+    assert(JSON.stringify(bodyModuleLabels) === JSON.stringify(["腿身分布", "腰线特征", "横向轮廓", "骨架量感"]), "体型比例没有按规范身材输入项展开");
     await rules.page.locator('#configTier3Chips button[data-personal-module-id="legRatio"]').click();
-    assert(await rules.page.locator(".personal-branch-btn").count() === 5, "腿身比例模块没有在配置区展示具体分支");
-    assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("优先服装路线"), "腿身比例分支没有展示对应输出结果");
+    assert(await rules.page.locator(".canonical-personal-branch-list button").count() === 27, "腿身分布没有进入27个身体轮廓组合分支");
+    assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("下装版型"), "腿身分布没有展示对应规范输出结果");
 
     await rules.page.locator('#configTier2Chips button[data-tier2-id="face"]').click();
     assert(JSON.stringify(await rules.page.locator("#configTier3Chips button[data-personal-module-id]").allInnerTexts()) === JSON.stringify(["脸型"]), "脸型没有作为独立输入模块展示");
     assert((await rules.page.locator("#editorTitle").innerText()) === "脸型特征", "点击二级导航未切换到脸型特征");
 
-    const faceScope = await rules.page.evaluate(() => ({
-      conditionNames: [...document.querySelectorAll(".condition-locked-name")].map((el) => el.textContent.replace(/[【】]/g, "").trim()),
-      actionFields: [...document.querySelectorAll('select[data-edit^="actions."][data-edit$=".field"]')].map((el) => el.selectedOptions[0]?.textContent.trim())
-    }));
-    assert(faceScope.conditionNames.length > 0 && faceScope.conditionNames.every((label) => label === "脸型"), "脸型关系没有锁定脸型条件");
-    assert(faceScope.actionFields.every((label) => label === "推荐领口方向" || label === "脸型配合说明"), "脸型关系暴露了无关结果字段");
-    assert(await rules.page.locator('.natural-condition-row:first-child [data-edit="conditions.0.value"]:disabled').count() === 1, "分支入口条件值仍可编辑");
+    assert(await rules.page.locator(".canonical-personal-branch-list button").count() === 6, "脸型没有展开六个规范条件分支");
+    assert((await rules.page.locator(".canonical-when-statement").innerText()).includes("脸型轮廓"), "脸型关系没有锁定脸型条件");
+    assert(await rules.page.locator(".rule-clause--when input, .rule-clause--when select").count() === 0, "分支入口条件仍可在配置区修改");
+    assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("领口方向"), "脸型关系没有展示规范领口输出");
     assert(await rules.page.locator("#editorContent").innerText().then((text) => !text.includes("配置内容")), "编辑区仍保留重复的配置内容切换器");
     assert(await rules.page.locator(".rule-summary-module").count() === 1 && await rules.page.locator(".rule-config-module").count() === 1, "规则页没有拆分关系结果与配置模块");
     assert(await rules.page.locator(".rule-summary-submodule").count() === 2, "关系结果没有形成两个清晰的主模块");
@@ -297,17 +415,26 @@ async function choose(page, pathName, value) {
     await rules.page.locator('#configTier1Tabs button[data-tier1-id="context"]').click();
     await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();
     assert((await rules.page.locator("#configTier3Label").innerText()) === "具体分支", "场景条件三级导航没有恢复为具体分支");
-    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 6, "温度关系三级导航没有展开六个分支");
+    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 30, "温度关系没有展开30个气温与场合组合分支");
     const tier3Labels = await rules.page.locator("#configTier3Chips button[data-tier3-id]").allInnerTexts();
     assert(tier3Labels.every((label) => !/层数|袖长|外层|覆盖|厚薄/.test(label)), "三级分支入口混入了具体推荐结果");
     assert((await rules.page.locator("#editorContent").innerText()).includes("输出结果"), "配置编辑器没有形成输入到结果的闭环");
     assert((await rules.page.locator("#editorContent").innerText()).includes("具体输出"), "当前分支没有展示具体输出模块");
 
-    await rules.page.locator('#configTier3Chips button[data-tier3-id="TEMP-05_12"]').click();
+    await rules.page.locator('#configTier3Chips button[data-canonical-branch-key="matrix:scenario:S01"]').click();
     const coldSynopsis = await rules.page.locator(".branch-output-submodule").innerText();
-    assert(coldSynopsis.includes("5-12°C") && coldSynopsis.includes("推荐层数") && coldSynopsis.includes("长袖") && coldSynopsis.includes("保暖外层"), "点击三级具体分支未展示完整中文输出");
+    assert(coldSynopsis.includes("5-12°C") && coldSynopsis.includes("穿着层数") && coldSynopsis.includes("长袖") && coldSynopsis.includes("保暖外层"), "点击三级具体分支未展示完整中文输出");
     assert(!/\blong\b|\bnone\b|\bwarm\b|\bfull\b/.test(coldSynopsis), "规则结果仍暴露内部英文枚举值");
-    assert(await rules.page.locator(".action-type-details summary").allInnerTexts().then((labels) => labels.every((label) => label.trim() !== "设为")), "默认 SET 动作仍显示无意义的设为按钮");
+    assert(await rules.page.locator('[data-canonical-matrix-field]').count() >= 6, "场景分支的影响内容仍不可配置");
+    assert(await rules.page.locator('[data-canonical-matrix-value="framework.layerCount"]').count() === 1, "场景分支的具体输出值仍不可配置");
+    await rules.page.locator('[data-canonical-matrix-value="framework.layerCount"]').selectOption("2");
+    assert((await rules.page.locator(".branch-output-submodule").innerText()).includes("2层"), "修改具体输出后当前分支摘要没有同步刷新");
+    assert(await rules.page.locator(".action-type-details").count() === 0, "统一规则编辑器仍显示重复的作用方式控件");
+    await rules.page.locator('#configTier2Chips button[data-tier2-id="environment"]').click();
+    assert(await rules.page.locator("#configTier3Chips button[data-tier3-id]").count() === 2, "环境特征没有作为独立关系展示两个修饰分支");
+    assert((await rules.page.locator("#editorContent").innerText()).includes("环境特征"), "环境特征分支没有形成独立配置内容");
+    await rules.page.locator('#configTier2Chips button[data-tier2-id="temperature"]').click();
+    await rules.page.locator('#configTier3Chips button[data-canonical-branch-key="matrix:scenario:S01"]').click();
 
     await rules.page.locator("#resourceButton").click();
     await rules.page.locator('button[data-resource-tab="trends"]').click();
@@ -334,6 +461,23 @@ async function choose(page, pathName, value) {
     const publishedTrendLabels = await rules.page.locator('button[data-input-path="preference.trendDirection"]').allInnerTexts();
     assert(publishedTrendLabels.some((label) => label.includes("松弛精裁")), "潮流方向修改没有同步到案例运行页");
     assert((await rules.page.locator("#ruleVersion").innerText()).includes("1.2.1"), "案例运行页没有同步发布版本");
+    await rules.page.locator('button[data-group="personal"]').click();
+    await choose(rules.page, "appearance.skinTone", "cool");
+    await choose(rules.page, "appearance.hairDepth", "dark");
+    const publishedNearFaceColors = await rules.page.evaluate(() => {
+      const input = window.GarmentRuleEngine.Store.loadInput();
+      return window.GarmentCanonicalRuleEngine.run(window.GarmentCanonicalInputAdapter.normalizeLegacyInput(input).input).color.nearFacePalette.preferred;
+    });
+    assert(JSON.stringify(publishedNearFaceColors) === JSON.stringify(["海军蓝", "雾蓝"]), "个人色彩规则发布后案例运行没有读取修改后的近脸首选色");
+    await rules.page.locator('button[data-group="context"]').click();
+    await choose(rules.page, "context.temperatureRange", "05_12");
+    await choose(rules.page, "context.occasion", "formal");
+    const publishedCanonicalLayer = await rules.page.evaluate(() => {
+      const input = window.GarmentRuleEngine.Store.loadInput();
+      return window.GarmentCanonicalRuleEngine.run(window.GarmentCanonicalInputAdapter.normalizeLegacyInput(input).input).framework.layerCount;
+    });
+    assert(publishedCanonicalLayer === 2, "统一规则发布后案例运行仍未读取修改后的场景输出");
+    assert((await rules.page.locator(".candidate-card").first().innerText()).includes("2层"), "统一规则修改没有落实到可见穿着方案");
 
     const mobile = await openPage(browser, `${baseUrl}index.html`, { width: 390, height: 844 });
     const mobileMetrics = await metrics(mobile.page);
@@ -362,6 +506,21 @@ async function choose(page, pathName, value) {
     assert(rulesMobile.errors.length === 0, rulesMobile.errors.join("\n"));
     await rulesMobile.page.screenshot({ path: path.join(outputDir, "garment-v12-rules-mobile.png"), fullPage: true });
     report.push({ page: "mobile", caseMetrics: mobileMetrics, rulesMetrics: rulesMobileMetrics });
+
+    const standalone = await openPage(browser, `${baseUrl}garment-recommendation-standalone.html`, { width: 1440, height: 900 });
+    const standaloneBridge = await standalone.page.evaluate(() => {
+      const result = window.GarmentRuleEngine.run(window.GarmentRuleEngine.Store.loadInput(), window.GarmentRuleEngine.Store.loadPublished());
+      return {
+        candidates: result.candidates.length,
+        canonical: Boolean(result.canonical?.result),
+        paletteMatched: result.canonicalOverlay?.paletteMatch?.matched === true
+      };
+    });
+    assert(standaloneBridge.candidates === 3, "Standalone build did not render three candidates");
+    assert(standaloneBridge.canonical, "Standalone build is missing the canonical rule bridge");
+    assert(standaloneBridge.paletteMatched, "Standalone build is missing canonical palette matching");
+    assert(standalone.errors.length === 0, standalone.errors.join("\n"));
+    report.push({ page: "standalone-1440", bridge: standaloneBridge });
 
     console.log(JSON.stringify({ ok: true, report }, null, 2));
   } finally {

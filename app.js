@@ -3,6 +3,7 @@
 
   const DATA = window.GarmentPrototypeData;
   const Engine = window.GarmentRuleEngine;
+  const CANONICAL_INPUTS = window.GarmentCanonicalData?.fieldRegistry?.inputs || [];
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -56,6 +57,31 @@
       if (zhDict[clean] !== undefined) return zhDict[clean];
     }
     return String(val);
+  }
+
+  function canonicalParameter(id, options = {}) {
+    const field = CANONICAL_INPUTS.find((item) => item.id === id);
+    if (!field) return null;
+    const values = (field.options || []).map(([value, label]) => ({ value, label }));
+    if (options.allowUnset && !field.required) values.unshift({ value: "", label: "未设置" });
+    return {
+      id: field.id,
+      name: field.label,
+      type: options.scale ? "scale" : field.kind === "set" ? "set" : "select",
+      required: Boolean(field.required),
+      selection: field.selection,
+      exclusive: field.exclusive || [],
+      options: values
+    };
+  }
+
+  function canonicalValueLabel(id, value, fallback = "未设置") {
+    const field = CANONICAL_INPUTS.find((item) => item.id === id);
+    if (Array.isArray(value)) {
+      const labels = value.map((item) => field?.options?.find(([optionValue]) => String(optionValue) === String(item))?.[1] || item);
+      return labels.length ? labels.join("、") : fallback;
+    }
+    return field?.options?.find(([optionValue]) => String(optionValue) === String(value))?.[1] || fallback;
   }
 
   init();
@@ -185,16 +211,20 @@
     const face = state.input.face || {};
 
     const tempLabel = c.temperatureRange ? `${c.temperatureRange.replace("_", "-")}°C` : "适中气温";
-    const occasionLabel = translateValue(c.occasion) || "待确认";
-    const skinToneLabel = a.skinTemperature !== undefined ? scaleLabels.hue[a.skinTemperature] || "标准" : "自然";
-    const bodyPropLabel = body.legRatio !== undefined ? (body.legRatio === 2 ? "长腿" : body.legRatio === 0 ? "偏长身" : "匀称") : "标准比例";
-    const faceLabel = translateValue(face.shape) || "标准脸";
-    const styleLabel = translateValue(p.style) || "未限定";
+    const occasionLabel = canonicalValueLabel("context.occasion", c.occasion, "待确认");
+    const environmentLabel = (c.environment || []).includes("none") ? "" : canonicalValueLabel("context.environment", c.environment, "");
+    const skinToneLabel = canonicalValueLabel("appearance.skinTone", a.skinTone, "未确认底色");
+    const bodyPropLabel = canonicalValueLabel("body.legRatio", body.legRatio, "比例未确认");
+    const faceLabel = canonicalValueLabel("face.shape", face.shape, "脸型未确认");
+    const styleLabel = canonicalValueLabel("preference.style", p.style, "未限定");
+    const paletteLabel = canonicalValueLabel("preference.palette", p.palette, "不限定");
     const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
-    const goalLabel = g.endpoint && g.endpoint !== "unknown" ? `${translateValue(g.endpoint)}${g.direction === "strengthen" ? "强化" : "调整"}` : "保持原样";
+    const goalLabel = g.endpoint ? `${canonicalValueLabel("goal.endpoint", g.endpoint)}·${canonicalValueLabel("goal.direction", g.direction, "保持")}` : "暂不调整";
     const boundaryList = [];
     if (b.rejectSkirt) boundaryList.push("拒裙");
+    if (b.rejectTight) boundaryList.push("拒紧绷");
     if (b.rejectDefinedWaist) boundaryList.push("拒收腰");
+    if (b.rejectDeepNeck) boundaryList.push("拒低领");
     if (b.rejectHighContrast) boundaryList.push("拒高对比");
     if (b.strictCoverage) boundaryList.push("严覆盖");
     if (b.movementFriendly) boundaryList.push("易活动");
@@ -205,9 +235,9 @@
       <div class="snapshot-inner">
         <span class="snapshot-label">已选条件</span>
         <div class="snapshot-badges">
-          <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温与场合">场景: ${escapeHtml(tempLabel)} · ${escapeHtml(occasionLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底色与体型脸型">特征: ${escapeHtml(skinToneLabel)}调 · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(trendLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温、场合与环境">场景: ${escapeHtml([tempLabel, occasionLabel, environmentLabel].filter(Boolean).join(" · "))}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="personal" title="个人特征：肤色底色与体型脸型">特征: ${escapeHtml(skinToneLabel)} · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="风格偏好：风格、色系与潮流">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(paletteLabel)} · ${escapeHtml(trendLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="调整目标与方向">目标: ${escapeHtml(goalLabel)}</button>
           <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="身体与穿着边界">边界: ${escapeHtml(boundaryLabel)}</button>
         </div>
@@ -225,61 +255,69 @@
   function renderInputs() {
     const group = state.activeTab;
     const content = $("#inputContent");
-    const parameter = (id) => state.ruleSet.parameters.find((item) => item.id === id) || DATA.defaultRuleSet.parameters.find((item) => item.id === id);
 
     if (group === "context") {
-      const temperature = parameter("context.temperatureRange");
-      const occasion = parameter("context.occasion");
+      const temperature = canonicalParameter("context.temperatureRange");
+      const occasion = canonicalParameter("context.occasion");
+      const environment = canonicalParameter("context.environment");
       content.innerHTML = `<div class="input-form-compact">
         ${renderParameterScale("context.temperatureRange", "近期气温范围", temperature)}
         ${renderParameterScale("context.occasion", "使用场合要求", occasion)}
+        ${renderSetScale("context.environment", "环境特征", environment)}
       </div>`;
     } else if (group === "personal") {
       const appearanceFields = [
-        ["skin", "肤色"], ["hair", "发色"], ["eye", "瞳色"]
+        ["肤色", [["appearance.skinTone", "肤色底色"], ["appearance.skinValue", "肤色明度"]]],
+        ["发色", [["appearance.hairTone", "发色冷暖"], ["appearance.hairDepth", "发色深浅"]]]
       ];
       content.innerHTML = `
         <div class="input-section">
-          <div class="input-section-heading"><strong>底色与色彩</strong><span>根据肤色、发色与瞳色分析冷暖色调、明度与彩度</span></div>
-          <div class="appearance-matrix-wrap">${appearanceFields.map(([part, label]) => `
+          <div class="input-section-heading"><strong>面部色彩</strong><span>肤色底色与发色深浅构成配色判断基础</span></div>
+          <div class="appearance-matrix-wrap">${appearanceFields.map(([label, fields]) => `
             <div class="appearance-row-card">
               <div class="appearance-row-title"><strong>${label}</strong><span>用户确认的外观事实</span></div>
               <div class="appearance-row-scales">
-                ${renderParameterScale(`appearance.${part}Temperature`, "色调", parameter(`appearance.${part}Temperature`), "inline-range")}
-                ${renderParameterScale(`appearance.${part}Value`, "明度", parameter(`appearance.${part}Value`), "inline-range")}
-                ${renderParameterScale(`appearance.${part}Chroma`, "彩度", parameter(`appearance.${part}Chroma`), "inline-range")}
+                ${fields.map(([path, labelText]) => renderParameterScale(path, labelText, canonicalParameter(path, { scale: true }), "inline-range")).join("")}
               </div>
             </div>`).join("")}</div>
         </div>
         <div class="input-section">
-          <div class="input-section-heading"><strong>身体轮廓与比例</strong><span>身体纵向比例与横向轮廓特征</span></div>
+          <div class="input-section-heading"><strong>身体轮廓与比例</strong><span>腿身分布、腰线、肩胯与骨架量感分别描述</span></div>
           <div class="field-stack-grid field-stack-grid--ranges">
-            ${renderParameterScale("body.heightPresence", "纵向高度", parameter("body.heightPresence"), "inline-range")}
-            ${renderParameterScale("body.legRatio", "腿身分布", parameter("body.legRatio"), "inline-range")}
-            ${renderParameterScale("body.waistDefinition", "腰线特征", parameter("body.waistDefinition"), "inline-range")}
-            ${renderParameterScale("body.shoulderHipBalance", "横向轮廓", parameter("body.shoulderHipBalance"), "inline-range")}
+            ${renderParameterScale("body.legRatio", "腿身分布", canonicalParameter("body.legRatio", { scale: true }), "inline-range")}
+            ${renderParameterScale("body.waistDefinition", "腰线特征", canonicalParameter("body.waistDefinition", { scale: true }), "inline-range")}
+            ${renderParameterScale("body.shoulderHipBalance", "横向轮廓", canonicalParameter("body.shoulderHipBalance", { scale: true }), "inline-range")}
+            ${renderParameterScale("body.boneFrame", "骨架量感", canonicalParameter("body.boneFrame", { scale: true }), "inline-range")}
           </div>
         </div>
         <div class="input-section input-section--face">
           <div class="input-section-heading"><strong>脸型轮廓</strong><span>影响领口方向与近脸修饰</span></div>
-          <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型特征", parameter("face.shape"))}</div>
+          <div class="field-stack-grid--single">${renderParameterScale("face.shape", "脸型轮廓", canonicalParameter("face.shape", { allowUnset: true }))}</div>
         </div>`;
     } else if (group === "preference") {
-      const styleOptions = parameter("preference.style");
-      const formalityOptions = parameter("preference.formality");
-      const trendOptions = [{ value: "none", label: "不限定" }, ...(state.ruleSet.trendDirections || []).filter((item) => item.enabled !== false).map((item) => ({ value: item.value, label: item.name }))];
+      const styleOptions = canonicalParameter("preference.style", { allowUnset: true });
+      const formalityOptions = canonicalParameter("preference.formality", { allowUnset: true });
+      const paletteOptions = canonicalParameter("preference.palette");
+      const trendOptions = canonicalParameter("preference.trendDirection");
+      trendOptions.options = trendOptions.options.map((option) => ({
+        ...option,
+        label: (state.ruleSet.trendDirections || []).find((item) => item.value === option.value)?.name || option.label
+      }));
       content.innerHTML = `<div class="preference-flow-grid field-stack-grid--preference">
         ${renderParameterScale("preference.style", "风格方向", styleOptions, "choice-flow")}
         ${renderParameterScale("preference.formality", "正式程度偏好", formalityOptions)}
-        ${renderTrendDirectionScale("preference.trendDirection", "潮流方向", state.input.preference.trendDirection, trendOptions)}
-        ${state.input.preference.trendDirection !== "none" ? renderOptionScale("preference.trendIntensity", "潮流表达强度", state.input.preference.trendIntensity, parameter("preference.trendIntensity").options) : ""}
+        ${renderParameterScale("preference.palette", "色系偏好", paletteOptions)}
+        ${renderParameterScale("preference.trendDirection", "潮流方向", trendOptions)}
+        ${state.input.preference.trendDirection !== "none" ? renderParameterScale("preference.trendIntensity", "潮流表达强度", canonicalParameter("preference.trendIntensity")) : ""}
       </div>`;
     } else if (group === "goal-boundaries") {
-      const endpoint = parameter("goal.endpoint");
-      const direction = parameter("goal.direction");
+      const endpoint = canonicalParameter("goal.endpoint", { allowUnset: true });
+      const direction = canonicalParameter("goal.direction");
       const boundaryFields = [
         ["rejectSkirt", "拒绝裙装", "排除所有裙装下装"],
+        ["rejectTight", "拒绝紧绷贴身", "排除修身或活动余量不足的版型"],
         ["rejectDefinedWaist", "拒绝明显收腰", "排除明确腰位或高腰表达"],
+        ["rejectDeepNeck", "拒绝低领开阔", "排除低领或过度开阔的领口"],
         ["rejectHighContrast", "拒绝高对比配色", "配色对比不高于中等"],
         ["strictCoverage", "要求完整覆盖", "上下装都必须满足完整覆盖"],
         ["movementFriendly", "行动不能受限", "抬手、行走和坐下保持便利"],
@@ -298,6 +336,14 @@
           <div class="checkbox-grid">${boundaryFields.map(([field, title, desc]) => renderBooleanCheckbox(`boundaries.${field}`, title, desc)).join("")}</div>
         </div>`;
     }
+  }
+
+  function renderSetScale(path, label, definition) {
+    const selected = Engine.getByPath(state.input, path) || [];
+    return `<div class="form-item option-scale--set"><div class="form-item-header"><label>${escapeHtml(label)}</label></div><div class="pill-segment-control segment-control--${Math.min(definition?.options?.length || 1, 6)}" role="group" aria-label="${escapeHtml(label)}">${(definition?.options || []).map((option) => {
+      const active = selected.includes(option.value);
+      return `<button type="button" data-input-set-path="${escapeHtml(path)}" data-input-set-value="${escapeHtml(option.value)}" class="${active ? "is-active" : ""}" aria-pressed="${active}">${escapeHtml(option.label)}</button>`;
+    }).join("")}</div></div>`;
   }
 
   function renderParameterScale(path, label, definition, variant = "") {
@@ -335,17 +381,18 @@
   function rangeEndpointLabels(path, options) {
     const overrides = {
       body: {
-        heightPresence: ["小巧", "高挑"],
         legRatio: ["上身偏长", "下身偏长"],
         waistDefinition: ["不明显", "明显"],
-        shoulderHipBalance: ["肩部偏明显", "胯部偏明显"]
+        shoulderHipBalance: ["肩部明显", "胯部明显"],
+        boneFrame: ["小骨架", "大骨架"]
       }
     };
     const [scope, field] = path.split(".");
     if (scope === "body" && overrides.body[field]) return overrides.body[field];
-    if (path.endsWith("Temperature")) return ["冷", "暖"];
-    if (path.endsWith("Value")) return ["浅", "深"];
-    if (path.endsWith("Chroma")) return ["低", "高"];
+    if (path.endsWith("skinTone")) return ["冷调", "暖调"];
+    if (path.endsWith("skinValue")) return ["浅", "深"];
+    if (path.endsWith("hairTone")) return ["冷", "暖"];
+    if (path.endsWith("hairDepth")) return ["浅", "深"];
     return [options[0]?.label || "低", options[options.length - 1]?.label || "高"];
   }
 
@@ -419,6 +466,24 @@
   }
 
   function handleInputClick(event) {
+    const setButton = event.target.closest("button[data-input-set-path]");
+    if (setButton) {
+      const path = setButton.dataset.inputSetPath;
+      const value = setButton.dataset.inputSetValue;
+      let selected = Engine.getByPath(state.input, path) || [];
+      if (value === "none") {
+        selected = ["none"];
+      } else if (selected.includes(value)) {
+        selected = selected.filter((item) => item !== value);
+        if (!selected.length) selected = ["none"];
+      } else {
+        selected = [...selected.filter((item) => item !== "none"), value];
+      }
+      Engine.setByPath(state.input, path, selected);
+      Engine.Store.saveInput(state.input);
+      renderAll();
+      return;
+    }
     const btn = event.target.closest("button[data-input-path]");
     if (!btn) return;
     const path = btn.dataset.inputPath;
@@ -459,6 +524,7 @@
         array = array.filter((item) => item !== val);
       }
       Engine.setByPath(state.input, path, array);
+      Engine.Store.saveInput(state.input);
       renderAll();
     }
   }
@@ -504,10 +570,23 @@
   }
 
   function roleForGarment(roles, category) {
-    const garment = category === "top" ? "上装" : category === "outer" ? "外层" : "下装";
+    const garment = category === "top" ? "上装" : category === "outer" ? "外层" : category === "dress" ? "连身裙" : "下装";
     return roles.find((role) => role.garment === garment)
       || roles.find((role) => role.role === category)
       || null;
+  }
+
+  function candidateGarmentEntries(candidate) {
+    return [
+      candidate.garments?.dress ? { category: "dress", name: candidate.garments.dress } : null,
+      candidate.garments?.top ? { category: "top", name: candidate.garments.top } : null,
+      candidate.garments?.outer ? { category: "outer", name: candidate.garments.outer } : null,
+      candidate.garments?.bottom ? { category: "bottom", name: candidate.garments.bottom } : null
+    ].filter(Boolean);
+  }
+
+  function candidateGarmentNames(candidate) {
+    return candidateGarmentEntries(candidate).map((item) => item.name);
   }
 
   function renderIllustration(illustration, candidate) {
@@ -518,14 +597,16 @@
       return escapeHtml(role?.hex || fallback);
     };
     const topLayer = layers.find((layer) => layer.kind === "top") || {};
+    const dressLayer = layers.find((layer) => layer.kind === "dress") || {};
     const outerLayer = layers.find((layer) => layer.kind === "outer") || {};
     const bottomLayer = layers.find((layer) => layer.kind === "bottom") || {};
-    const topColor = colorFor("上装", topLayer.color || "#dedbd1");
+    const isDress = Boolean(dressLayer.visible);
+    const topColor = isDress ? colorFor("连身裙", dressLayer.color || "#dedbd1") : colorFor("上装", topLayer.color || "#dedbd1");
     const outerColor = colorFor("外层", outerLayer.color || "#a8b1af");
-    const bottomColor = colorFor("下装", bottomLayer.color || "#4c5961");
+    const bottomColor = isDress ? topColor : colorFor("下装", bottomLayer.color || "#4c5961");
     const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none";
-    const bottomType = bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
-    const sleeve = topLayer.sleeve || candidate.sleeve || "long";
+    const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
+    const sleeve = (isDress ? dressLayer.sleeve : topLayer.sleeve) || candidate.sleeve || "long";
     const neckline = model.neckline || candidate.neckline || "regular";
     const waist = model.waist || candidate.waist || "natural";
     const line = model.line || candidate.line || "balanced";
@@ -558,14 +639,20 @@
       : bottomType === "short"
         ? `<path d="M80 158 L140 158 L145 206 L114 206 L110 178 L106 206 L75 206 Z" fill="${bottomColor}"/>`
         : `<path d="M82 158 L138 158 L136 236 L111 236 L108 178 L104 236 L79 236 Z" fill="${bottomColor}"/>`;
+    const dressShape = {
+      aLineMidi: `<path d="M93 55 L127 55 L141 104 L157 235 Q110 248 63 235 L79 104 Z" fill="${topColor}"/>`,
+      shirtDress: `<path d="M93 55 L127 55 L139 107 L144 235 Q110 241 76 235 L81 107 Z" fill="${topColor}"/><path d="M110 87 L110 220" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2"/>`,
+      wrapDress: `<path d="M93 55 L127 55 L140 108 L154 235 Q110 246 66 235 L80 108 Z" fill="${topColor}"/><path d="M94 68 L126 112 L91 128" fill="none" stroke="#ffffff" stroke-opacity="0.48" stroke-width="2"/>`,
+      columnDress: `<path d="M93 55 L127 55 L137 108 L139 235 Q110 240 81 235 L83 108 Z" fill="${topColor}"/>`
+    }[dressLayer.dressCut] || `<path d="M93 55 L127 55 L140 108 L151 235 Q110 245 69 235 L80 108 Z" fill="${topColor}"/>`;
     return `
       <div class="outfit-illustration" data-illustration-type="${escapeHtml(model.type || "outfit-schematic")}">
         <svg class="illustration-svg" viewBox="0 0 220 260" role="img" aria-label="${escapeHtml(candidate.title || "穿搭方案效果图")}">
           <circle cx="110" cy="37" r="18" fill="#e8d2c1"/>
-          <path d="M93 55 L127 55 L143 92 L137 158 L83 158 L77 92 Z" fill="${topColor}"/>
+          ${isDress ? dressShape : `<path d="M93 55 L127 55 L143 92 L137 158 L83 158 L77 92 Z" fill="${topColor}"/>`}
           ${armPath}
           ${outerVisible ? `<path d="M88 62 L70 91 L78 166 L142 166 L150 91 L132 62 L125 80 L95 80 Z" fill="${outerColor}" opacity="0.92"/>` : ""}
-          ${bottomShape}
+          ${isDress ? "" : bottomShape}
           <path d="M100 235 L100 248 M120 235 L120 248" stroke="#39434a" stroke-width="7" stroke-linecap="round"/>
           <path d="M94 250 L105 250 M115 250 L126 250" stroke="#39434a" stroke-width="5" stroke-linecap="round"/>
           ${necklinePath}
@@ -581,12 +668,7 @@
     const palette = cand.palette || {};
     const roles = palette.roles || [];
     
-    // Garments from candidate
-    const garments = [
-      { category: "top", name: cand.garments?.top || "上装" },
-      { category: "outer", name: cand.garments?.outer || "无外层" },
-      { category: "bottom", name: cand.garments?.bottom || "下装" }
-    ];
+    const garments = candidateGarmentEntries(cand);
 
     const familyMap = {
       straight: "简洁直线",
@@ -630,7 +712,7 @@
         <div class="garment-color-list">
           ${garments.map((comp) => {
             const role = roleForGarment(roles, comp.category) || roles[0] || {};
-            const catIcon = comp.category === "outer" ? "🦺" : comp.category === "bottom" ? "👖" : "🧥";
+            const catIcon = comp.category === "outer" ? "🦺" : comp.category === "bottom" ? "👖" : comp.category === "dress" ? "👗" : "🧥";
             return `
               <div class="garment-color-item">
                 <span class="garment-icon">${catIcon}</span>
@@ -691,7 +773,7 @@
             </tr>
             <tr>
               <td class="table-row-label">单品组合</td>
-              ${candidates.map((c) => `<td>${[c.garments?.top, c.garments?.outer !== "无外层" ? c.garments?.outer : null, c.garments?.bottom].filter(Boolean).join(" ＋ ")}</td>`).join("")}
+              ${candidates.map((c) => `<td>${candidateGarmentNames(c).map(escapeHtml).join(" ＋ ")}</td>`).join("")}
             </tr>
             <tr>
               <td class="table-row-label">结构与层数</td>
@@ -722,7 +804,7 @@
             <div class="mobile-candidate-body">
               <div class="mobile-candidate-row">
                 <span class="mobile-candidate-label">单品组合</span>
-                <span>${[c.garments?.top, c.garments?.outer !== "无外层" ? c.garments?.outer : null, c.garments?.bottom].filter(Boolean).join(" ＋ ")}</span>
+                <span>${candidateGarmentNames(c).map(escapeHtml).join(" ＋ ")}</span>
               </div>
               <div class="mobile-candidate-row">
                 <span class="mobile-candidate-label">结构与层数</span>
@@ -766,12 +848,40 @@
       const role = roleForGarment(roles, comp.category) || roles[0] || {};
       return `
         <span>
-          <small>${comp.category === "top" ? "上装" : comp.category === "outer" ? "外层" : "下装"}</small>
+          <small>${comp.category === "top" ? "上装" : comp.category === "outer" ? "外层" : comp.category === "dress" ? "连身裙" : "下装"}</small>
           <strong>${escapeHtml(comp.name)}</strong>
           <small style="margin-top:4px;color:var(--text-soft);">${escapeHtml(role.colorName || "基础色")} (${role.ratio || 0}%)</small>
         </span>
       `;
     }).join("");
+
+    const accessoryLabels = {
+      footwear: { loafersOxfords: "乐福/牛津鞋", minimalSneakers: "极简板鞋", kittenHeels: "低跟单鞋", boots: "短靴" },
+      leatherGoods: { structuredTote: "挺括托特包", shoulderBag: "腋下包", crossbody: "斜挎包", slimBelt: "细腰带" },
+      jewelry: { pearls: "珍珠", coolSilver: "冷银", warmGold: "暖金", naturalResin: "天然材质", eyewear: "眼镜" },
+      textile: { silkScarf: "真丝小方巾", cashmereScarf: "羊绒围巾", none: "无" }
+    };
+    const accessoryNames = { footwear: "鞋履", leatherGoods: "箱包皮具", jewelry: "首饰", textile: "织物软配" };
+    const canonicalAccessories = cand.canonicalOutput?.accessories || {};
+    const accessoriesHtml = Object.entries(canonicalAccessories)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => `<span><small>${escapeHtml(accessoryNames[key] || key)}</small><strong>${escapeHtml(accessoryLabels[key]?.[value] || value)}</strong></span>`)
+      .join("");
+
+    const canonicalLabels = {
+      form: { separatesTrouser: "分体裤装", separatesSkirt: "分体裙装", onePieceDress: "一件式" },
+      topFit: { fitted: "修身", regular: "合体", oversized: "宽松" },
+      bottomCut: { straightLeg: "直筒裤", wideLeg: "阔腿裤", tapered: "锥形裤", aLineSkirt: "A字裙", straightSkirt: "直筒裙" },
+      dressCut: { aLineMidi: "A字中长", shirtDress: "衬衫裙", wrapDress: "裹身裙", columnDress: "直筒裙" }
+    };
+    const canonicalFramework = cand.canonicalOutput?.framework || {};
+    const canonicalGarment = cand.canonicalOutput?.garment || {};
+    const canonicalGarmentHtml = [
+      ["方案形态", canonicalLabels.form[canonicalFramework.form]],
+      ["上装松紧", canonicalLabels.topFit[canonicalGarment.topFit]],
+      ["下装版型", canonicalLabels.bottomCut[canonicalGarment.bottomCut]],
+      ["连身裙型", canonicalLabels.dressCut[canonicalGarment.dressCut]]
+    ].filter(([, value]) => value).map(([label, value]) => `<span><small>${label}</small><strong>${value}</strong></span>`).join("");
 
     const paletteHtml = roles.map((role) => `
       <span>
@@ -810,7 +920,7 @@
 
       <section class="dialog-section">
         <h3>完整穿着单品</h3>
-        <div class="dialog-garments">${garmentsHtml}</div>
+        <div class="dialog-garments">${garmentsHtml}${canonicalGarmentHtml}${accessoriesHtml}</div>
       </section>
 
       <section class="dialog-section">

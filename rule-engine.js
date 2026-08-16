@@ -363,6 +363,147 @@
     return state;
   }
 
+  function canonicalStyleFamilies(style, silhouette) {
+    const byStyle = {
+      minimal: ["straight", "tailored", "soft"],
+      urban: ["tailored", "straight", "soft"],
+      elegant: ["soft", "retro", "tailored"],
+      casual: ["relaxed", "straight", "soft"],
+      street: ["street", "relaxed", "straight"],
+      retro: ["retro", "soft", "tailored"],
+      cityboy: ["relaxed", "street", "straight"]
+    };
+    const bySilhouette = {
+      H: ["straight", "tailored", "soft"],
+      A: ["soft", "retro", "straight"],
+      X: ["soft", "retro", "tailored"],
+      Y: ["tailored", "street", "straight"],
+      O: ["relaxed", "street", "soft"],
+      shortWideLongSlim: ["street", "relaxed", "straight"]
+    };
+    const preferred = byStyle[style] || bySilhouette[silhouette] || ["straight", "soft", "relaxed"];
+    return [...preferred, ...(bySilhouette[silhouette] || []).filter((family) => !preferred.includes(family))];
+  }
+
+  function canonicalTrendFamilies(direction) {
+    return {
+      utilityLayering: ["street", "relaxed", "straight"],
+      relaxedTailoring: ["relaxed", "tailored", "straight"],
+      sheerLayering: ["soft", "relaxed", "straight"]
+    }[direction] || [];
+  }
+
+  function canonicalPresentationResource(input, ruleSet) {
+    const style = input.preference?.style;
+    const styleOutput = (ruleSet.outfitOutputs || []).find((output) => (
+      output.enabled !== false
+      && (output.conditions || []).some((condition) => condition.field === "input.preference.style" && condition.value === style)
+    ));
+    const trendValue = input.preference?.trendDirection;
+    const trend = (ruleSet.trendDirections || []).find((item) => item.enabled !== false && item.value === trendValue);
+    return { styleOutput, trend };
+  }
+
+  function createCanonicalDecision(input, canonical, ruleSet) {
+    const output = canonical.result;
+    const canonicalInput = canonical.migration?.input || {};
+    const presentation = canonicalPresentationResource(input, ruleSet);
+    const style = input.preference?.style;
+    const trendDirection = input.preference?.trendDirection;
+    const trendIntensity = input.preference?.trendIntensity === "clear" ? "clear" : "light";
+    const styleFamilies = canonicalStyleFamilies(style, output.garment?.silhouette);
+    const trendFamilies = canonicalTrendFamilies(trendDirection);
+    const family = trendFamilies.length && trendIntensity === "clear"
+      ? [...trendFamilies, ...styleFamilies.filter((item) => !trendFamilies.includes(item))]
+      : [...styleFamilies, ...trendFamilies.filter((item) => !styleFamilies.includes(item))];
+    const occasionFormality = { daily: 1, commute: 2, formal: 4, social: 2, travel: 1 }[input.context?.occasion] || 1;
+    const preferenceFormality = { relaxed: 1, commute: 2, formal: 4 }[input.preference?.formality] || 1;
+    const necklineLabels = { vNeck: "V领", uNeck: "U领", boatNeck: "船领", squareNeck: "方领", crewNeck: "小圆领/立领" };
+    const materialLabels = { lightweight: "轻薄", medium: "适中", heavy: "厚重" };
+    const contrastLabels = { low: "低", medium: "中等", high: "高" };
+    const waistValues = { raised: "raised", natural: "natural", relaxed: "relaxed" };
+    const lineValues = { H: "balanced", A: "sectioned", X: "sectioned", Y: "continuous", O: "balanced", shortWideLongSlim: "continuous" };
+    const styleNames = { minimal: "极简", urban: "都市", elegant: "优雅", casual: "休闲", street: "街头", retro: "复古", cityboy: "Cityboy" };
+    const hardFields = {
+      "boundaries.rejectSkirt": ["requirements.canonicalForm", "requirements.canonicalBottomCut", "requirements.canonicalDressCut"],
+      "boundaries.rejectTight": ["requirements.canonicalTopFit", "requirements.canonicalBottomCut", "requirements.canonicalDressCut"],
+      "boundaries.rejectDefinedWaist": ["requirements.waist", "requirements.silhouette"],
+      "boundaries.rejectDeepNeck": ["requirements.neckline"],
+      "boundaries.rejectHighContrast": ["requirements.colorContrast"],
+      "boundaries.strictCoverage": ["requirements.coverage", "requirements.sleeve"],
+      "boundaries.movementFriendly": ["requirements.movement"],
+      "boundaries.sensitiveTexture": ["requirements.texture", "requirements.material"]
+    };
+    const locks = {};
+    const trace = [];
+    Object.entries(hardFields).forEach(([field, affected]) => {
+      if (!canonicalInput[field]) return;
+      affected.forEach((path) => { locks[path] = { ruleId: field, kind: "hard", priority: 1000 }; });
+      const labels = {
+        "boundaries.rejectSkirt": "拒绝裙装",
+        "boundaries.rejectTight": "拒绝紧绷贴身",
+        "boundaries.rejectDefinedWaist": "拒绝明显收腰",
+        "boundaries.rejectDeepNeck": "拒绝低领开阔",
+        "boundaries.rejectHighContrast": "拒绝高对比配色",
+        "boundaries.strictCoverage": "要求完整覆盖",
+        "boundaries.movementFriendly": "行动不能受限",
+        "boundaries.sensitiveTexture": "避免粗糙触感"
+      };
+      trace.push({ stage: "hard", status: "matched", ruleId: field, name: labels[field], reason: `已将“${labels[field]}”作为不可覆盖的穿着边界。`, actions: [] });
+    });
+
+    const styleResult = presentation.styleOutput?.result || {};
+    if (style) trace.push({ stage: "soft", status: "matched", ruleId: "canonical-style", name: `${styleNames[style] || "当前"}风格`, reason: presentation.styleOutput?.reason || "主风格用于排序服装路线，不覆盖身体和边界约束。", outputResult: { families: styleFamilies }, actions: [] });
+    if (trendFamilies.length) trace.push({ stage: "soft", status: "matched", ruleId: "canonical-trend", name: presentation.trend?.name || "潮流方向", reason: presentation.trend?.reason || "潮流方向只调整服装细节和路线顺序。", outputResult: { families: trendFamilies }, actions: [] });
+
+    return {
+      canonicalPrimary: true,
+      requirements: {
+        layerCount: output.framework?.layerCount || 1,
+        sleeve: output.framework?.sleeve || "threeQuarter",
+        outer: output.framework?.outer || "none",
+        coverage: canonicalInput["boundaries.strictCoverage"] ? "full" : null,
+        material: materialLabels[output.framework?.materialWeight] || "适中",
+        formalityMin: Math.max(occasionFormality, preferenceFormality),
+        movement: Boolean(canonicalInput["boundaries.movementFriendly"]),
+        waist: waistValues[output.garment?.waistline] || "natural",
+        line: lineValues[output.garment?.silhouette] || "balanced",
+        texture: canonicalInput["boundaries.sensitiveTexture"] ? "smooth" : "regular",
+        colorTemperature: "按近脸安全色",
+        colorContrast: contrastLabels[output.color?.contrastMode] || "中等",
+        colorChroma: "按安全色谱",
+        colorContrastMax: canonicalInput["boundaries.rejectHighContrast"] ? "中等" : "高",
+        palettePlanId: null,
+        neckline: necklineLabels[output.garment?.neckline] || "常规领口",
+        faceEffect: `使用${necklineLabels[output.garment?.neckline] || "常规领口"}协调当前脸型轮廓。`,
+        faceShape: input.face?.shape || null,
+        canonicalForm: output.framework?.form || "separatesTrouser",
+        canonicalTopFit: output.garment?.topFit || null,
+        canonicalBottomCut: output.garment?.bottomCut || null,
+        canonicalDressCut: output.garment?.dressCut || null,
+        silhouette: output.garment?.silhouette || "H",
+        styleName: styleNames[style] || "未限定风格",
+        detail: presentation.trend?.result?.detail || styleResult.detail || "与主风格匹配的克制细节",
+        pattern: presentation.trend?.result?.pattern || styleResult.pattern || "纯色或低存在感纹理",
+        finish: presentation.trend?.result?.finish || styleResult.finish || "按场合保持整洁",
+        trend: trendDirection || "none",
+        trendName: presentation.trend?.name || "未指定潮流",
+        trendIntensity: trendFamilies.length ? trendIntensity : null,
+        trendReference: presentation.trend?.reference || null,
+        proportion: presentation.trend?.result?.proportion || "按统一版型结果执行",
+        detailIntensity: presentation.trend?.result?.detailIntensity || "适度使用",
+        note: presentation.trend?.result?.note || "长期可穿",
+        seasonVersion: presentation.trend?.season || "长期"
+      },
+      preferences: { family, styleFamilies, trendFamilies, trendIntensity },
+      notes: [],
+      forbidden: [],
+      locks,
+      trace,
+      conflicts: []
+    };
+  }
+
   function applyOutfitOutputs(input, derived, state, ruleSet) {
     const context = { input, derived };
     const matched = (ruleSet.outfitOutputs || [])
@@ -537,17 +678,19 @@
     if (!component.enabled || component.category !== category) return false;
     const attributes = component.attributes || {};
     if (category === "top" && attributes.sleeve !== requirements.sleeve) return false;
+    if (category === "dress" && attributes.sleeve !== requirements.sleeve) return false;
     if (category === "outer" && attributes.outerKind !== requirements.outer) return false;
-    if (category === "bottom" && attributes.coverage !== requirements.coverage) return false;
+    if (category === "bottom" && requirements.canonicalForm === "separatesTrouser" && attributes.bottomType !== "trouser") return false;
+    if (category === "bottom" && requirements.canonicalForm === "separatesSkirt" && attributes.bottomType !== "skirt") return false;
+    if (category === "bottom" && requirements.coverage && attributes.coverage !== requirements.coverage) return false;
     if (!(category === "outer" && attributes.outerKind === "none") && Number(attributes.formality || 0) < Number(requirements.formalityMin || 0)) return false;
     if (requirements.movement && !attributes.movement) return false;
     if (family && attributes.family !== family && !(category === "outer" && attributes.outerKind === "none")) return false;
 
     const materialClass = requirementMaterialClass(requirements.material);
-    if (materialClass === "warm" && category === "outer" && attributes.outerKind !== "warm") return false;
     if (materialClass === "light" && attributes.materialClass === "warm") return false;
     if (locks["requirements.texture"] && requirements.texture === "smooth" && attributes.texture === "rough") return false;
-    if (locks["requirements.waist"] && requirements.waist && category === "bottom" && attributes.waistPosition !== requirements.waist) return false;
+    if (locks["requirements.waist"] && requirements.waist && ["bottom", "dress"].includes(category) && attributes.waistPosition !== requirements.waist) return false;
     if (locks["requirements.coverage"] && category === "bottom" && Number(attributes.coverageRank || 0) < Number({ light: 0, regular: 1, full: 2 }[requirements.coverage] ?? 1)) return false;
 
     const candidateShape = category === "bottom" ? { bottomType: attributes.bottomType } : {};
@@ -561,9 +704,12 @@
   function componentScore(component, requirements, category) {
     const attributes = component.attributes || {};
     let score = 0;
-    if (category === "bottom" && requirements.waist && attributes.waistPosition === requirements.waist) score += 8;
+    if (["bottom", "dress"].includes(category) && requirements.waist && attributes.waistPosition === requirements.waist) score += 8;
     if (requirements.line && attributes.lineDirection === requirements.line) score += 5;
-    if (category === "top" && requirements.neckline && attributes.neckline === requirements.neckline) score += 5;
+    if (["top", "dress"].includes(category) && requirements.neckline && attributes.neckline === requirements.neckline) score += 5;
+    if (category === "top" && requirements.canonicalTopFit && attributes.topFit === requirements.canonicalTopFit) score += 12;
+    if (category === "bottom" && requirements.canonicalBottomCut && attributes.bottomCut === requirements.canonicalBottomCut) score += 12;
+    if (category === "dress" && requirements.canonicalDressCut && attributes.dressCut === requirements.canonicalDressCut) score += 16;
     if (requirements.texture && attributes.texture === requirements.texture) score += 2;
     if (requirements.material && requirementMaterialClass(requirements.material) === attributes.materialClass) score += 1;
     return score;
@@ -588,6 +734,85 @@
     });
   }
 
+  function canonicalFamilyScore(family, requirements) {
+    const fitFamilies = {
+      fitted: ["tailored"],
+      regular: ["straight", "soft", "retro"],
+      oversized: ["relaxed", "street"]
+    };
+    const cutFamilies = {
+      straightLeg: ["straight", "soft", "retro"],
+      wideLeg: ["relaxed", "street"],
+      tapered: ["tailored"],
+      aLineSkirt: ["soft", "retro"],
+      straightSkirt: ["straight", "tailored"]
+    };
+    let score = 0;
+    if ((fitFamilies[requirements.canonicalTopFit] || []).includes(family)) score += 2;
+    if ((cutFamilies[requirements.canonicalBottomCut] || []).includes(family)) score += 3;
+    return score;
+  }
+
+  function materializeCanonicalComponent(component, category, requirements) {
+    if (!component || !requirements) return component;
+    const adapted = clone(component);
+    const attributes = adapted.attributes ||= {};
+    const familyLabel = {
+      straight: "简洁",
+      soft: "柔和",
+      relaxed: "松弛",
+      tailored: "利落",
+      street: "街头",
+      retro: "复古"
+    }[attributes.family] || "日常";
+    const sleeveLabelText = { long: "长袖", threeQuarter: "七分袖", short: "短袖" }[requirements.sleeve] || "";
+    const necklineLabelText = {
+      "开阔领口": "开阔领",
+      "柔和开阔领口": "船形领",
+      "常规领口": "小圆领"
+    }[requirements.neckline] || "常规领";
+
+    if (category === "top") {
+      const fit = requirements.canonicalTopFit || attributes.topFit || "regular";
+      attributes.topFit = fit;
+      attributes.neckline = requirements.neckline || attributes.neckline;
+      const fitLabel = { fitted: "合体版", regular: "常规版", oversized: "宽松版" }[fit] || "常规版";
+      adapted.name = `${familyLabel}${fitLabel}${sleeveLabelText}${necklineLabelText}上衣`;
+    }
+
+    if (category === "bottom") {
+      const cut = requirements.canonicalBottomCut || attributes.bottomCut;
+      if (cut) attributes.bottomCut = cut;
+      if (requirements.waist) attributes.waistPosition = requirements.waist;
+      const waistLabel = { raised: "偏高腰", natural: "自然腰", relaxed: "松弛腰" }[attributes.waistPosition] || "自然腰";
+      const cutLabel = {
+        straightLeg: "直筒长裤",
+        wideLeg: "阔腿长裤",
+        tapered: "锥形长裤",
+        aLineSkirt: "A字中长裙",
+        straightSkirt: "直筒中长裙"
+      }[cut] || adapted.name;
+      adapted.name = `${familyLabel}${waistLabel}${cutLabel}`;
+    }
+
+    if (category === "dress") {
+      const cut = requirements.canonicalDressCut || attributes.dressCut;
+      if (cut) attributes.dressCut = cut;
+      if (requirements.waist) attributes.waistPosition = requirements.waist;
+      attributes.neckline = requirements.neckline || attributes.neckline;
+      const waistLabel = { raised: "偏高腰", natural: "自然腰", relaxed: "松弛腰" }[attributes.waistPosition] || "自然腰";
+      const cutLabel = {
+        aLineMidi: "A字中长连衣裙",
+        shirtDress: "衬衫连衣裙",
+        wrapDress: "裹身连衣裙",
+        columnDress: "直筒连衣裙"
+      }[cut] || "连衣裙";
+      adapted.name = `${familyLabel}${sleeveLabelText}${waistLabel}${necklineLabelText}${cutLabel}`;
+    }
+
+    return adapted;
+  }
+
   function assembleCandidates(input, derived, decision, ruleSet) {
     if (decision.conflicts.length) return { candidates: [], blocked: [], conflicts: decision.conflicts };
 
@@ -603,22 +828,31 @@
         : [...sharedFamilies, ...styleFamilies.filter((family) => !sharedFamilies.includes(family)), ...trendFamilies.filter((family) => !styleFamilies.includes(family))]
       : styleFamilies;
     const strictStyle = Boolean(decision.preferences.styleFamilies?.length || trendFamilies.length);
-    const familyOrder = [...preferred.filter((family) => allowedFamilies.includes(family)), ...allowedFamilies.filter((family) => !preferred.includes(family))];
+    const baseFamilyOrder = [...preferred.filter((family) => allowedFamilies.includes(family)), ...allowedFamilies.filter((family) => !preferred.includes(family))];
+    const familyOrder = baseFamilyOrder
+      .map((family, index) => ({ family, index, score: trendIntensity === "clear" ? 0 : canonicalFamilyScore(family, decision.requirements) }))
+      .sort((left, right) => right.score - left.score || left.index - right.index)
+      .map((item) => item.family);
     const candidates = [];
     const blocked = [];
+    const onePiece = decision.requirements.canonicalForm === "onePieceDress";
 
     familyOrder.forEach((family) => {
-      const top = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "top", strictStyle, decision.locks);
       const outer = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "outer", strictStyle, decision.locks);
-      const bottom = chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "bottom", strictStyle, decision.locks);
-      if (!top || !outer || !bottom) {
-        blocked.push({ family, reason: "没有找到同时满足袖长、覆盖、正式度和边界的完整组合。" });
+      const top = onePiece ? null : chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "top", strictStyle, decision.locks);
+      const bottom = onePiece ? null : chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "bottom", strictStyle, decision.locks);
+      const dress = onePiece ? chooseComponent(ruleSet.components, family, decision.requirements, decision.forbidden, "dress", strictStyle, decision.locks) : null;
+      if (!outer || (onePiece ? !dress : !top || !bottom)) {
+        blocked.push({ family, reason: onePiece ? "没有找到同时满足裙型、袖长、正式度和边界的一件式组合。" : "没有找到同时满足袖长、覆盖、正式度和边界的完整组合。" });
         return;
       }
 
+      const canonicalTop = materializeCanonicalComponent(top, "top", decision.requirements);
+      const canonicalBottom = materializeCanonicalComponent(bottom, "bottom", decision.requirements);
+      const canonicalDress = materializeCanonicalComponent(dress, "dress", decision.requirements);
       const paletteIds = decision.requirements.palettePlanIds || [decision.requirements.palettePlanId];
       const palettePlanId = paletteIds[candidates.length % Math.max(paletteIds.length, 1)] || decision.requirements.palettePlanId;
-      const candidate = createCandidate({ family, top, outer, bottom, input, derived, decision, ruleSet, palettePlanId });
+      const candidate = createCandidate({ family, top: canonicalTop, outer, bottom: canonicalBottom, dress: canonicalDress, input, derived, decision, ruleSet, palettePlanId });
       const blocker = candidateBlocked(candidate, decision.forbidden);
       if (blocker) {
         blocked.push({ family, reason: blocker.reason, ruleId: blocker.ruleId });
@@ -646,7 +880,7 @@
     return { candidates: selected.slice(0, 3), blocked, conflicts: [] };
   }
 
-  function createCandidate({ family, top, outer, bottom, input, derived, decision, ruleSet, palettePlanId }) {
+  function createCandidate({ family, top, outer, bottom, dress, input, derived, decision, ruleSet, palettePlanId }) {
     const familyMeta = {
       straight: { line: "连续直线", focus: "保持纵向连贯" },
       soft: { line: "柔和曲线", focus: "降低结构边界" },
@@ -658,13 +892,16 @@
     const hardRules = decision.trace.filter((item) => item.stage === "hard" && ["matched", "rewritten", "partial"].includes(item.status));
     const softRules = decision.trace.filter((item) => item.stage === "soft" && ["matched", "rewritten", "partial"].includes(item.status));
     const outerName = outer.attributes.outerKind === "none" ? "无外层" : outer.name;
-    const waist = bottom.attributes.waistPosition || decision.requirements.waist || "natural";
-    const line = decision.requirements.line || bottom.attributes.lineDirection || familyMeta.line;
-    const unknownColor = [derived.color?.temperature, derived.color?.contrast, derived.color?.chroma].some((item) => !item || item.value === null);
+    const bodyComponent = dress || bottom;
+    const waist = bodyComponent.attributes.waistPosition || decision.requirements.waist || "natural";
+    const line = decision.requirements.line || bodyComponent.attributes.lineDirection || familyMeta.line;
+    const unknownColor = decision.canonicalPrimary
+      ? !decision.canonicalColor
+      : [derived.color?.temperature, derived.color?.contrast, derived.color?.chroma].some((item) => !item || item.value === null);
     const palette = resolvePalette(ruleSet, palettePlanId || decision.requirements.palettePlanId);
-    const boundPalette = bindPaletteToGarments(palette, outer.attributes.outerKind);
-    const nameParts = [top.name, outer.attributes.outerKind === "none" ? null : outer.name, bottom.name].filter(Boolean);
-    const components = [top, outer.attributes.outerKind === "none" ? null : outer, bottom].filter(Boolean).map((component) => clone(component));
+    const boundPalette = bindPaletteToGarments(palette, outer.attributes.outerKind, Boolean(dress));
+    const nameParts = [dress?.name || top?.name, outer.attributes.outerKind === "none" ? null : outer.name, dress ? null : bottom?.name].filter(Boolean);
+    const components = [dress || top, outer.attributes.outerKind === "none" ? null : outer, dress ? null : bottom].filter(Boolean).map((component) => clone(component));
     const relevantRule = (trace) => {
       const familyValues = [
         ...(trace.actions || []).filter((action) => action.field === "preferences.family" && ["ADD", "BOOST"].includes(action.type)).map((action) => action.value),
@@ -680,7 +917,7 @@
       { item: "具体商品的尺码与纸样", affectsPlan: true, validation: "核对成衣肩、胸、腰、臀和关键长度，并试穿确认活动量。", failure: "关键部位尺寸不足、衣长落点偏离或动作受限。" },
       { item: "面料厚度、织法与垂坠度", affectsPlan: false, validation: `确认商品能实现“${decision.requirements.material}”且不过度蓬胀。`, failure: "实际面料过厚、过硬或蓬胀，改变了当前轮廓。" },
       ...(palette ? [{ item: `配色方案“${palette.name}”的实物呈现`, affectsPlan: false, validation: palette.validation || "在自然光下核对近脸色、主色和辅助色。", failure: "实物色温、明度或彩度偏离当前配色方向。" }] : []),
-      ...(unknownColor ? [{ item: "外观色彩事实不完整", affectsPlan: false, validation: "在自然光下确认肤色、发色和眼睛颜色的冷暖、明度和彩度。", failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。" }] : [])
+      ...(unknownColor ? [{ item: "外观色彩事实不完整", affectsPlan: false, validation: "在自然光下确认肤色底色、肤色明度、发色冷暖和发色深浅。", failure: "近脸颜色让肤色明显发灰或整体对比与本人不协调。" }] : [])
     ].map((item) => ({ ...item, field: item.item, impact: item.affectsPlan, howToVerify: item.validation, failureCondition: item.failure }));
 
     return {
@@ -688,11 +925,16 @@
       title: nameParts.join(" + "),
       name: nameParts.join(" + "),
       family,
-      topId: top.id,
+      form: dress ? "onePieceDress" : decision.requirements.canonicalForm,
+      topId: top?.id || null,
       outerId: outer.id,
-      bottomId: bottom.id,
-      bottomType: bottom.attributes.bottomType,
-      garments: { top: top.name, outer: outerName, bottom: bottom.name },
+      bottomId: bottom?.id || null,
+      dressId: dress?.id || null,
+      bottomType: dress ? "dress" : bottom.attributes.bottomType,
+      topFit: top?.attributes?.topFit || null,
+      bottomCut: bottom?.attributes?.bottomCut || null,
+      dressCut: dress?.attributes?.dressCut || null,
+      garments: { top: top?.name || null, outer: outerName, bottom: bottom?.name || null, dress: dress?.name || null },
       components,
       layerCount: decision.requirements.layerCount,
       sleeve: decision.requirements.sleeve,
@@ -706,7 +948,7 @@
       colorChroma: decision.requirements.colorChroma,
       palettePlanId: palette?.id || null,
       palette: boundPalette,
-      illustration: buildIllustration(top, outer, bottom, decision, boundPalette, family),
+      illustration: buildIllustration(top, outer, bottom, dress, decision, boundPalette, family),
       styleName: decision.requirements.styleName || "未限定风格",
       silhouette: decision.requirements.silhouette || familyMeta.line,
       detail: decision.requirements.detail || "与风格匹配的细节",
@@ -757,43 +999,58 @@
     };
   }
 
-  function bindPaletteToGarments(palette, outerKind) {
+  function bindPaletteToGarments(palette, outerKind, onePiece = false) {
     if (!palette) return null;
     const roles = palette.roles.map((item) => ({
       ...item,
-      garment: item.role === "nearFace" ? "上装" : item.role === "main" && outerKind !== "none" ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
+      garment: onePiece
+        ? item.role === "main" && outerKind !== "none" ? "外层" : ["nearFace", "main", "secondary"].includes(item.role) ? "连身裙" : "点缀"
+        : item.role === "nearFace" ? "上装" : item.role === "main" && outerKind !== "none" ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
     }));
     return { ...palette, roles };
   }
 
-  function buildIllustration(top, outer, bottom, decision, palette, family) {
+  function buildIllustration(top, outer, bottom, dress, decision, palette, family) {
     const roles = palette?.roles || [];
     const colorFor = (garment, fallback) => {
       const role = roles.find((item) => item.garment === garment);
       return { hex: role?.hex || fallback, colorName: role?.colorName || "基础色" };
     };
     const outerKind = outer?.attributes?.outerKind || "none";
-    const bottomType = bottom?.attributes?.bottomType || "trouser";
-    const topColor = colorFor("上装", "#dedbd1");
+    const bottomType = dress ? "dress" : bottom?.attributes?.bottomType || "trouser";
+    const topColor = dress ? colorFor("连身裙", "#dedbd1") : colorFor("上装", "#dedbd1");
     const outerColor = colorFor("外层", "#a8b1af");
-    const bottomColor = colorFor("下装", "#4c5961");
+    const bottomColor = dress ? topColor : colorFor("下装", "#4c5961");
+    const bodyComponent = dress || bottom;
     return {
       type: "outfit-schematic",
+      form: dress ? "onePieceDress" : decision.requirements.canonicalForm,
       layerCount: decision.requirements.layerCount || 1,
       silhouette: decision.requirements.silhouette || family || "straight",
-      waist: decision.requirements.waist || bottom?.attributes?.waistPosition || "natural",
-      line: decision.requirements.line || bottom?.attributes?.lineDirection || "balanced",
-      neckline: decision.requirements.neckline || top?.attributes?.neckline || "regular",
+      waist: decision.requirements.waist || bodyComponent?.attributes?.waistPosition || "natural",
+      line: decision.requirements.line || bodyComponent?.attributes?.lineDirection || "balanced",
+      neckline: decision.requirements.neckline || (dress || top)?.attributes?.neckline || "regular",
       layers: [
-        {
-          id: "top",
-          kind: "top",
-          type: "top",
-          visible: true,
-          sleeve: decision.requirements.sleeve || top?.attributes?.sleeve || "regular",
-          color: topColor.hex,
-          colorName: topColor.colorName
-        },
+        dress
+          ? {
+            id: "dress",
+            kind: "dress",
+            type: "dress",
+            dressCut: dress.attributes.dressCut,
+            visible: true,
+            sleeve: decision.requirements.sleeve || dress.attributes.sleeve || "regular",
+            color: topColor.hex,
+            colorName: topColor.colorName
+          }
+          : {
+            id: "top",
+            kind: "top",
+            type: "top",
+            visible: true,
+            sleeve: decision.requirements.sleeve || top?.attributes?.sleeve || "regular",
+            color: topColor.hex,
+            colorName: topColor.colorName
+          },
         {
           id: "outer",
           kind: "outer",
@@ -803,7 +1060,7 @@
           color: outerColor.hex,
           colorName: outerColor.colorName
         },
-        {
+        dress ? null : {
           id: "bottom",
           kind: "bottom",
           type: bottomType,
@@ -813,7 +1070,7 @@
           color: bottomColor.hex,
           colorName: bottomColor.colorName
         }
-      ]
+      ].filter(Boolean)
     };
   }
 
@@ -830,7 +1087,7 @@
   }
 
   function candidateSignature(candidate) {
-    return [candidate.topId, candidate.outerId, candidate.bottomId, candidate.waist, candidate.line, candidate.colorContrast].join("|");
+    return [candidate.form, candidate.topId, candidate.outerId, candidate.bottomId, candidate.dressId, candidate.waist, candidate.line, candidate.colorContrast].join("|");
   }
 
   function meaningfulDifference(first, second) {
@@ -838,7 +1095,11 @@
       ["上装", "topId"],
       ["外层", "outerId"],
       ["下装", "bottomId"],
+      ["连身裙", "dressId"],
       ["下装类型", "bottomType"],
+      ["上装松紧", "topFit"],
+      ["下装版型", "bottomCut"],
+      ["连身裙型", "dressCut"],
       ["腰线", "waist"],
       ["线条", "line"],
       ["色彩对比", "colorContrast"],
@@ -990,9 +1251,30 @@
   function run(input, suppliedRuleSet) {
     const ruleSet = normalizeRuleSet(suppliedRuleSet);
     const safeInput = normalizeInput(input);
-    const derivation = deriveFeatures(safeInput, ruleSet);
-    const decision = applyDecisionRules(safeInput, derivation.derived, ruleSet);
+    let canonical = null;
+    if (window.GarmentCanonicalInputAdapter && window.GarmentCanonicalRuleEngine) {
+      const migration = window.GarmentCanonicalInputAdapter.normalizeLegacyInput(safeInput);
+      canonical = {
+        migration,
+        result: window.GarmentCanonicalRuleEngine.run(migration.input)
+      };
+    }
+    const derivation = canonical?.result
+      ? { derived: {}, trace: [], missing: [] }
+      : deriveFeatures(safeInput, ruleSet);
+    const decision = canonical?.result
+      ? createCanonicalDecision(safeInput, canonical, ruleSet)
+      : applyDecisionRules(safeInput, derivation.derived, ruleSet);
+    if (canonical && window.GarmentCanonicalOutputAdapter) {
+      window.GarmentCanonicalOutputAdapter.applyToDecision(decision, canonical, ruleSet);
+    }
     const assembly = assembleCandidates(safeInput, derivation.derived, decision, ruleSet);
+    if (canonical?.result) {
+      const canonicalOutput = clone(canonical.result);
+      assembly.candidates.forEach((candidate) => {
+        candidate.canonicalOutput = canonicalOutput;
+      });
+    }
     const insights = buildAnalysisInsights(decision, assembly, ruleSet);
     assembly.candidates.forEach((candidate) => {
       const applied = insights.filter((insight) => insight.candidateIds.includes(candidate.id));
@@ -1021,7 +1303,15 @@
       candidates: assembly.candidates,
       blocked: assembly.blocked,
       conflicts: [...decision.conflicts, ...assembly.conflicts],
-      trace: [...derivation.trace, ...decision.trace]
+      trace: [...derivation.trace, ...decision.trace],
+      canonical,
+      canonicalOverlay: canonical
+        ? {
+          applied: decision.canonicalApplied || [],
+          deferred: decision.canonicalDeferred || [],
+          paletteMatch: decision.canonicalPaletteMatch || null
+        }
+        : null
     };
   }
 
@@ -1106,7 +1396,7 @@
 
     ruleSet.components.forEach((component) => {
       const attributes = component.attributes || {};
-      if (!component.category || !["top", "outer", "bottom"].includes(component.category)) {
+      if (!component.category || !["top", "outer", "bottom", "dress"].includes(component.category)) {
         errors.push({ type: "invalid_component_category", componentId: component.id, message: `${component.name || component.id} 的品类无效。` });
       }
       if (!component.enabled) return;
@@ -1114,6 +1404,7 @@
       if (component.category === "top" && !attributes.sleeve) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少袖长属性。` });
       if (component.category === "outer" && !attributes.outerKind) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少外层类型属性。` });
       if (component.category === "bottom" && (!attributes.bottomType || !attributes.coverage)) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少下装类型或覆盖属性。` });
+      if (component.category === "dress" && (!attributes.dressCut || !attributes.sleeve || !attributes.coverage)) errors.push({ type: "missing_component_attribute", componentId: component.id, message: `${component.name || component.id} 缺少连身裙型、袖长或覆盖属性。` });
     });
 
     const colorIds = new Set(ruleSet.colorLibrary.map((item) => item.id));
