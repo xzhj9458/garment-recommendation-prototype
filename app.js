@@ -4,6 +4,8 @@
   const DATA = window.GarmentPrototypeData;
   const Engine = window.GarmentRuleEngine;
   const CANONICAL_INPUTS = window.GarmentCanonicalData?.fieldRegistry?.inputs || [];
+  const PREVIEW_HAIR_STYLE_KEY = "garment-preview-hair-style";
+  const PREVIEW_HAIR_STYLES = new Set(["short", "medium", "long"]);
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -15,6 +17,7 @@
     highlightRuleId: null,
     hoveredField: null,
     viewMode: "cards", // 'cards' | 'table'
+    previewHairStyle: PREVIEW_HAIR_STYLES.has(localStorage.getItem(PREVIEW_HAIR_STYLE_KEY)) ? localStorage.getItem(PREVIEW_HAIR_STYLE_KEY) : "short",
     ruleSet: Engine.Store.loadPublished()
   };
 
@@ -119,6 +122,16 @@
       renderCandidates();
     });
 
+    $("#hairStyleBar").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-hair-style]");
+      if (!button || !PREVIEW_HAIR_STYLES.has(button.dataset.hairStyle)) return;
+      state.previewHairStyle = button.dataset.hairStyle;
+      localStorage.setItem(PREVIEW_HAIR_STYLE_KEY, state.previewHairStyle);
+      renderHairStyleBar();
+      renderCandidates(state.lastResult);
+      triggerRefreshTransition();
+    });
+
     const resetBtn = $("#resetInputButton") || $("#resetButton");
     if (resetBtn) {
       resetBtn.addEventListener("click", () => {
@@ -175,6 +188,7 @@
     renderConditionSnapshot();
     renderInputTabs();
     renderInputs();
+    renderHairStyleBar();
     renderViewModeBar();
     renderCandidates(result);
 
@@ -555,6 +569,14 @@
     cards.forEach((card, index) => {
       const isSelected = state.selectedCandidateIndex === index;
       card.classList.toggle("is-active-selection", isSelected);
+    });
+  }
+
+  function renderHairStyleBar() {
+    $$("#hairStyleBar button[data-hair-style]").forEach((button) => {
+      const active = button.dataset.hairStyle === state.previewHairStyle;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-checked", String(active));
     });
   }
 
@@ -1300,6 +1322,17 @@
     const hairDepth = state.input?.appearance?.hairDepth;
     const hairTone = state.input?.appearance?.hairTone;
     const hairColor = hairDepth === "light" ? (hairTone === "warm" ? "#6a4c3b" : "#574b49") : hairTone === "warm" ? "#3f3029" : "#29282a";
+    const hairStyle = PREVIEW_HAIR_STYLES.has(state.previewHairStyle) ? state.previewHairStyle : "short";
+    const hairBack = {
+      short: `<path d="M99 29 Q97 17 110 16 Q124 17 123 31 L121 43 Q117 39 117 33 Q110 27 102 31 Q103 39 99 43 Z" fill="${hairColor}"/>`,
+      medium: `<path d="M99 28 Q97 16 110 15 Q124 16 124 30 Q128 44 124 62 Q118 67 113 60 L116 34 Q110 27 103 31 L105 60 Q101 67 95 62 Q92 44 99 28 Z" fill="${hairColor}"/>`,
+      long: `<path d="M99 28 Q97 15 110 14 Q125 15 124 30 Q132 50 133 91 Q128 101 120 95 L116 35 Q110 27 103 31 L100 95 Q92 101 87 91 Q88 50 99 28 Z" fill="${hairColor}"/>`
+    }[hairStyle];
+    const hairFront = {
+      short: `<path d="M100 28 Q102 17 111 17 Q120 17 123 27 Q115 23 108 24 Q103 25 100 28 Z" fill="${hairColor}"/><path d="M101 26 Q109 18 120 22" fill="none" stroke="#ffffff" stroke-opacity="0.24" stroke-width="0.9"/>`,
+      medium: `<path d="M99 28 Q102 16 111 16 Q121 17 124 28 Q116 23 109 24 Q103 25 99 28 Z" fill="${hairColor}"/><path d="M101 25 Q110 17 121 22" fill="none" stroke="#ffffff" stroke-opacity="0.24" stroke-width="0.9"/>`,
+      long: `<path d="M99 27 Q102 15 111 15 Q122 16 124 28 Q116 22 109 23 Q103 24 99 27 Z" fill="${hairColor}"/><path d="M101 24 Q110 16 121 21" fill="none" stroke="#ffffff" stroke-opacity="0.24" stroke-width="0.9"/>`
+    }[hairStyle];
 
     const accessoryKey = (kind, canonicalKey, fallback = null) => {
       const modeled = (model.accessories || []).find((item) => item.kind === kind && item.visible !== false)?.key;
@@ -1455,12 +1488,11 @@
 
           <g data-layer="figure" aria-hidden="true">
             <path d="M96 124 L96 252 M124 124 L124 252" stroke="${skin}" stroke-width="8" stroke-linecap="round"/>
+            <g data-hair-style="${hairStyle}">${hairBack}</g>
             <ellipse cx="110" cy="30" rx="9.5" ry="12.5" fill="${skin}"/>
             <circle cx="100" cy="31" r="2" fill="${skin}"/><circle cx="120" cy="31" r="2" fill="${skin}"/>
             <path d="M104 40 L104 56 Q110 61 116 56 L116 40 Z" fill="${skin}"/>
-            <path d="M100 31 Q98 17 111 17 Q123 17 123 31 Q118 25 111 24 Q104 23 100 31 Z" fill="${hairColor}"/>
-            <path d="M101 25 Q108 18 120 21" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1"/>
-            <path d="M121 28 Q132 32 131 42 Q130 50 124 53 Q126 43 122 36 Z" fill="${hairColor}" data-hair-style="side-part-low-tail"/>
+            ${hairFront}
             <path d="M106 37 Q110 39 114 37" fill="none" stroke="${skinShade}" stroke-opacity="0.55" stroke-width="0.8"/>
           </g>
 

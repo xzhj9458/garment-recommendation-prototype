@@ -75,7 +75,7 @@ async function choose(page, pathName, value) {
         renderer: container.dataset.renderer,
         viewBox: svg.getAttribute("viewBox"),
         canvas: svg.dataset.canvas,
-        hasModernHair: Boolean(svg.querySelector('[data-hair-style="side-part-low-tail"]')),
+        hairStyle: svg.querySelector('[data-hair-style]')?.getAttribute("data-hair-style") || null,
         hasInner: Boolean(svg.querySelector('[data-layer="inner"]')),
         hasBottomOrDress: Boolean(svg.querySelector('[data-layer="bottom"]')) || Boolean(svg.querySelector('[data-layer="inner"] path')),
         hasFootwear: Boolean(svg.querySelector('[data-layer="footwear"]')),
@@ -85,8 +85,21 @@ async function choose(page, pathName, value) {
       };
     }));
     assert(integratedIllustrations.every((item) => item.renderer === "integrated-ensemble" && item.viewBox === "0 0 220 280" && item.canvas === "220x280"), "效果图没有统一为 220×280 一体化画板");
-    assert(integratedIllustrations.every((item) => item.hasModernHair && item.hasInner && item.hasBottomOrDress && item.hasFootwear), "一体化效果图缺少现代发型或完整穿着层");
+    assert(integratedIllustrations.every((item) => item.hairStyle === "short" && item.hasInner && item.hasBottomOrDress && item.hasFootwear), "一体化效果图缺少默认短发或完整穿着层");
     assert(integratedIllustrations.every((item) => !item.hasFragmentIcons && !item.hasDeadGray && item.contained), "效果图仍存在零件碎片、死灰回退或画板溢出");
+    assert(await demo.page.locator("#hairStyleBar button[data-hair-style]").count() === 3, "效果图缺少短发、中长发和长发三种通用发型");
+    const candidateNamesBeforeHair = await demo.page.locator(".candidate-card .candidate-name").allInnerTexts();
+    for (const hairStyle of ["medium", "long", "short"]) {
+      await demo.page.locator(`#hairStyleBar button[data-hair-style="${hairStyle}"]`).click();
+      const hairState = await demo.page.evaluate(() => ({
+        styles: [...document.querySelectorAll(".illustration-svg [data-hair-style]")].map((element) => element.getAttribute("data-hair-style")),
+        checked: document.querySelector('#hairStyleBar button[aria-checked="true"]')?.dataset.hairStyle,
+        canvases: [...document.querySelectorAll(".illustration-svg")].map((svg) => { const box = svg.getBBox(); return box.x >= 0 && box.y >= 0 && box.x + box.width <= 220.5 && box.y + box.height <= 280.5; })
+      }));
+      assert(hairState.styles.length === 3 && hairState.styles.every((style) => style === hairStyle), `${hairStyle} 没有同步应用到三套方案`);
+      assert(hairState.checked === hairStyle && hairState.canvases.every(Boolean), `${hairStyle} 控件状态错误或发型超出画板`);
+    }
+    assert(JSON.stringify(candidateNamesBeforeHair) === JSON.stringify(await demo.page.locator(".candidate-card .candidate-name").allInnerTexts()), "切换效果图发型错误地改变了推荐结果");
     const desktopLayout = await demo.page.evaluate(() => {
       const input = document.querySelector(".demo-column-input").getBoundingClientRect();
       const results = document.querySelector(".demo-column-results").getBoundingClientRect();

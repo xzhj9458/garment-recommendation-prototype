@@ -1268,6 +1268,8 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .recommendation-heading-controls p {
@@ -1280,6 +1282,43 @@ button {
   padding: 2px;
   background: #e8eee9;
   border-radius: var(--radius-pill);
+}
+
+.hair-style-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.hair-style-bar {
+  display: inline-flex;
+  padding: 2px;
+  background: #e8eee9;
+  border-radius: var(--radius-pill);
+}
+
+.hair-style-button {
+  min-width: 42px;
+  padding: 3px 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.hair-style-button:hover,
+.hair-style-button.is-active {
+  color: var(--green-dark);
+  background: var(--surface);
+}
+
+.hair-style-button.is-active {
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .view-mode-button {

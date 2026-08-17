@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>穿搭推荐案例运行</title>
-  <link rel="stylesheet" href="styles.css?v=logic-2.4">
-  <script defer src="rules-data.js?v=logic-2.4"></script>
-  <script defer src="canonical-data.js?v=logic-2.4"></script>
-  <script defer src="canonical-input-adapter.js?v=logic-2.4"></script>
-  <script defer src="canonical-rule-engine.js?v=logic-2.4"></script>
-  <script defer src="canonical-output-adapter.js?v=logic-2.4"></script>
-  <script defer src="rule-engine.js?v=logic-2.4"></script>
-  <script defer src="app.js?v=logic-2.4"></script>
+  <link rel="stylesheet" href="styles.css?v=logic-2.5">
+  <script defer src="rules-data.js?v=logic-2.5"></script>
+  <script defer src="canonical-data.js?v=logic-2.5"></script>
+  <script defer src="canonical-input-adapter.js?v=logic-2.5"></script>
+  <script defer src="canonical-rule-engine.js?v=logic-2.5"></script>
+  <script defer src="canonical-output-adapter.js?v=logic-2.5"></script>
+  <script defer src="rule-engine.js?v=logic-2.5"></script>
+  <script defer src="app.js?v=logic-2.5"></script>
 </head>
 <body class="demo-page">
   <header class="app-header">
@@ -60,6 +60,14 @@
         </div>
         <div class="recommendation-heading-controls">
           <p id="candidateSummary">根据当前规则生成 3 个不同方向</p>
+          <div class="hair-style-control" aria-label="效果图发型">
+            <span>发型</span>
+            <div class="hair-style-bar" id="hairStyleBar" role="radiogroup" aria-label="效果图通用发型">
+              <button class="hair-style-button is-active" type="button" role="radio" aria-checked="true" data-hair-style="short">短发</button>
+              <button class="hair-style-button" type="button" role="radio" aria-checked="false" data-hair-style="medium">中长发</button>
+              <button class="hair-style-button" type="button" role="radio" aria-checked="false" data-hair-style="long">长发</button>
+            </div>
+          </div>
           <div class="view-mode-bar" id="viewModeBar" role="group" aria-label="方案视图模式">
             <button class="view-mode-button is-active" type="button" data-view-mode="cards" title="卡片视图">▣ 卡片对比</button>
             <button class="view-mode-button" type="button" data-view-mode="table" title="多维属性对比表">☷ 属性对比表</button>
