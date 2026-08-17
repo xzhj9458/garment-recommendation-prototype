@@ -1370,29 +1370,38 @@ button {
 }
 
 .outfit-illustration {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  min-height: 184px;
-  height: 184px;
-  padding: 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 278px;
+  height: 278px;
+  padding: 5px 8px 4px;
   margin: 4px 0 2px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: #f1f4f1;
+  background: #f4f7f4;
   box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  contain: layout paint;
 }
 
 .illustration-svg {
   display: block;
-  width: min(100%, 148px);
-  height: 170px;
+  width: min(100%, 198px);
+  height: 252px;
+  aspect-ratio: 11 / 14;
+  filter: drop-shadow(0 4px 10px rgba(18, 32, 24, 0.08));
+  flex: 0 0 auto;
 }
 
 .illustration-caption {
   color: var(--text-muted);
   font-size: 9px;
   line-height: 1.2;
+  text-align: center;
+  margin-top: 2px;
 }
 
 .illustration-warning {
@@ -1400,6 +1409,7 @@ button {
   font-size: 9px;
   line-height: 1.2;
   font-weight: 700;
+  text-align: center;
 }
 
 .candidate-card-meta {

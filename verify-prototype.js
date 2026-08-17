@@ -65,8 +65,28 @@ async function choose(page, pathName, value) {
     assert(illustrationContract.every((item) => item.geometry?.top || item.geometry?.dress), "效果图没有消费组件版型属性");
     assert(new Set(illustrationContract.map((item) => item.geometry?.outer?.outerStyle || item.geometry?.bottom?.legWidth || item.geometry?.dress?.hemWidth)).size >= 2, "不同候选没有形成可辨识的版型几何差异");
     const firstIllustrationSvg = await demo.page.locator(".candidate-card").first().locator(".illustration-svg").innerHTML();
-    assert(firstIllustrationSvg.includes("shadow-") && firstIllustrationSvg.includes("pattern-"), "效果图没有渲染投影或花色图案定义");
+    assert(firstIllustrationSvg.includes("garment-") && firstIllustrationSvg.includes("fabric-"), "效果图没有渲染织物纹理或服装投影定义");
     assert(firstIllustrationSvg.includes("<rect") || firstIllustrationSvg.includes("<path"), "效果图没有渲染可识别的服装或配饰形状");
+    assert(firstIllustrationSvg.includes('data-part="crease-line"') && firstIllustrationSvg.includes('data-part="horsebit"') && firstIllustrationSvg.includes('data-part="tote-handles"'), "分体效果图缺少裤装烫迹线、乐福鞋马衔扣或托特包提把");
+    const integratedIllustrations = await demo.page.evaluate(() => [...document.querySelectorAll(".outfit-illustration")].map((container) => {
+      const svg = container.querySelector("svg");
+      const content = svg.querySelector("[data-layer=figure]").parentElement.getBBox();
+      return {
+        renderer: container.dataset.renderer,
+        viewBox: svg.getAttribute("viewBox"),
+        canvas: svg.dataset.canvas,
+        hasModernHair: Boolean(svg.querySelector('[data-hair-style="side-part-low-tail"]')),
+        hasInner: Boolean(svg.querySelector('[data-layer="inner"]')),
+        hasBottomOrDress: Boolean(svg.querySelector('[data-layer="bottom"]')) || Boolean(svg.querySelector('[data-layer="inner"] path')),
+        hasFootwear: Boolean(svg.querySelector('[data-layer="footwear"]')),
+        hasFragmentIcons: Boolean(container.querySelector(".garment-flat-svg")),
+        hasDeadGray: svg.innerHTML.includes("#dedbd1"),
+        contained: content.x >= 0 && content.y >= 0 && content.x + content.width <= 220.5 && content.y + content.height <= 280.5
+      };
+    }));
+    assert(integratedIllustrations.every((item) => item.renderer === "integrated-ensemble" && item.viewBox === "0 0 220 280" && item.canvas === "220x280"), "效果图没有统一为 220×280 一体化画板");
+    assert(integratedIllustrations.every((item) => item.hasModernHair && item.hasInner && item.hasBottomOrDress && item.hasFootwear), "一体化效果图缺少现代发型或完整穿着层");
+    assert(integratedIllustrations.every((item) => !item.hasFragmentIcons && !item.hasDeadGray && item.contained), "效果图仍存在零件碎片、死灰回退或画板溢出");
     const desktopLayout = await demo.page.evaluate(() => {
       const input = document.querySelector(".demo-column-input").getBoundingClientRect();
       const results = document.querySelector(".demo-column-results").getBoundingClientRect();
@@ -295,6 +315,13 @@ async function choose(page, pathName, value) {
     assert((await demo.page.locator(".candidate-card").first().innerText()).includes("连衣裙"), "一件式候选没有在案例卡片显示真实连衣裙单品");
     assert(await demo.page.locator(".one-piece-component").count() === 3, "一件式候选没有使用专属信息组件");
     assert(await demo.page.locator(".one-piece-component .one-piece-specs span").count() === 18, "一件式组件没有完整展示裙型、领口、腰部、裙摆、袖长和外搭");
+    const dressCanvas = await demo.page.evaluate(() => [...document.querySelectorAll(".outfit-illustration")].map((container) => {
+      const svg = container.querySelector("svg");
+      const rect = svg.getBoundingClientRect();
+      const viewBox = svg.viewBox.baseVal;
+      return { viewBox: svg.getAttribute("viewBox"), width: rect.width, height: rect.height, contained: svg.scrollWidth <= svg.clientWidth + 1 && svg.scrollHeight <= svg.clientHeight + 1 && viewBox.width === 220 && viewBox.height === 280 };
+    }));
+    assert(dressCanvas.every((item) => item.contained), "一件式连衣裙没有保持 220×280 画板或发生内部溢出");
     assert(await demo.page.locator(".color-spectrum-trigger").count() >= 3, "方案卡片没有提供近脸颜色容错色谱");
     assert(await demo.page.locator(".wearing-layer.is-required").count() === 3 && await demo.page.locator(".wearing-layer.is-optional").count() === 3, "鞋履与进阶选配没有分层展示");
     assert(await demo.page.locator(".candidate-card .pattern-tag").count() === 3, "候选方案没有显示规范花色状态");

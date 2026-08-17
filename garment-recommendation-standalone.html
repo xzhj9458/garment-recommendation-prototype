@@ -1378,29 +1378,38 @@ button {
 }
 
 .outfit-illustration {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  min-height: 184px;
-  height: 184px;
-  padding: 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 278px;
+  height: 278px;
+  padding: 5px 8px 4px;
   margin: 4px 0 2px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: #f1f4f1;
+  background: #f4f7f4;
   box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  contain: layout paint;
 }
 
 .illustration-svg {
   display: block;
-  width: min(100%, 148px);
-  height: 170px;
+  width: min(100%, 198px);
+  height: 252px;
+  aspect-ratio: 11 / 14;
+  filter: drop-shadow(0 4px 10px rgba(18, 32, 24, 0.08));
+  flex: 0 0 auto;
 }
 
 .illustration-caption {
   color: var(--text-muted);
   font-size: 9px;
   line-height: 1.2;
+  text-align: center;
+  margin-top: 2px;
 }
 
 .illustration-warning {
@@ -1408,6 +1417,7 @@ button {
   font-size: 9px;
   line-height: 1.2;
   font-weight: 700;
+  text-align: center;
 }
 
 .candidate-card-meta {
@@ -8056,8 +8066,8 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
         return {
           ...item,
           color,
-          colorName: color?.name || "基础色",
-          hex: color?.hex || "#c7c7c7"
+          colorName: color?.name || "待确认",
+          hex: color?.hex || null
         };
       })
     };
@@ -8080,8 +8090,8 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
       ]
       : [
         { id: "top", layerKind: "top", role: nearFace?.role || null, color: nearFace },
-        ...(visibleOuter ? [{ id: "outer", layerKind: "outer", role: main?.role || null, color: main }] : []),
-        { id: "bottom", layerKind: "bottom", role: (visibleOuter ? secondary : main)?.role || null, color: visibleOuter ? secondary : main },
+        ...(visibleOuter ? [{ id: "outer", layerKind: "outer", role: secondary?.role || null, color: secondary }] : []),
+        { id: "bottom", layerKind: "bottom", role: main?.role || null, color: main },
         { id: "accent", layerKind: "accessory", role: accent?.role || null, color: accent }
       ];
     const regions = assignments.map((assignment) => ({
@@ -8102,8 +8112,8 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
     const boundRoles = roles.map((item) => ({
       ...item,
       garment: onePiece
-        ? item.role === "main" && visibleOuter ? "外层" : item.role === "main" || item.role === "nearFace" ? "连身裙" : "点缀"
-        : item.role === "nearFace" ? "上装" : item.role === "main" && visibleOuter ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
+        ? item.role === "main" ? "连身裙" : item.role === "secondary" && visibleOuter ? "外层" : item.role === "nearFace" ? "近脸区域" : "点缀"
+        : item.role === "nearFace" ? "上装" : item.role === "main" ? "下装" : item.role === "secondary" && visibleOuter ? "外层" : "点缀"
     }));
     return {
       ...palette,
@@ -8122,18 +8132,18 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
     const outerKind = outer?.attributes?.outerKind || "none";
     const bottomType = dress ? "dress" : bottom?.attributes?.bottomType || "trouser";
     const regions = palette?.regions || [];
-    const regionFor = (id, fallback) => {
+    const regionFor = (id) => {
       const region = regions.find((item) => item.id === id);
       return {
-        hex: region?.hex || fallback,
+        hex: region?.hex || null,
         colorName: region?.colorName || "待确认",
         ratio: region?.ratio || 0,
         source: region?.source || "unresolved"
       };
     };
-    const topColor = dress ? regionFor("dress", "#dedbd1") : regionFor("top", "#dedbd1");
-    const outerColor = regionFor("outer", "#a8b1af");
-    const bottomColor = dress ? topColor : regionFor("bottom", "#4c5961");
+    const topColor = dress ? regionFor("dress") : regionFor("top");
+    const outerColor = regionFor("outer");
+    const bottomColor = dress ? topColor : regionFor("bottom");
     const bodyComponent = dress || bottom;
     const requestedPatternTarget = options.patternDetail?.placement === "外层" ? "outer" : options.patternDetail?.placement === "下装" ? "bottom" : options.patternDetail?.placement === "连身裙" ? "dress" : "top";
     const patternTarget = requestedPatternTarget === "outer" && outerKind === "none"
@@ -9433,7 +9443,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
   function renderOnePieceComponent(candidate, roles) {
     const role = roleForGarment(roles, "dress") || roles[0] || {};
     return `<section class="one-piece-component" data-component="one-piece">
-      <div class="one-piece-heading"><span>一件式主体</span><strong>${escapeHtml(candidate.garments?.dress || "连衣裙")}</strong><span class="garment-color-pill"><i style="background:${escapeHtml(role.hex || "#ccc")}"></i>${escapeHtml(role.colorName || "基础色")}</span>${renderColorSpectrum(candidate)}</div>
+      <div class="one-piece-heading"><span>一件式主体</span><strong>${escapeHtml(candidate.garments?.dress || "连衣裙")}</strong><span class="garment-color-pill"><i style="background:${escapeHtml(role.hex || "transparent")}"></i>${escapeHtml(role.colorName || "待确认")}</span>${renderColorSpectrum(candidate)}</div>
       <div class="one-piece-specs">${onePieceDetails(candidate).map(([label, value]) => `<span><small>${label}</small><strong>${escapeHtml(value)}</strong></span>`).join("")}</div>
     </section>`;
   }
@@ -9466,7 +9476,292 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
     return `<span class="pattern-tag" title="${escapeHtml(`${pattern.scale}尺度 · ${pattern.contrast}对比 · 用于${pattern.placement}`)}">${escapeHtml(pattern.name)} · ${escapeHtml(pattern.placement)}</span>`;
   }
 
-  function renderIllustration(illustration, candidate) {
+  const GarmentIconRenderer = {
+    trenchCoat(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 110" class="garment-flat-svg" role="img" aria-label="经典双排扣风衣">
+          <g filter="url(#garmentShadow)">
+            <path d="M32 18 L18 36 L24 88 L34 94 L66 94 L76 88 L82 36 L68 18 L58 22 L42 22 Z" fill="${color}"/>
+            ${patternId ? `<path d="M32 18 L18 36 L24 88 L34 94 L66 94 L76 88 L82 36 L68 18 L58 22 L42 22 Z" fill="url(#${patternId})" opacity="0.6"/>` : ""}
+            <path d="M32 18 L48 38 L38 48 L22 32 Z" fill="#ffffff" fill-opacity="0.18"/>
+            <path d="M68 18 L52 38 L62 48 L78 32 Z" fill="#ffffff" fill-opacity="0.18"/>
+            <rect x="25" y="56" width="50" height="6" rx="1" fill="${color}" stroke="#000000" stroke-width="0.8" stroke-opacity="0.25"/>
+            <rect x="44" y="54" width="12" height="10" rx="1.5" fill="#d4af37" stroke="#997b20" stroke-width="0.8"/>
+            <rect x="47" y="56" width="6" height="6" fill="${color}"/>
+            <circle cx="43" cy="42" r="1.8" fill="#2c2825"/><circle cx="57" cy="42" r="1.8" fill="#2c2825"/>
+            <circle cx="43" cy="50" r="1.8" fill="#2c2825"/><circle cx="57" cy="50" r="1.8" fill="#2c2825"/>
+            <circle cx="43" cy="68" r="1.8" fill="#2c2825"/><circle cx="57" cy="68" r="1.8" fill="#2c2825"/>
+            <rect x="19" y="76" width="8" height="3" rx="0.5" fill="#d4af37"/>
+            <rect x="73" y="76" width="8" height="3" rx="0.5" fill="#d4af37"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    blazer(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 100" class="garment-flat-svg" role="img" aria-label="精裁西装">
+          <g filter="url(#garmentShadow)">
+            <path d="M30 16 L14 36 L22 84 L78 84 L86 36 L70 16 L58 20 L42 20 Z" fill="${color}"/>
+            ${patternId ? `<path d="M30 16 L14 36 L22 84 L78 84 L86 36 L70 16 L58 20 L42 20 Z" fill="url(#${patternId})" opacity="0.65"/>` : ""}
+            <path d="M30 16 L48 48 L36 54 L24 32 Z" fill="#ffffff" fill-opacity="0.2"/>
+            <path d="M70 16 L52 48 L64 54 L76 32 Z" fill="#ffffff" fill-opacity="0.2"/>
+            <rect x="30" y="40" width="12" height="2.5" rx="0.5" fill="#000000" fill-opacity="0.25"/>
+            <path d="M33 39 L36 34 L39 39 Z" fill="#f8faf8"/>
+            <rect x="24" y="64" width="16" height="3.5" rx="0.8" fill="#000000" fill-opacity="0.25"/>
+            <rect x="60" y="64" width="16" height="3.5" rx="0.8" fill="#000000" fill-opacity="0.25"/>
+            <circle cx="50" cy="58" r="2" fill="#2c2825" stroke="#d4af37" stroke-width="0.6"/>
+            <circle cx="50" cy="68" r="2" fill="#2c2825" stroke="#d4af37" stroke-width="0.6"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    cardigan(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 100" class="garment-flat-svg" role="img" aria-label="小香风开衫">
+          <g filter="url(#garmentShadow)">
+            <path d="M32 18 L16 34 L22 78 L78 78 L84 34 L68 18 C60 22 40 22 32 18 Z" fill="${color}"/>
+            ${patternId ? `<path d="M32 18 L16 34 L22 78 L78 78 L84 34 L68 18 C60 22 40 22 32 18 Z" fill="url(#${patternId})" opacity="0.6"/>` : ""}
+            <path d="M32 18 Q50 26 68 18" fill="none" stroke="#2c2825" stroke-width="2.5"/>
+            <line x1="50" y1="23" x2="50" y2="78" stroke="#2c2825" stroke-width="2.5"/>
+            <circle cx="50" cy="30" r="2" fill="#d4af37"/>
+            <circle cx="50" cy="42" r="2" fill="#d4af37"/>
+            <circle cx="50" cy="54" r="2" fill="#d4af37"/>
+            <circle cx="50" cy="66" r="2" fill="#d4af37"/>
+            <rect x="28" y="48" width="12" height="8" rx="1" fill="#000000" fill-opacity="0.1" stroke="#2c2825" stroke-width="0.8"/>
+            <circle cx="34" cy="52" r="1.2" fill="#d4af37"/>
+            <rect x="60" y="48" width="12" height="8" rx="1" fill="#000000" fill-opacity="0.1" stroke="#2c2825" stroke-width="0.8"/>
+            <circle cx="66" cy="52" r="1.2" fill="#d4af37"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    shirt(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 100" class="garment-flat-svg" role="img" aria-label="高支衬衫">
+          <g filter="url(#garmentShadow)">
+            <path d="M30 20 L16 34 L22 76 Q50 82 78 76 L84 34 L70 20 L58 24 L42 24 Z" fill="${color}"/>
+            ${patternId ? `<path d="M30 20 L16 34 L22 76 Q50 82 78 76 L84 34 L70 20 L58 24 L42 24 Z" fill="url(#${patternId})" opacity="0.65"/>` : ""}
+            <path d="M38 18 L50 28 L42 32 L34 20 Z" fill="#ffffff" fill-opacity="0.25"/>
+            <path d="M62 18 L50 28 L58 32 L66 20 Z" fill="#ffffff" fill-opacity="0.25"/>
+            <line x1="50" y1="28" x2="50" y2="78" stroke="#000000" stroke-width="1.2" stroke-opacity="0.2"/>
+            <circle cx="50" cy="34" r="1.2" fill="#ffffff" stroke="#999" stroke-width="0.4"/>
+            <circle cx="50" cy="44" r="1.2" fill="#ffffff" stroke="#999" stroke-width="0.4"/>
+            <circle cx="50" cy="54" r="1.2" fill="#ffffff" stroke="#999" stroke-width="0.4"/>
+            <circle cx="50" cy="64" r="1.2" fill="#ffffff" stroke="#999" stroke-width="0.4"/>
+            <path d="M28 38 L38 38 L38 48 L33 52 L28 48 Z" fill="none" stroke="#000000" stroke-width="0.8" stroke-opacity="0.2"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    bretonTee(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 100" class="garment-flat-svg" role="img" aria-label="海魂条纹T恤">
+          <g filter="url(#garmentShadow)">
+            <path d="M30 20 L14 36 L20 76 L80 76 L86 36 L70 20 C60 26 40 26 30 20 Z" fill="${color}"/>
+            ${patternId ? `<path d="M30 20 L14 36 L20 76 L80 76 L86 36 L70 20 C60 26 40 26 30 20 Z" fill="url(#${patternId})" opacity="0.85"/>` : ""}
+            <path d="M34 20 Q50 28 66 20 Q50 24 34 20 Z" fill="#ffffff" stroke="#1f2933" stroke-width="0.8"/>
+            <line x1="20" y1="74" x2="80" y2="74" stroke="#000000" stroke-width="0.8" stroke-opacity="0.15"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    silkBlouse(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 100" class="garment-flat-svg" role="img" aria-label="真丝飘带领衬衫">
+          <g filter="url(#garmentShadow)">
+            <path d="M30 20 L16 38 L24 76 L76 76 L84 38 L70 20 Q50 26 30 20 Z" fill="${color}"/>
+            ${patternId ? `<path d="M30 20 L16 38 L24 76 L76 76 L84 38 L70 20 Q50 26 30 20 Z" fill="url(#${patternId})" opacity="0.6"/>` : ""}
+            <path d="M46 22 Q42 32 40 48 Q44 46 48 26 Z" fill="#ffffff" fill-opacity="0.25"/>
+            <path d="M54 22 Q58 34 60 52 Q56 48 52 26 Z" fill="#ffffff" fill-opacity="0.25"/>
+            <circle cx="50" cy="24" r="3.5" fill="${color}" stroke="#000000" stroke-width="0.6" stroke-opacity="0.3"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    wideLegTrouser(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 110" class="garment-flat-svg" role="img" aria-label="高腰垂感阔腿西裤">
+          <g filter="url(#garmentShadow)">
+            <path d="M32 16 L68 16 L76 96 L53 96 L50 42 L47 96 L24 96 Z" fill="${color}"/>
+            ${patternId ? `<path d="M32 16 L68 16 L76 96 L53 96 L50 42 L47 96 L24 96 Z" fill="url(#${patternId})" opacity="0.6"/>` : ""}
+            <rect x="32" y="16" width="36" height="5" fill="#000000" fill-opacity="0.15"/>
+            <line x1="36" y1="26" x2="36" y2="94" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35"/>
+            <line x1="64" y1="26" x2="64" y2="94" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35"/>
+            <line x1="32" y1="22" x2="38" y2="30" stroke="#000000" stroke-width="0.8" stroke-opacity="0.3"/>
+            <line x1="68" y1="22" x2="62" y2="30" stroke="#000000" stroke-width="0.8" stroke-opacity="0.3"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    pants(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 110" class="garment-flat-svg" role="img" aria-label="经典西裤">
+          <g filter="url(#garmentShadow)">
+            <path d="M34 16 L66 16 L72 96 L52 96 L50 44 L48 96 L28 96 Z" fill="${color}"/>
+            ${patternId ? `<path d="M34 16 L66 16 L72 96 L52 96 L50 44 L48 96 L28 96 Z" fill="url(#${patternId})" opacity="0.6"/>` : ""}
+            <rect x="34" y="16" width="32" height="5" fill="#000000" fill-opacity="0.15"/>
+            <line x1="38" y1="24" x2="38" y2="94" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3"/>
+            <line x1="62" y1="24" x2="62" y2="94" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    skirt(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 110" class="garment-flat-svg" role="img" aria-label="高腰A字半身裙">
+          <g filter="url(#garmentShadow)">
+            <path d="M36 16 L64 16 L82 94 Q50 100 18 94 Z" fill="${color}"/>
+            ${patternId ? `<path d="M36 16 L64 16 L82 94 Q50 100 18 94 Z" fill="url(#${patternId})" opacity="0.65"/>` : ""}
+            <rect x="36" y="16" width="28" height="5" fill="#000000" fill-opacity="0.15"/>
+            <path d="M42 22 Q40 58 34 95" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+            <path d="M50 22 Q50 58 50 97" stroke="#000000" stroke-width="0.8" stroke-opacity="0.2" fill="none"/>
+            <path d="M58 22 Q60 58 66 95" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    wrapDress(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 120" class="garment-flat-svg" role="img" aria-label="法式茶歇裹身裙">
+          <g filter="url(#garmentShadow)">
+            <path d="M34 16 L18 32 L26 44 L36 46 L20 106 Q50 114 80 106 L64 46 L74 44 L82 32 L66 16 Z" fill="${color}"/>
+            ${patternId ? `<path d="M34 16 L18 32 L26 44 L36 46 L20 106 Q50 114 80 106 L64 46 L74 44 L82 32 L66 16 Z" fill="url(#${patternId})" opacity="0.65"/>` : ""}
+            <path d="M34 16 L58 46 L42 46 Z" fill="#ffffff" fill-opacity="0.2"/>
+            <path d="M66 16 L42 46 L58 46 Z" fill="#000000" fill-opacity="0.12"/>
+            <circle cx="38" cy="46" r="3" fill="#d4af37"/>
+            <path d="M38 46 Q32 54 30 68" stroke="${color}" stroke-width="2.5" fill="none"/>
+            <path d="M38 46 Q40 56 42 66" stroke="${color}" stroke-width="2" fill="none"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    shirtDress(color, patternId = null) {
+      return `
+        <svg viewBox="0 0 100 120" class="garment-flat-svg" role="img" aria-label="系带衬衫裙">
+          <g filter="url(#garmentShadow)">
+            <path d="M32 16 L16 32 L24 44 L34 46 L22 106 Q50 112 78 106 L66 46 L76 44 L84 32 L68 16 Z" fill="${color}"/>
+            ${patternId ? `<path d="M32 16 L16 32 L24 44 L34 46 L22 106 Q50 112 78 106 L66 46 L76 44 L84 32 L68 16 Z" fill="url(#${patternId})" opacity="0.65"/>` : ""}
+            <path d="M38 14 L50 24 L42 28 Z" fill="#ffffff" fill-opacity="0.25"/>
+            <path d="M62 14 L50 24 L58 28 Z" fill="#ffffff" fill-opacity="0.25"/>
+            <line x1="50" y1="24" x2="50" y2="108" stroke="#000000" stroke-width="1.2" stroke-opacity="0.2"/>
+            <rect x="34" y="44" width="32" height="4.5" rx="1" fill="#2c2825"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    loafers(color) {
+      return `
+        <svg viewBox="0 0 100 70" class="garment-flat-svg" role="img" aria-label="皮质乐福鞋">
+          <g filter="url(#garmentShadow)">
+            <path d="M16 42 C16 28 30 22 40 22 C46 22 48 32 48 44 C48 52 42 56 30 56 C18 56 16 52 16 42 Z" fill="${color}"/>
+            <path d="M22 32 C26 26 36 26 42 32" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.4"/>
+            <rect x="27" y="34" width="10" height="2" rx="0.5" fill="#d4af37"/>
+            <circle cx="28" cy="35" r="1.3" fill="none" stroke="#d4af37" stroke-width="0.7"/>
+            <circle cx="36" cy="35" r="1.3" fill="none" stroke="#d4af37" stroke-width="0.7"/>
+            <path d="M52 42 C52 30 54 22 60 22 C70 22 84 28 84 42 C84 52 82 56 70 56 C58 56 52 52 52 42 Z" fill="${color}"/>
+            <path d="M58 32 C64 26 74 26 78 32" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.4"/>
+            <rect x="63" y="34" width="10" height="2" rx="0.5" fill="#d4af37"/>
+            <circle cx="64" cy="35" r="1.3" fill="none" stroke="#d4af37" stroke-width="0.7"/>
+            <circle cx="72" cy="35" r="1.3" fill="none" stroke="#d4af37" stroke-width="0.7"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    kittenHeels(color) {
+      return `
+        <svg viewBox="0 0 100 70" class="garment-flat-svg" role="img" aria-label="尖头小猫跟鞋">
+          <g filter="url(#garmentShadow)">
+            <path d="M14 40 Q28 34 44 42 Q36 50 22 50 Q12 50 14 40 Z" fill="${color}"/>
+            <path d="M18 50 L16 58 L19 58 L21 50 Z" fill="#2c2825"/>
+            <path d="M86 40 Q72 34 56 42 Q64 50 78 50 Q88 50 86 40 Z" fill="${color}"/>
+            <path d="M82 50 L84 58 L81 58 L79 50 Z" fill="#2c2825"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    boots(color) {
+      return `
+        <svg viewBox="0 0 100 80" class="garment-flat-svg" role="img" aria-label="切尔西短靴">
+          <g filter="url(#garmentShadow)">
+            <path d="M20 18 L40 18 L40 44 Q48 48 48 60 L16 60 L16 44 Q16 32 20 18 Z" fill="${color}"/>
+            <path d="M26 26 L34 26 L36 46 L24 46 Z" fill="#1f2933"/>
+            <path d="M80 18 L60 18 L60 44 Q52 48 52 60 L84 60 L84 44 Q84 32 80 18 Z" fill="${color}"/>
+            <path d="M74 26 L66 26 L64 46 L76 46 Z" fill="#1f2933"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    sneakers(color) {
+      return `
+        <svg viewBox="0 0 100 70" class="garment-flat-svg" role="img" aria-label="复古德训板鞋">
+          <g filter="url(#garmentShadow)">
+            <path d="M12 42 Q20 30 46 34 L48 50 L14 50 Z" fill="${color}"/>
+            <rect x="12" y="50" width="36" height="5" rx="1" fill="#d8ba8e"/>
+            <path d="M88 42 Q80 30 54 34 L52 50 L86 50 Z" fill="${color}"/>
+            <rect x="52" y="50" width="36" height="5" rx="1" fill="#d8ba8e"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    toteBag(color) {
+      return `
+        <svg viewBox="0 0 100 90" class="garment-flat-svg" role="img" aria-label="挺括托特包">
+          <g filter="url(#garmentShadow)">
+            <path d="M36 36 Q36 12 50 12 Q64 12 64 36" fill="none" stroke="#2c2825" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M24 34 L76 34 L70 78 L30 78 Z" fill="${color}"/>
+            <line x1="24" y1="34" x2="76" y2="34" stroke="#000000" stroke-width="0.8" stroke-opacity="0.25"/>
+            <circle cx="36" cy="36" r="2" fill="#d4af37"/>
+            <circle cx="64" cy="36" r="2" fill="#d4af37"/>
+            <line x1="38" y1="38" x2="42" y2="50" stroke="#2c2825" stroke-width="0.8"/>
+            <path d="M40 50 L44 50 L45 56 L39 56 Z" fill="#2c2825"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    shoulderBag(color) {
+      return `
+        <svg viewBox="0 0 100 80" class="garment-flat-svg" role="img" aria-label="法式腋下包">
+          <g filter="url(#garmentShadow)">
+            <path d="M30 40 Q30 16 50 16 Q70 16 70 40" fill="none" stroke="#2c2825" stroke-width="2.2"/>
+            <path d="M22 38 Q50 32 78 38 L74 66 Q50 74 26 66 Z" fill="${color}"/>
+            <path d="M24 38 Q50 48 76 38" fill="none" stroke="#000000" stroke-width="0.8" stroke-opacity="0.2"/>
+            <circle cx="50" cy="48" r="2.5" fill="#d4af37"/>
+          </g>
+        </svg>
+      `;
+    },
+
+    crossbodyBag(color) {
+      return `
+        <svg viewBox="0 0 100 80" class="garment-flat-svg" role="img" aria-label="随身小方包">
+          <g filter="url(#garmentShadow)">
+            <line x1="16" y1="14" x2="84" y2="38" stroke="#2c2825" stroke-width="1.6"/>
+            <rect x="30" y="34" width="40" height="28" rx="2.5" fill="${color}"/>
+            <path d="M30 34 L70 34 L70 46 L50 54 L30 46 Z" fill="#ffffff" fill-opacity="0.15"/>
+            <rect x="47" y="50" width="6" height="3.5" rx="0.8" fill="#d4af37"/>
+          </g>
+        </svg>
+      `;
+    }
+  };
+
+  function renderLegacyIllustration(illustration, candidate) {
     const model = illustration || {};
     const layers = model.layers || [];
     const colorRegions = model.colorMap?.regions || candidate.palette?.regions || [];
@@ -9491,7 +9786,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
     const outerColor = colorFor("outer", outerLayer.color || "#8d9b86");
     const bottomColor = isDress ? topColor : colorFor("bottom", bottomLayer.color || "#34383a");
     const accentColor = colorFor("accent", "#5b5149");
-    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none" && Boolean(outerLayer.type);
+    const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none" && Boolean(candidate.garments?.outer && candidate.garments.outer !== "无外层");
 
     const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
     const bottomCut = candidate.canonicalOutput?.garment?.bottomCut || candidate.bottomCut || "straightLeg";
@@ -9499,30 +9794,23 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
     const sleeve = (isDress ? dressLayer.sleeve : topLayer.sleeve) || candidate.sleeve || "long";
     const neckline = model.neckline || candidate.neckline || "regular";
     const waist = model.waist || candidate.waist || "natural";
-    const line = model.line || candidate.line || "balanced";
-    const topAttributes = topLayer.attributes || model.geometry?.top || {};
-    const outerAttributes = outerLayer.attributes || model.geometry?.outer || {};
-    const bottomAttributes = bottomLayer.attributes || model.geometry?.bottom || {};
-    const dressAttributes = dressLayer.attributes || model.geometry?.dress || {};
-    const pattern = model.pattern || (candidate.patternDetail ? { ...candidate.patternDetail, target: "top" } : null);
-    const patternTarget = pattern?.target || "top";
-    const accessories = model.accessories || [];
-    const accessoryKey = (kind, fallback = null) => accessories.find((item) => item.kind === kind)?.key || candidate.canonicalOutput?.accessories?.[kind === "bag" ? "leatherGoods" : kind] || fallback;
-    const footwearKey = accessoryKey("footwear", "loafersOxfords");
-    const bagKey = accessoryKey("bag", null);
-    const jewelryKey = accessoryKey("jewelry", null);
-    const textileKey = accessoryKey("textile", null);
 
-    // Sleeve Geometry
-    const shoulderWidth = topAttributes.shoulderWidth === "broad" ? 22 : topAttributes.shoulderWidth === "narrow" ? 15 : 18;
-    const armWidth = topAttributes.sleeveWidth === "wide" ? 10 : 8;
-    const shoulderLeft = 110 - shoulderWidth;
-    const shoulderRight = 110 + shoulderWidth;
+    const pattern = candidate.patternDetail;
+    const patternTarget = pattern?.placement === "上装" ? "top" : pattern?.placement === "外层" ? "outer" : pattern?.placement === "下装" ? "bottom" : pattern?.placement === "连衣裙" ? "dress" : null;
+
+    const footwearKey = candidate.canonicalOutput?.accessories?.footwear || "loafersOxfords";
+    const bagKey = candidate.canonicalOutput?.accessories?.leatherGoods || "structuredTote";
+
+    const svgId = `ens-${Math.random().toString(36).slice(2, 7)}`;
+    const patternInk = pattern?.contrast === "低" ? "#243746" : "#ffffff";
+    const patternOpacity = pattern?.contrast === "低" ? "0.24" : "0.38";
+
+    // Sleeve Geometry with True Visible Sleeves
     const armPath = sleeve === "short"
-      ? `<path d="M${shoulderLeft} 65 L${shoulderLeft - 17} 94 M${shoulderRight} 65 L${shoulderRight + 17} 94" fill="none" stroke="${topColor.hex}" stroke-width="${armWidth}" stroke-linecap="round"/>`
+      ? `<path d="M92 56 L76 90 M128 56 L144 90" fill="none" stroke="${topColor.hex}" stroke-width="13" stroke-linecap="round"/><line x1="70" y1="90" x2="82" y2="90" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.4"/><line x1="138" y1="90" x2="150" y2="90" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.4"/>`
       : sleeve === "threeQuarter"
-        ? `<path d="M${shoulderLeft} 65 L${shoulderLeft - 19} 108 M${shoulderRight} 65 L${shoulderRight + 19} 108" fill="none" stroke="${topColor.hex}" stroke-width="${armWidth}" stroke-linecap="round"/>`
-        : `<path d="M${shoulderLeft} 65 L${shoulderLeft - 19} 124 M${shoulderRight} 65 L${shoulderRight + 19} 124" fill="none" stroke="${topColor.hex}" stroke-width="${armWidth}" stroke-linecap="round"/>`;
+        ? `<path d="M92 56 L73 108 M128 56 L147 108" fill="none" stroke="${topColor.hex}" stroke-width="13" stroke-linecap="round"/><line x1="67" y1="108" x2="79" y2="108" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.4"/><line x1="141" y1="108" x2="153" y2="108" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.4"/>`
+        : `<path d="M92 56 L71 126 M128 56 L149 126" fill="none" stroke="${topColor.hex}" stroke-width="13" stroke-linecap="round"/><circle cx="71" cy="122" r="1.2" fill="#ffffff" stroke="#999" stroke-width="0.4"/><circle cx="149" cy="122" r="1.2" fill="#ffffff" stroke="#999" stroke-width="0.4"/>`;
 
     // Neckline Geometry
     const necklineText = String(neckline);
@@ -9530,96 +9818,123 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
     const isSquareNeckline = neckline === "squareNeck" || necklineText.includes("方领");
     const isSoftNeckline = neckline === "softCurve" || neckline === "uNeck" || necklineText.includes("U领") || necklineText.includes("柔和");
     const necklinePath = isOpenNeckline
-      ? `<path d="M97 72 L110 93 L123 72" fill="none" stroke="#ecd8c8" stroke-width="3" stroke-linecap="round"/>`
+      ? `<path d="M97 70 L110 92 L123 70" fill="none" stroke="#ecd8c8" stroke-width="3" stroke-linecap="round"/>`
       : isSquareNeckline
-        ? `<path d="M98 72 L98 87 L122 87 L122 72" fill="none" stroke="#ecd8c8" stroke-width="3"/>`
+        ? `<path d="M98 70 L98 86 L122 86 L122 70" fill="none" stroke="#ecd8c8" stroke-width="3"/>`
         : isSoftNeckline
-          ? `<path d="M97 73 Q110 94 123 73" fill="none" stroke="#ecd8c8" stroke-width="3"/>`
-          : `<path d="M99 73 Q110 84 121 73" fill="none" stroke="#ecd8c8" stroke-width="3"/>`;
+          ? `<path d="M97 71 Q110 93 123 71" fill="none" stroke="#ecd8c8" stroke-width="3"/>`
+          : `<path d="M99 71 Q110 82 121 71" fill="none" stroke="#ecd8c8" stroke-width="3"/>`;
 
     // Waistline Marker
-    const waistY = waist === "raised" ? 110 : waist === "defined" ? 126 : 142;
+    const waistY = waist === "raised" ? 112 : waist === "defined" ? 128 : 144;
     const waistMark = waist === "defined"
       ? `<path d="M86 ${waistY} L134 ${waistY}" stroke="#ffffff" stroke-opacity="0.85" stroke-width="2.5"/>`
       : waist === "raised"
         ? `<path d="M88 ${waistY} L132 ${waistY}" stroke="#ffffff" stroke-opacity="0.75" stroke-width="2" stroke-dasharray="4 3"/>`
         : "";
 
-    // Trousers & Skirt Shapes: widths and lengths come from the component attributes.
-    const legWidth = bottomAttributes.legWidth || (bottomCut === "wideLeg" ? "wide" : bottomCut === "tapered" ? "tapered" : "straight");
-    const trouserShape = legWidth === "wide"
-      ? `<path d="M76 148 L144 148 L151 238 L114 238 L110 168 L106 238 L69 238 Z" fill="${bottomColor.hex}"/>`
-      : legWidth === "tapered"
-        ? `<path d="M82 148 L138 148 L132 238 L112 238 L110 168 L108 238 L88 238 Z" fill="${bottomColor.hex}"/>`
-        : `<path d="M82 148 L138 148 L138 238 L113 238 L110 168 L107 238 L82 238 Z" fill="${bottomColor.hex}"/>`;
+    // Trousers & Skirt Shapes with Razor-Sharp Crease Line (烫迹线)
+    const trouserShape = bottomCut === "wideLeg"
+      ? `<path d="M78 144 L142 144 L148 244 L114 244 L110 162 L106 244 L72 244 Z" fill="${bottomColor.hex}"/>
+         <line x1="91" y1="152" x2="88" y2="242" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.35"/>
+         <line x1="129" y1="152" x2="132" y2="242" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.35"/>
+         <rect x="78" y="144" width="64" height="6" fill="#000000" fill-opacity="0.15"/>
+         <rect x="107" y="144" width="6" height="6" fill="#d4af37" rx="1"/>`
+      : bottomCut === "tapered"
+        ? `<path d="M82 144 L138 144 L131 244 L112 244 L110 164 L108 244 L89 244 Z" fill="${bottomColor.hex}"/>
+           <line x1="95" y1="152" x2="97" y2="242" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35"/>
+           <line x1="125" y1="152" x2="123" y2="242" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35"/>
+           <rect x="82" y="144" width="56" height="6" fill="#000000" fill-opacity="0.15"/>`
+        : `<path d="M82 144 L138 144 L137 244 L113 244 L110 164 L107 244 L83 244 Z" fill="${bottomColor.hex}"/>
+           <line x1="94" y1="152" x2="94" y2="242" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35"/>
+           <line x1="126" y1="152" x2="126" y2="242" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.35"/>
+           <rect x="82" y="144" width="56" height="6" fill="#000000" fill-opacity="0.15"/>`;
 
     const bottomShape = bottomType === "skirt" || bottomCut === "aLineSkirt" || bottomCut === "straightSkirt"
-      ? bottomAttributes.hemWidth === "narrow" || bottomCut === "straightSkirt"
-        ? `<path d="M84 148 L136 148 L139 236 Q110 240 81 236 Z" fill="${bottomColor.hex}"/>`
-        : `<path d="M80 148 L140 148 L158 234 Q110 244 62 234 Z" fill="${bottomColor.hex}"/>`
-      : bottomType === "short"
-        ? `<path d="M80 148 L140 148 L145 204 L114 204 L110 176 L106 204 L75 204 Z" fill="${bottomColor.hex}"/>`
-        : trouserShape;
+      ? `<path d="M80 144 L140 144 L160 240 Q110 250 60 240 Z" fill="${bottomColor.hex}"/>
+         <rect x="80" y="144" width="60" height="6" fill="#000000" fill-opacity="0.15"/>
+         <path d="M96 150 Q92 195 82 242" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.35" fill="none"/>
+         <path d="M124 150 Q128 195 138 242" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.35" fill="none"/>`
+      : trouserShape;
 
-    // Dress Shapes
+    // Dress Shapes (Complete Fluid One-Piece with zero overflow)
     const dressShape = {
-      aLineMidi: `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor.hex}"/>`,
-      shirtDress: `<path d="M92 58 L128 58 L138 107 L144 235 Q110 241 76 235 L82 107 Z" fill="${topColor.hex}"/><path d="M110 74 L110 226" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2"/><path d="M102 60 L110 68 L118 60" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.8"/>`,
-      wrapDress: `<path d="M92 58 L128 58 L140 108 L156 234 Q110 245 64 234 L80 108 Z" fill="${topColor.hex}"/><path d="M94 66 L124 114 L88 128" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>`,
-      columnDress: `<path d="M92 58 L128 58 L136 108 L138 235 Q110 240 82 235 L84 108 Z" fill="${topColor.hex}"/>`
-    }[dressCut] || `<path d="M92 58 L128 58 L142 108 L158 234 Q110 244 62 234 L78 108 Z" fill="${topColor.hex}"/>`;
+      aLineMidi: `<path d="M92 54 L128 54 L142 104 L160 240 Q110 250 60 240 L78 104 Z" fill="${topColor.hex}"/>
+                  <path d="M98 114 Q92 180 82 242" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.35" fill="none"/>
+                  <path d="M122 114 Q128 180 138 242" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.35" fill="none"/>`,
+      shirtDress: `<path d="M92 54 L128 54 L138 104 L146 242 Q110 248 74 242 L82 104 Z" fill="${topColor.hex}"/>
+                   <path d="M102 54 L110 64 L118 54" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.6"/>
+                   <line x1="110" y1="64" x2="110" y2="238" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.5"/>
+                   <rect x="88" y="118" width="44" height="6" fill="#2c2825" rx="1"/>`,
+      wrapDress: `<path d="M92 54 L128 54 L140 104 L158 240 Q110 250 62 240 L80 104 Z" fill="${topColor.hex}"/>
+                  <path d="M92 54 L122 110 L94 122" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2"/>
+                  <circle cx="94" cy="122" r="3.5" fill="#d4af37"/>
+                  <path d="M94 122 Q88 135 86 154" stroke="${topColor.hex}" stroke-width="2.5" fill="none"/>
+                  <path d="M94 122 Q96 138 98 152" stroke="${topColor.hex}" stroke-width="2.5" fill="none"/>`,
+      columnDress: `<path d="M92 54 L128 54 L136 104 L138 242 Q110 246 82 242 L84 104 Z" fill="${topColor.hex}"/>`
+    }[dressCut] || `<path d="M92 54 L128 54 L142 104 L160 240 Q110 250 60 240 L78 104 Z" fill="${topColor.hex}"/>`;
 
-    // Outer Shape: distinguish blazer, trench, coat, cardigan and jacket.
-    const outerStyle = outerAttributes.outerStyle || (outerKind === "warm" ? "coat" : "minimalJacket");
-    const outerShape = outerStyle === "blazer"
-      ? `<path d="M84 56 L64 86 L70 172 L150 172 L156 86 L136 56 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.96"/><path d="M96 57 L104 88 L110 80 L116 88 L124 57" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2"/><path d="M80 130 L140 130" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.4"/>`
-      : outerStyle === "trench"
-        ? `<path d="M84 56 L64 88 L70 216 L150 216 L156 88 L136 56 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.96"/><path d="M96 56 L104 88 L110 82 L116 88 L124 56" fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="2"/><path d="M72 142 L148 142" stroke="#ffffff" stroke-opacity="0.58" stroke-width="2.5"/><path d="M76 102 L92 96 M144 102 L128 96" stroke="#ffffff" stroke-opacity="0.42" stroke-width="2"/>`
-        : outerStyle === "coat"
-          ? `<path d="M84 56 L62 92 L70 218 Q110 224 150 218 L158 92 L136 56 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.97"/><path d="M95 56 L104 88 L110 82 L116 88 L125 56" fill="none" stroke="#ffffff" stroke-opacity="0.62" stroke-width="2.2"/>`
-          : outerStyle === "cardigan"
-            ? `<path d="M86 57 L66 90 L76 178 L98 178 L98 82 L110 74 L122 82 L122 178 L144 178 L154 90 L134 57 L122 75 L98 75 Z" fill="${outerColor.hex}" opacity="0.94"/><path d="M110 75 L110 178" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.6"/>`
-            : `<path d="M86 58 L68 88 L76 164 L144 164 L152 88 L134 58 L122 74 L98 74 Z" fill="${outerColor.hex}" opacity="0.96"/><path d="M96 58 L104 86 L110 80 L116 86 L124 58" fill="none" stroke="#ffffff" stroke-opacity="0.48" stroke-width="1.7"/>`;
+    // Outer Layer (Naturally Layered Over Top with Open Front)
+    const outerGarmentName = candidate.garments?.outer || "";
+    const outerShape = outerGarmentName.includes("风衣")
+      ? `<path d="M84 54 L62 88 L70 216 L150 216 L158 88 L136 54 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.96"/>
+         <path d="M96 54 L104 88 L110 82 L116 88 L124 54" fill="none" stroke="#ffffff" stroke-opacity="0.65" stroke-width="2"/>
+         <path d="M84 54 L60 92 L62 130 M136 54 L160 92 L158 130" stroke="${outerColor.hex}" stroke-width="15" stroke-linecap="round" fill="none"/>
+         <path d="M72 142 L66 172 M148 142 L154 172" stroke="${outerColor.hex}" stroke-width="3"/>
+         <circle cx="88" cy="110" r="2" fill="#2c2825"/><circle cx="132" cy="110" r="2" fill="#2c2825"/>`
+      : outerGarmentName.includes("开衫") || outerGarmentName.includes("针织")
+        ? `<path d="M86 54 L66 88 L74 168 L146 168 L154 88 L134 54 L122 72 L98 72 Z" fill="${outerColor.hex}" opacity="0.94"/>
+           <path d="M86 54 Q110 68 134 54" fill="none" stroke="#2c2825" stroke-width="2.5"/>
+           <line x1="110" y1="65" x2="110" y2="168" stroke="#2c2825" stroke-width="2.5"/>
+           <path d="M86 54 L62 90 L64 126 M134 54 L158 90 L156 126" stroke="${outerColor.hex}" stroke-width="14" stroke-linecap="round" fill="none"/>
+           <circle cx="110" cy="80" r="2" fill="#d4af37"/><circle cx="110" cy="100" r="2" fill="#d4af37"/><circle cx="110" cy="120" r="2" fill="#d4af37"/><circle cx="110" cy="140" r="2" fill="#d4af37"/>`
+        : `<path d="M84 54 L64 86 L70 172 L150 172 L156 86 L136 54 L124 74 L96 74 Z" fill="${outerColor.hex}" opacity="0.96"/>
+           <path d="M96 54 L104 86 L110 80 L116 86 L124 54" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2"/>
+           <path d="M84 54 L62 90 L64 126 M136 54 L158 90 L156 126" stroke="${outerColor.hex}" stroke-width="14" stroke-linecap="round" fill="none"/>
+           <rect x="76" y="98" width="14" height="3" fill="#000000" fill-opacity="0.3"/>
+           <path d="M80 97 L83 92 L86 97 Z" fill="#ffffff"/>
+           <circle cx="110" cy="126" r="2.2" fill="#2c2825" stroke="#d4af37" stroke-width="0.6"/>`;
 
     // Concrete Footwear
     const footwearSvg = {
-      loafersOxfords: `<path d="M84 239 Q94 236 104 241 L102 251 L83 251 Q82 246 84 239 Z M116 241 Q126 236 136 239 L138 251 L119 251 Z" fill="${accentColor.hex}"/><line x1="90" y1="244" x2="99" y2="244" stroke="#d4af37" stroke-width="1.4"/><line x1="121" y1="244" x2="130" y2="244" stroke="#d4af37" stroke-width="1.4"/>`,
-      kittenHeels: `<path d="M84 240 Q94 237 104 242 L101 250 L87 250 Z M116 242 Q126 237 136 240 L133 250 L119 250 Z" fill="${accentColor.hex}"/><path d="M88 250 L87 255 M132 250 L133 255" stroke="${accentColor.hex}" stroke-width="2"/>`,
-      boots: `<path d="M84 226 L104 226 L104 250 L84 250 Z M116 226 L136 226 L136 250 L116 250 Z" fill="${accentColor.hex}"/><path d="M84 232 L104 232 M116 232 L136 232" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>`,
-      minimalSneakers: `<path d="M84 240 Q94 237 104 241 L102 250 L83 250 Z M116 241 Q126 237 136 240 L138 250 L119 250 Z" fill="#eeeae0" stroke="${accentColor.hex}" stroke-opacity="0.45"/><line x1="85" y1="248" x2="103" y2="248" stroke="#ffffff" stroke-width="2"/><line x1="117" y1="248" x2="135" y2="248" stroke="#ffffff" stroke-width="2"/>`
-    }[footwearKey] || `<path d="M84 239 Q94 236 104 241 L102 251 L83 251 Z M116 241 Q126 236 136 239 L138 251 L119 251 Z" fill="${accentColor.hex}"/>`;
+      loafersOxfords: `<path d="M84 248 Q94 244 104 248 L102 258 L83 258 Z M116 248 Q126 244 136 248 L137 258 L118 258 Z" fill="${accentColor.hex}"/>
+                       <line x1="89" y1="251" x2="99" y2="251" stroke="#d4af37" stroke-width="1.6"/>
+                       <line x1="121" y1="251" x2="131" y2="251" stroke="#d4af37" stroke-width="1.6"/>`,
+      kittenHeels: `<path d="M84 249 Q94 244 104 249 L101 257 L87 257 Z M116 249 Q126 244 136 249 L133 257 L119 257 Z" fill="${accentColor.hex}"/>
+                    <path d="M88 257 L87 262 M132 257 L133 262" stroke="${accentColor.hex}" stroke-width="2"/>`,
+      boots: `<path d="M84 240 L104 240 L104 258 L84 258 Z M116 240 L136 240 L136 258 L116 258 Z" fill="${accentColor.hex}"/>
+              <path d="M94 244 L94 254 M126 244 L126 254" stroke="#1f2933" stroke-width="3"/>`,
+      minimalSneakers: `<path d="M84 248 Q94 244 104 248 L102 257 L83 257 Z M116 248 Q126 244 136 248 L137 257 L118 257 Z" fill="#eeeae0" stroke="${accentColor.hex}" stroke-width="0.8"/>
+                        <rect x="83" y="257" width="20" height="2.5" fill="#d8ba8e"/>
+                        <rect x="117" y="257" width="20" height="2.5" fill="#d8ba8e"/>`
+    }[footwearKey] || `<path d="M84 248 Q94 244 104 248 L102 258 L83 258 Z M116 248 Q126 244 136 248 L137 258 L118 258 Z" fill="${accentColor.hex}"/>`;
 
     // Concrete Bags
     const bagSvg = {
-      structuredTote: `<rect x="146" y="136" width="26" height="34" rx="2" fill="${accentColor.hex}"/><path d="M153 136 Q159 122 165 136" fill="none" stroke="${accentColor.hex}" stroke-width="2.4"/>`,
-      shoulderBag: `<path d="M138 86 Q146 108 148 120 L162 118 Q158 102 146 84 Z" fill="${accentColor.hex}"/>`,
-      crossbody: `<line x1="94" y1="58" x2="146" y2="132" stroke="${accentColor.hex}" stroke-width="2.2"/><rect x="140" y="128" width="22" height="18" rx="3" fill="${accentColor.hex}"/>`,
+      structuredTote: `<rect x="150" y="136" width="26" height="34" rx="2" fill="${accentColor.hex}"/>
+                       <path d="M157 136 Q163 122 169 136" fill="none" stroke="#2c2825" stroke-width="2.2"/>
+                       <circle cx="157" cy="138" r="1.5" fill="#d4af37"/><circle cx="169" cy="138" r="1.5" fill="#d4af37"/>`,
+      shoulderBag: `<path d="M142 86 Q150 108 152 120 L166 118 Q162 102 150 84 Z" fill="${accentColor.hex}"/>
+                    <circle cx="158" cy="116" r="2" fill="#d4af37"/>`,
+      crossbody: `<line x1="94" y1="58" x2="148" y2="132" stroke="#2c2825" stroke-width="2"/>
+                  <rect x="142" y="128" width="22" height="18" rx="3" fill="${accentColor.hex}"/>
+                  <rect x="151" y="135" width="4" height="3" fill="#d4af37"/>`,
       slimBelt: `<rect x="86" y="125" width="48" height="4" rx="1" fill="${accentColor.hex}"/>`
     }[bagKey] || "";
 
-    const jewelrySvg = jewelryKey && jewelryKey !== "none" ? `<circle cx="110" cy="91" r="3" fill="${accentColor.hex}"/><path d="M101 78 Q110 92 119 78" fill="none" stroke="${accentColor.hex}" stroke-width="1.2"/><circle cx="97" cy="58" r="2" fill="${accentColor.hex}"/><circle cx="123" cy="58" r="2" fill="${accentColor.hex}"/>` : "";
-    const textileSvg = textileKey && textileKey !== "none" ? `<path d="M98 76 L110 92 L122 76 L118 72 L110 83 L102 72 Z" fill="${accentColor.hex}" opacity="0.92"/><path d="M103 83 L98 106 M117 83 L122 106" stroke="${accentColor.hex}" stroke-width="2"/>` : "";
-
-    const svgId = `illu-${Math.random().toString(36).slice(2, 7)}`;
-    const patternInk = pattern?.contrast === "低" ? "#243746" : "#ffffff";
-    const patternOpacity = pattern?.contrast === "低" ? "0.24" : "0.38";
-    const topPath = topAttributes.fitProfile === "oversized"
-      ? "M86 56 L134 56 L148 94 L142 152 L78 152 L72 94 Z"
-      : topAttributes.fitProfile === "fitted"
-        ? "M96 56 L124 56 L138 94 L134 152 L86 152 L82 94 Z"
-        : "M92 56 L128 56 L144 94 L138 152 L82 152 L76 94 Z";
+    const topPath = "M92 54 L128 54 L142 92 L136 148 L84 148 L78 92 Z";
     const patternShapes = {
       top: `<path d="${topPath}" fill="url(#pattern-${svgId})"/>`,
-      outer: `<path d="M84 56 L64 90 L74 174 L146 174 L156 90 L136 56 L124 74 L96 74 Z" fill="url(#pattern-${svgId})" opacity="0.72"/>`,
-      bottom: `<path d="M76 148 L144 148 L151 238 L114 238 L110 168 L106 238 L69 238 Z" fill="url(#pattern-${svgId})" opacity="0.72"/>`,
+      outer: outerVisible ? `<path d="M84 54 L64 86 L70 172 L150 172 L156 86 L136 54 L124 74 L96 74 Z" fill="url(#pattern-${svgId})" opacity="0.72"/>` : "",
+      bottom: `<path d="M78 144 L142 144 L148 244 L114 244 L110 162 L106 244 L72 244 Z" fill="url(#pattern-${svgId})" opacity="0.72"/>`,
       dress: dressShape.replace(/fill="#[A-Fa-f0-9]+"/g, `fill="url(#pattern-${svgId})"`)
     }[patternTarget] || "";
 
     return `
       <div class="outfit-illustration" data-illustration-type="${escapeHtml(model.type || "outfit-schematic")}">
-        <svg class="illustration-svg" viewBox="0 0 220 264" role="img" aria-label="${escapeHtml(candidate.title || "穿搭方案效果图")}">
+        <svg class="illustration-svg" viewBox="0 0 220 280" role="img" aria-label="${escapeHtml(candidate.title || "真实穿搭上身效果图")}">
           <defs>
-            <filter id="shadow-${svgId}" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-color="#1f2933" flood-opacity="0.18"/></filter>
+            <filter id="shadow-${svgId}" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-color="#182820" flood-opacity="0.14"/></filter>
             <pattern id="pattern-${svgId}" width="${pattern?.id === "maritimeStripe" ? 16 : 12}" height="${pattern?.id === "maritimeStripe" ? 6 : 12}" patternUnits="userSpaceOnUse">
               ${pattern?.id === "maritimeStripe" ? `<line x1="0" y1="3" x2="16" y2="3" stroke="${patternInk}" stroke-width="2.2" stroke-opacity="${patternOpacity}"/>` : ""}
               ${pattern?.id === "princeOfWales" || pattern?.id === "houndstooth" ? `<path d="M0 0h12v12H0z" fill="none"/><path d="M0 0h12M0 4h12M0 8h12M0 0v12M4 0v12M8 0v12" stroke="${patternInk}" stroke-width="0.75" stroke-opacity="${patternOpacity}"/>` : ""}
@@ -9628,44 +9943,40 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
             </pattern>
           </defs>
 
-          <!-- Stylized head, hair, neck and hands: a neutral garment figure, not a photo-real person. -->
-          <ellipse cx="110" cy="35" rx="9" ry="12" fill="#ecd8c8" stroke="#d4b8a2" stroke-width="0.8"/>
+          <!-- Ground Contact Shadow -->
+          <ellipse cx="110" cy="265" rx="52" ry="5.5" fill="#182820" fill-opacity="0.1"/>
+
+          <!-- Stylized French Hair & Neck -->
           <ellipse cx="110" cy="20" rx="7" ry="5" fill="#2d2926"/>
           <path d="M96 34 C94 20 126 20 124 34 C126 40 122 46 118 48 C120 38 116 28 110 28 C104 28 100 38 102 48 C98 46 94 40 96 34 Z" fill="#2d2926"/>
-          <path d="M101 34 Q110 49 119 34 L117 58 Q110 62 103 58 Z" fill="#ecd8c8"/>
-          <path d="M103 58 Q110 62 117 58" stroke="#d4b8a2" stroke-width="1.2" fill="none" opacity="0.6"/>
+          <path d="M101 34 Q110 49 119 34 L117 56 Q110 60 103 56 Z" fill="#ecd8c8"/>
+          <path d="M103 56 Q110 60 117 56" stroke="#d4b8a2" stroke-width="1.2" fill="none" opacity="0.6"/>
 
-          <ellipse cx="110" cy="254" rx="45" ry="4.5" fill="#1f2933" fill-opacity="0.1"/>
-
-          <!-- Base Body / Dress -->
+          <!-- Base Inner Top / Dress -->
           <g filter="url(#shadow-${svgId})">
             ${isDress ? dressShape : `<path d="${topPath}" fill="${topColor.hex}"/>`}
             ${patternTarget === "top" || patternTarget === "dress" ? patternShapes : ""}
           </g>
 
-          <!-- Arms -->
+          <!-- Inner Sleeves (Clearly visible with short/threeQuarter/long differences) -->
           ${armPath}
-          <circle cx="${shoulderLeft - 19}" cy="${sleeve === "short" ? 94 : sleeve === "threeQuarter" ? 108 : 124}" r="3.4" fill="#ecd8c8"/>
-          <circle cx="${shoulderRight + 19}" cy="${sleeve === "short" ? 94 : sleeve === "threeQuarter" ? 108 : 124}" r="3.4" fill="#ecd8c8"/>
+          <circle cx="71" cy="${sleeve === "short" ? 94 : sleeve === "threeQuarter" ? 112 : 130}" r="3.2" fill="#ecd8c8"/>
+          <circle cx="149" cy="${sleeve === "short" ? 94 : sleeve === "threeQuarter" ? 112 : 130}" r="3.2" fill="#ecd8c8"/>
 
-          <!-- Outer Layer -->
+          <!-- Outer Layer (Layered Over Inner Top) -->
           ${outerVisible ? `<g filter="url(#shadow-${svgId})">${outerShape}${patternTarget === "outer" ? patternShapes : ""}</g>` : ""}
 
-          <!-- Bottom Separates -->
+          <!-- Bottom Separates (Trousers with Press Crease / A-line Skirt) -->
           ${isDress ? "" : `<g filter="url(#shadow-${svgId})">${bottomShape}${patternTarget === "bottom" ? patternShapes : ""}</g>`}
 
-          <!-- Legs -->
-          <path d="M96 235 L96 241 M124 235 L124 241" stroke="#ecd8c8" stroke-width="5" stroke-linecap="round"/>
+          <!-- Legs Transition to Footwear -->
+          <path d="M94 240 L94 248 M126 240 L126 248" stroke="#ecd8c8" stroke-width="6" stroke-linecap="round"/>
 
-          <!-- Concrete Footwear -->
+          <!-- Concrete Footwear Grounded -->
           ${footwearSvg}
 
           <!-- Concrete Handbag -->
           ${bagSvg}
-
-          <!-- Jewelry and textile detail -->
-          ${jewelrySvg}
-          ${textileSvg}
 
           <!-- Neckline, Waistline Markers -->
           ${necklinePath}
@@ -9673,6 +9984,270 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
         </svg>
         <span class="illustration-caption">${escapeHtml(model.layerCount || candidate.layerCount || 1)}层 · ${escapeHtml(model.silhouette || candidate.silhouette || "整体轮廓")} · ${escapeHtml(translateValue(sleeve))}</span>
         ${model.validation?.colorComplete === false ? `<span class="illustration-warning">颜色待确认</span>` : ""}
+      </div>
+    `;
+  }
+
+  function renderIllustration(illustration, candidate) {
+    const model = illustration || {};
+    const layers = model.layers || [];
+    const svgId = `ensemble-${Math.random().toString(36).slice(2, 8)}`;
+    const unresolvedFill = `url(#unresolved-${svgId})`;
+    const colorRegions = model.colorMap?.regions || candidate.palette?.regions || [];
+    const regionColors = new Map(colorRegions.map((region) => [region.id, region]));
+    const paletteRoles = candidate.palette?.roles || [];
+    const topLayer = layers.find((layer) => layer.kind === "top") || {};
+    const dressLayer = layers.find((layer) => layer.kind === "dress") || {};
+    const outerLayer = layers.find((layer) => layer.kind === "outer") || {};
+    const bottomLayer = layers.find((layer) => layer.kind === "bottom") || {};
+    const isDress = Boolean(dressLayer.visible) || candidate.form === "onePieceDress" || Boolean(candidate.garments?.dress);
+
+    const colorFor = (regionId, layer, preferredRoles) => {
+      const region = regionColors.get(regionId);
+      const role = preferredRoles.map((roleName) => paletteRoles.find((item) => item.role === roleName && item.hex)).find(Boolean);
+      const hex = region?.hex || layer?.color || role?.hex || null;
+      return {
+        hex,
+        fill: hex || unresolvedFill,
+        colorName: region?.colorName || layer?.colorName || role?.colorName || "待确认",
+        ratio: Number(region?.ratio || layer?.ratio || role?.ratio || 0),
+        resolved: Boolean(hex)
+      };
+    };
+
+    const topColor = isDress
+      ? colorFor("dress", dressLayer, ["main", "nearFace"])
+      : colorFor("top", topLayer, ["nearFace", "secondary"]);
+    const bottomColor = isDress ? topColor : colorFor("bottom", bottomLayer, ["main", "secondary"]);
+    const outerColor = colorFor("outer", outerLayer, ["secondary", "main"]);
+    const accentColor = colorFor("accent", null, ["accent", "secondary", "main"]);
+
+    const outerVisible = outerLayer.visible !== false
+      && outerLayer.type !== "none"
+      && Boolean(candidate.garments?.outer && candidate.garments.outer !== "无外层");
+    const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
+    const bottomCut = candidate.canonicalOutput?.garment?.bottomCut || candidate.bottomCut || bottomLayer.attributes?.bottomCut || "straightLeg";
+    const dressCut = candidate.canonicalOutput?.garment?.dressCut || candidate.dressCut || dressLayer.dressCut || "aLineMidi";
+    const sleeve = (isDress ? dressLayer.sleeve : topLayer.sleeve) || candidate.sleeve || "long";
+    const neckline = model.neckline || candidate.neckline || "regular";
+    const waist = model.waist || candidate.waist || "natural";
+    const topAttributes = topLayer.attributes || model.geometry?.top || {};
+    const outerAttributes = outerLayer.attributes || model.geometry?.outer || {};
+    const bottomAttributes = bottomLayer.attributes || model.geometry?.bottom || {};
+    const dressAttributes = dressLayer.attributes || model.geometry?.dress || {};
+    const topName = candidate.garments?.top || "";
+    const dressName = candidate.garments?.dress || "";
+    const outerName = candidate.garments?.outer || "";
+    const isShirt = /衬衫/.test(topName) || /衬衫/.test(dressName) || dressCut === "shirtDress";
+
+    const rawPattern = model.pattern || candidate.patternDetail || null;
+    const fallbackPatternTarget = rawPattern?.placement === "上装" ? "top"
+      : rawPattern?.placement === "外层" ? "outer"
+        : rawPattern?.placement === "下装" ? "bottom"
+          : ["连身裙", "连衣裙"].includes(rawPattern?.placement) ? "dress" : null;
+    const requestedPatternTarget = rawPattern?.target || fallbackPatternTarget;
+    const patternTarget = requestedPatternTarget === "outer" && !outerVisible
+      ? (isDress ? "dress" : "bottom")
+      : requestedPatternTarget;
+    const pattern = rawPattern ? { ...rawPattern, target: patternTarget } : null;
+    const targetColor = ({ top: topColor, outer: outerColor, bottom: bottomColor, dress: topColor })[patternTarget] || topColor;
+    const patternBase = targetColor.hex || "#fff7df";
+    const patternInk = paletteRoles.find((role) => role.hex && role.hex !== patternBase)?.hex || accentColor.hex || "#263746";
+    const patternOpacity = pattern?.contrast === "低" ? 0.28 : 0.5;
+    const fabricFill = (target, color) => pattern?.target === target ? `url(#fabric-${svgId})` : color.fill;
+
+    const topFill = fabricFill(isDress ? "dress" : "top", topColor);
+    const bottomFill = fabricFill("bottom", bottomColor);
+    const outerFill = fabricFill("outer", outerColor);
+    const accentFill = accentColor.fill;
+    const skin = "#ead2bf";
+    const skinShade = "#cda98f";
+    const detailInk = patternInk;
+    const hairDepth = state.input?.appearance?.hairDepth;
+    const hairTone = state.input?.appearance?.hairTone;
+    const hairColor = hairDepth === "light" ? (hairTone === "warm" ? "#6a4c3b" : "#574b49") : hairTone === "warm" ? "#3f3029" : "#29282a";
+
+    const accessoryKey = (kind, canonicalKey, fallback = null) => {
+      const modeled = (model.accessories || []).find((item) => item.kind === kind && item.visible !== false)?.key;
+      return modeled || candidate.canonicalOutput?.accessories?.[canonicalKey] || fallback;
+    };
+    const footwearKey = accessoryKey("footwear", "footwear", "loafersOxfords");
+    const bagKey = accessoryKey("bag", "leatherGoods", null);
+    const jewelryKey = accessoryKey("jewelry", "jewelry", null);
+    const textileKey = accessoryKey("textile", "textile", null);
+
+    const topFit = topAttributes.fitProfile || topAttributes.topFit || candidate.topFit || "regular";
+    const shoulderLeft = topFit === "oversized" ? 89 : topFit === "fitted" ? 94 : 92;
+    const shoulderRight = 220 - shoulderLeft;
+    const waistLeft = topFit === "oversized" ? 91 : topFit === "fitted" ? 97 : 94;
+    const waistRight = 220 - waistLeft;
+    const topPath = `M${shoulderLeft} 55 Q110 61 ${shoulderRight} 55 L136 84 L${waistRight} 132 L${waistLeft} 132 L84 84 Z`;
+    const sleeveEndY = sleeve === "short" ? 89 : sleeve === "threeQuarter" ? 112 : 133;
+    const sleeveEndX = sleeve === "short" ? 79 : sleeve === "threeQuarter" ? 74 : 71;
+    const innerSleeves = `
+      <path d="M${shoulderLeft + 3} 58 Q84 63 ${sleeveEndX - 3} ${sleeveEndY - 5} Q${sleeveEndX} ${sleeveEndY + 2} ${sleeveEndX + 7} ${sleeveEndY} L${shoulderLeft + 9} 72 Z" fill="${topFill}"/>
+      <path d="M${shoulderRight - 3} 58 Q136 63 ${220 - sleeveEndX + 3} ${sleeveEndY - 5} Q${220 - sleeveEndX} ${sleeveEndY + 2} ${220 - sleeveEndX - 7} ${sleeveEndY} L${shoulderRight - 9} 72 Z" fill="${topFill}"/>
+      <path data-part="sleeve-cuff" d="M${sleeveEndX - 2} ${sleeveEndY - 3} L${sleeveEndX + 7} ${sleeveEndY - 1} M${213 - sleeveEndX} ${sleeveEndY - 1} L${222 - sleeveEndX} ${sleeveEndY - 3}" stroke="${detailInk}" stroke-opacity="0.45" stroke-width="1.2"/>
+      ${sleeve === "long" ? `<circle cx="${sleeveEndX + 4}" cy="${sleeveEndY - 1}" r="1" fill="#c8a95e"/><circle cx="${216 - sleeveEndX}" cy="${sleeveEndY - 1}" r="1" fill="#c8a95e"/>` : ""}
+    `;
+
+    const necklineText = String(neckline);
+    const isOpenNeckline = neckline === "open" || neckline === "vNeck" || necklineText.includes("V领") || necklineText.includes("开阔");
+    const isSquareNeckline = neckline === "squareNeck" || necklineText.includes("方领");
+    const isSoftNeckline = neckline === "softCurve" || neckline === "uNeck" || necklineText.includes("U领") || necklineText.includes("柔和");
+    const necklineDetail = isShirt ? `
+      <path d="M99 56 L109 67 L102 73 L94 59 Z M121 56 L111 67 L118 73 L126 59 Z" fill="#ffffff" fill-opacity="0.42" stroke="${detailInk}" stroke-opacity="0.2" stroke-width="0.7"/>
+      <path data-part="shirt-placket" d="M110 67 L110 129" stroke="${detailInk}" stroke-opacity="0.3" stroke-width="1.1"/>
+      ${[78, 89, 100, 111, 122].map((y) => `<circle cx="110" cy="${y}" r="1" fill="#ffffff" stroke="${detailInk}" stroke-opacity="0.35" stroke-width="0.45"/>`).join("")}
+    ` : isOpenNeckline
+      ? `<path d="M99 59 L110 78 L121 59" fill="${skin}" stroke="${skinShade}" stroke-opacity="0.35" stroke-width="0.8"/>`
+      : isSquareNeckline
+        ? `<path d="M99 58 L99 72 L121 72 L121 58" fill="${skin}" stroke="${skinShade}" stroke-opacity="0.35" stroke-width="0.8"/>`
+        : isSoftNeckline
+          ? `<path d="M99 59 Q110 76 121 59 Q110 67 99 59 Z" fill="${skin}"/>`
+          : `<path d="M101 58 Q110 67 119 58 Q110 63 101 58 Z" fill="${skin}"/>`;
+
+    const pantsBasePath = bottomCut === "wideLeg"
+      ? "M80 126 L140 126 L149 250 L114 250 L110 158 L106 250 L71 250 Z"
+      : bottomCut === "tapered"
+        ? "M83 126 L137 126 L132 250 L113 250 L110 159 L107 250 L88 250 Z"
+        : "M83 126 L137 126 L138 250 L113 250 L110 159 L107 250 L82 250 Z";
+    const trousers = `
+      <path d="${pantsBasePath}" fill="${bottomFill}"/>
+      <path d="M83 126 L137 126 L136 133 L84 133 Z" fill="${detailInk}" fill-opacity="0.12"/>
+      <circle cx="110" cy="130" r="1.7" fill="#c8a95e"/>
+      <path d="M87 135 L96 146 M133 135 L124 146" fill="none" stroke="${detailInk}" stroke-opacity="0.38" stroke-width="1.25"/>
+      <path data-part="crease-line" d="M94 137 L93 248 M126 137 L127 248" fill="none" stroke="#ffffff" stroke-opacity="0.42" stroke-width="1.2"/>
+      <path d="M95 138 L96 248 M125 138 L124 248" fill="none" stroke="${detailInk}" stroke-opacity="0.16" stroke-width="0.7"/>
+    `;
+    const shorts = `
+      <path d="M81 126 L139 126 L143 188 L114 188 L110 153 L106 188 L77 188 Z" fill="${bottomFill}"/>
+      <path d="M82 126 L138 126 L137 133 L83 133 Z" fill="${detailInk}" fill-opacity="0.12"/>
+      <circle cx="110" cy="130" r="1.7" fill="#c8a95e"/><path d="M87 136 L96 146 M133 136 L124 146" stroke="${detailInk}" stroke-opacity="0.38" stroke-width="1.2"/>
+    `;
+    const skirtPath = bottomCut === "straightSkirt"
+      ? "M83 126 L137 126 L140 238 Q110 243 80 238 Z"
+      : "M82 126 L138 126 L160 240 Q110 250 60 240 Z";
+    const skirt = `
+      <path d="${skirtPath}" fill="${bottomFill}"/>
+      <path d="M83 126 L137 126 L136 133 L84 133 Z" fill="${detailInk}" fill-opacity="0.12"/>
+      <path d="M96 134 Q92 188 82 240 M124 134 Q128 188 138 240" fill="none" stroke="#ffffff" stroke-opacity="0.34" stroke-width="1.15"/>
+    `;
+    const bottomShape = bottomType === "short" ? shorts
+      : bottomType === "skirt" || ["aLineSkirt", "straightSkirt"].includes(bottomCut) ? skirt
+        : trousers;
+
+    const dressBasePath = dressCut === "columnDress"
+      ? "M94 55 L126 55 L136 108 L139 244 Q110 248 81 244 L84 108 Z"
+      : dressCut === "shirtDress"
+        ? "M92 55 L128 55 L138 106 L149 244 Q110 250 71 244 L82 106 Z"
+        : dressCut === "wrapDress"
+          ? "M91 55 L129 55 L141 106 L160 242 Q110 252 60 242 L79 106 Z"
+          : "M92 55 L128 55 L142 106 L162 242 Q110 252 58 242 L78 106 Z";
+    const dressDetails = `
+      ${dressCut === "shirtDress" ? `<path d="M99 56 L110 67 L102 72 L95 59 Z M121 56 L110 67 L118 72 L125 59 Z" fill="#ffffff" fill-opacity="0.38"/><path d="M110 67 L110 237" stroke="${detailInk}" stroke-opacity="0.32" stroke-width="1.1"/>${[80, 94, 108].map((y) => `<circle cx="110" cy="${y}" r="1" fill="#ffffff"/>`).join("")}` : ""}
+      ${dressCut === "wrapDress" ? `<path d="M94 60 L121 111 L92 122" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.8"/>` : ""}
+      <path d="M87 115 Q110 120 133 115" fill="none" stroke="${detailInk}" stroke-opacity="0.45" stroke-width="2.2"/>
+      <path d="M110 117 C102 109 96 113 101 120 C105 123 109 120 110 117 C111 120 115 123 119 120 C124 113 118 109 110 117 Z" fill="${accentFill}"/>
+      <path d="M107 121 L103 139 M113 121 L117 139" stroke="${accentFill}" stroke-width="1.8"/>
+      <path d="M93 126 Q87 188 78 243 M127 126 Q133 188 142 243" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"/>
+    `;
+
+    const outerStyle = outerAttributes.outerStyle || (/风衣/.test(outerName) ? "trench" : /西装/.test(outerName) ? "blazer" : /开衫|针织/.test(outerName) ? "cardigan" : /大衣|中长/.test(outerName) ? "coat" : "minimalJacket");
+    const outerHem = ["trench", "coat"].includes(outerStyle) ? 218 : outerStyle === "minimalJacket" ? 158 : 170;
+    const outerSleeves = `
+      <path d="M91 58 Q82 61 78 76 L68 128 Q70 135 77 132 L91 79 Z" fill="${outerFill}"/>
+      <path d="M129 58 Q138 61 142 76 L152 128 Q150 135 143 132 L129 79 Z" fill="${outerFill}"/>
+      <path d="M68 126 L77 129 M143 129 L152 126" stroke="${detailInk}" stroke-opacity="0.45" stroke-width="1.2"/>
+      <circle cx="75" cy="130" r="1" fill="#c8a95e"/><circle cx="145" cy="130" r="1" fill="#c8a95e"/>
+    `;
+    const outerPanels = outerStyle === "cardigan" ? `
+      <path d="M91 55 L103 61 L104 ${outerHem} L80 ${outerHem - 3} L82 82 Z M129 55 L117 61 L116 ${outerHem} L140 ${outerHem - 3} L138 82 Z" fill="${outerFill}"/>
+      <path d="M103 61 L104 ${outerHem} M117 61 L116 ${outerHem}" stroke="${detailInk}" stroke-opacity="0.45" stroke-width="2"/>
+      ${[78, 92, 106, 120, 134, 148].filter((y) => y < outerHem - 4).map((y) => `<circle cx="116" cy="${y}" r="1.4" fill="#c8a95e"/>`).join("")}
+    ` : `
+      <path d="M91 55 L103 61 L106 88 L104 ${outerHem} L79 ${outerHem - 3} L82 82 Z" fill="${outerFill}"/>
+      <path d="M129 55 L117 61 L114 88 L116 ${outerHem} L141 ${outerHem - 3} L138 82 Z" fill="${outerFill}"/>
+      <path d="M103 61 L106 88 L96 79 L88 59 Z M117 61 L114 88 L124 79 L132 59 Z" fill="#ffffff" fill-opacity="0.22" stroke="${detailInk}" stroke-opacity="0.3" stroke-width="0.8"/>
+      <path d="M86 116 L99 113 M134 116 L121 113" stroke="${detailInk}" stroke-opacity="0.38" stroke-width="1.3"/>
+      ${outerStyle === "trench" ? `<path d="M81 143 L103 145 M117 145 L139 143" stroke="${detailInk}" stroke-opacity="0.5" stroke-width="2.5"/><circle cx="96" cy="104" r="1.4" fill="${detailInk}"/><circle cx="124" cy="104" r="1.4" fill="${detailInk}"/>` : `<circle cx="103" cy="128" r="1.5" fill="${detailInk}" stroke="#c8a95e" stroke-width="0.45"/>`}
+    `;
+
+    const footwearSvg = {
+      loafersOxfords: `
+        <path d="M81 249 Q91 244 104 249 L103 263 Q91 266 80 261 Z M116 249 Q129 244 139 249 L140 261 Q129 266 117 263 Z" fill="${accentFill}"/>
+        <path d="M84 251 Q92 247 101 251 M119 251 Q128 247 136 251" fill="none" stroke="#ffffff" stroke-opacity="0.42" stroke-width="1.1"/>
+        <path data-part="horsebit" d="M88 253 L99 253 M121 253 L132 253" stroke="#c8a95e" stroke-width="1.7"/><circle cx="89" cy="253" r="1.3" fill="none" stroke="#c8a95e"/><circle cx="131" cy="253" r="1.3" fill="none" stroke="#c8a95e"/>
+      `,
+      kittenHeels: `<path d="M80 252 Q92 246 105 252 L99 263 L84 263 Z M115 252 Q128 246 140 252 L136 263 L121 263 Z" fill="${accentFill}"/><path d="M84 262 L83 269 M136 262 L137 269" stroke="${accentFill}" stroke-width="1.8"/>`,
+      boots: `<path d="M82 235 L104 235 L104 262 Q91 266 80 261 L82 235 Z M116 235 L138 235 L140 261 Q129 266 116 262 Z" fill="${accentFill}"/><path d="M88 243 L99 243 M121 243 L132 243" stroke="#ffffff" stroke-opacity="0.25"/>`,
+      minimalSneakers: `<path d="M80 251 Q92 244 105 250 L103 262 L80 262 Z M115 250 Q128 244 140 251 L140 262 L117 262 Z" fill="${accentFill}"/><path d="M80 261 L104 261 M116 261 L140 261" stroke="#ffffff" stroke-width="2.4"/><path d="M88 252 L99 257 M121 257 L132 252" stroke="#ffffff" stroke-opacity="0.7"/>`
+    }[footwearKey] || "";
+
+    const bagSvg = {
+      structuredTote: `
+        <path d="M151 146 L179 146 L176 183 L148 183 Z" fill="${accentFill}"/>
+        <path data-part="tote-handles" d="M155 147 Q154 129 164 129 Q174 129 173 147 M160 147 Q160 136 165 136 Q170 136 170 147" fill="none" stroke="${accentFill}" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M151 149 L178 149" stroke="#ffffff" stroke-opacity="0.25"/><circle cx="154" cy="149" r="1.2" fill="#c8a95e"/><circle cx="174" cy="149" r="1.2" fill="#c8a95e"/>
+      `,
+      shoulderBag: `<path d="M146 105 Q148 89 158 89 Q168 89 171 105" fill="none" stroke="${accentFill}" stroke-width="2.3"/><path d="M144 104 Q158 99 173 104 L169 129 Q158 134 147 129 Z" fill="${accentFill}"/><circle cx="158" cy="111" r="1.6" fill="#c8a95e"/>`,
+      crossbody: `<path d="M98 59 Q126 91 156 137" fill="none" stroke="${accentFill}" stroke-width="1.8"/><path d="M147 134 L170 134 L169 155 L146 155 Z" fill="${accentFill}"/><circle cx="158" cy="141" r="1.5" fill="#c8a95e"/>`,
+      slimBelt: `<path d="M88 126 L132 126" stroke="${accentFill}" stroke-width="3"/><rect x="107" y="123" width="6" height="6" rx="1" fill="#c8a95e"/>`
+    }[bagKey] || "";
+    const jewelrySvg = jewelryKey ? `<path d="M103 54 Q110 68 117 54" fill="none" stroke="${accentFill}" stroke-width="1.1"/><circle cx="110" cy="67" r="1.8" fill="${accentFill}"/>` : "";
+    const textileSvg = textileKey && textileKey !== "none" ? `<path d="M100 55 L110 70 L120 55 L116 52 L110 62 L104 52 Z" fill="${accentFill}"/><path d="M106 65 L102 86 M114 65 L118 86" stroke="${accentFill}" stroke-width="1.7"/>` : "";
+    const handY = outerVisible ? 133 : sleeveEndY + 2;
+    const handX = outerVisible ? 72 : sleeveEndX + 3;
+
+    return `
+      <div class="outfit-illustration" data-illustration-type="${escapeHtml(model.type || "outfit-schematic")}" data-renderer="integrated-ensemble">
+        <svg class="illustration-svg" viewBox="0 0 220 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(candidate.title || "一体化穿搭上身效果图")}" data-canvas="220x280" data-pattern-target="${escapeHtml(patternTarget || "none")}">
+          <defs>
+            <filter id="garment-${svgId}" x="-20%" y="-20%" width="140%" height="150%">
+              <feDropShadow dx="0" dy="2.4" stdDeviation="1.8" flood-color="#17231d" flood-opacity="0.14"/>
+            </filter>
+            <pattern id="unresolved-${svgId}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#fff7df"/><path d="M0 8 L8 0" stroke="#bd7b1d" stroke-width="1" stroke-opacity="0.45"/></pattern>
+            <pattern id="fabric-${svgId}" width="${pattern?.id === "maritimeStripe" ? 18 : 12}" height="${pattern?.id === "maritimeStripe" ? 8 : 12}" patternUnits="userSpaceOnUse">
+              <rect width="100%" height="100%" fill="${patternBase}"/>
+              ${pattern?.id === "maritimeStripe" ? `<path d="M0 2 H18 M0 6 H18" stroke="${patternInk}" stroke-width="2" stroke-opacity="${patternOpacity}"/>` : ""}
+              ${pattern?.id === "princeOfWales" ? `<path d="M0 0 H12 M0 6 H12 M0 0 V12 M6 0 V12" stroke="${patternInk}" stroke-width="0.65" stroke-opacity="${patternOpacity}"/><path d="M3 0 V12 M9 0 V12 M0 3 H12 M0 9 H12" stroke="#ffffff" stroke-width="0.45" stroke-opacity="0.28"/>` : ""}
+              ${pattern?.id === "houndstooth" ? `<path d="M0 0 H5 L8 3 L5 6 H0 Z M6 6 H11 L12 7 V12 H8 L5 9 Z" fill="${patternInk}" fill-opacity="${patternOpacity}"/>` : ""}
+              ${pattern?.id === "frenchPolkaDot" ? `<circle cx="3" cy="3" r="1.5" fill="${patternInk}" fill-opacity="${patternOpacity}"/><circle cx="9" cy="9" r="1.5" fill="${patternInk}" fill-opacity="${patternOpacity}"/>` : ""}
+              ${pattern?.id === "smallFloral" ? `<g fill="${patternInk}" fill-opacity="${patternOpacity}"><circle cx="3" cy="1.5" r="1.1"/><circle cx="4.5" cy="3" r="1.1"/><circle cx="3" cy="4.5" r="1.1"/><circle cx="1.5" cy="3" r="1.1"/></g><path d="M3 4.5 L5.5 8" stroke="${patternInk}" stroke-opacity="${patternOpacity}" stroke-width="0.65"/>` : ""}
+            </pattern>
+          </defs>
+
+          <ellipse cx="110" cy="270" rx="52" ry="5" fill="#17231d" fill-opacity="0.09"/>
+
+          <g data-layer="figure" aria-hidden="true">
+            <path d="M96 124 L96 252 M124 124 L124 252" stroke="${skin}" stroke-width="8" stroke-linecap="round"/>
+            <ellipse cx="110" cy="30" rx="9.5" ry="12.5" fill="${skin}"/>
+            <circle cx="100" cy="31" r="2" fill="${skin}"/><circle cx="120" cy="31" r="2" fill="${skin}"/>
+            <path d="M104 40 L104 56 Q110 61 116 56 L116 40 Z" fill="${skin}"/>
+            <path d="M100 31 Q98 17 111 17 Q123 17 123 31 Q118 25 111 24 Q104 23 100 31 Z" fill="${hairColor}"/>
+            <path d="M101 25 Q108 18 120 21" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1"/>
+            <path d="M121 28 Q132 32 131 42 Q130 50 124 53 Q126 43 122 36 Z" fill="${hairColor}" data-hair-style="side-part-low-tail"/>
+            <path d="M106 37 Q110 39 114 37" fill="none" stroke="${skinShade}" stroke-opacity="0.55" stroke-width="0.8"/>
+          </g>
+
+          <g data-layer="inner" filter="url(#garment-${svgId})">
+            ${isDress ? `${innerSleeves}<path d="${dressBasePath}" fill="${topFill}"/>${dressDetails}` : `${innerSleeves}<path d="${topPath}" fill="${topFill}"/>${necklineDetail}<path d="M${waistLeft} 128 L${waistRight} 128" stroke="${detailInk}" stroke-opacity="0.2" stroke-width="1"/>`}
+          </g>
+
+          ${isDress ? "" : `<g data-layer="bottom" filter="url(#garment-${svgId})">${bottomShape}</g>`}
+
+          ${outerVisible ? `<g data-layer="outer" data-outer-open="true" filter="url(#garment-${svgId})">${outerSleeves}${outerPanels}</g>` : ""}
+
+          <g data-layer="hands" aria-hidden="true">
+            <ellipse cx="${handX}" cy="${handY}" rx="3.3" ry="4.5" fill="${skin}"/>
+            <ellipse cx="${220 - handX}" cy="${handY}" rx="3.3" ry="4.5" fill="${skin}"/>
+          </g>
+
+          <g data-layer="footwear" filter="url(#garment-${svgId})">${footwearSvg}</g>
+          <g data-layer="accessories" filter="url(#garment-${svgId})">${bagSvg}${jewelrySvg}${textileSvg}</g>
+        </svg>
+        <span class="illustration-caption">${escapeHtml(model.layerCount || candidate.layerCount || 1)}层 · ${escapeHtml(model.silhouette || candidate.silhouette || "整体轮廓")} · ${escapeHtml(translateValue(sleeve))}</span>
+        ${model.validation?.colorComplete === false ? `<span class="illustration-warning">部分颜色待确认</span>` : ""}
       </div>
     `;
   }
@@ -9711,7 +10286,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
             <span class="candidate-family-tag">${escapeHtml(familyLabel)}</span>
           </div>
           <div class="palette-strip" title="${escapeHtml(palette.name || "推荐配色")}">
-            ${roles.map((r) => `<span style="background:${escapeHtml(r.hex || "#ccc")};"></span>`).join("")}
+            ${roles.map((r) => `<span style="background:${escapeHtml(r.hex || "transparent")};"></span>`).join("")}
           </div>
         </div>
 
@@ -9731,7 +10306,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
                 <div class="garment-info">
                   <strong class="garment-name">${escapeHtml(comp.name)}</strong>
                   <span class="garment-color-pill">
-                    <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
+                    <i style="background:${escapeHtml(role.hex || "transparent")}"></i>
                     ${escapeHtml(role.colorName || "基础色")} ${role.ratio ? `${role.ratio}%` : ""}
                   </span>
                   ${comp.category === "top" || comp.category === "dress" ? renderColorSpectrum(cand) : ""}
@@ -9797,7 +10372,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
             </tr>
             <tr>
               <td class="table-row-label">配色方案</td>
-              ${candidates.map((c) => `<td><div style="display:flex;align-items:center;gap:6px;"><span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}</span><span>${escapeHtml(c.palette?.name || "经典配色")}</span></div></td>`).join("")}
+              ${candidates.map((c) => `<td><div style="display:flex;align-items:center;gap:6px;"><span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || 'transparent'};width:10px;height:14px;display:inline-block;"></span>`).join("")}</span><span>${escapeHtml(c.palette?.name || "经典配色")}</span></div></td>`).join("")}
             </tr>
             <tr>
               <td class="table-row-label">花色重点</td>
@@ -9838,7 +10413,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
                 <span class="mobile-candidate-label">配色方案</span>
                 <div style="display:flex;align-items:center;gap:6px;">
                   <span class="palette-strip" style="height:14px;border-radius:2px;overflow:hidden;display:flex;">
-                    ${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || '#ccc'};width:10px;height:14px;display:inline-block;"></span>`).join("")}
+                    ${(c.palette?.roles || []).map((r) => `<span style="background:${r.hex || 'transparent'};width:10px;height:14px;display:inline-block;"></span>`).join("")}
                   </span>
                   <span>${escapeHtml(c.palette?.name || "经典配色")}</span>
                 </div>
@@ -9900,7 +10475,7 @@ window.GarmentCanonicalData = {"fieldRegistry":{"schemaVersion":"2026-08-16","st
 
     const paletteHtml = roles.map((role) => `
       <span>
-        <i style="background:${escapeHtml(role.hex || "#ccc")}"></i>
+        <i style="background:${escapeHtml(role.hex || "transparent")}"></i>
         <div>
           <small>${escapeHtml(role.garment || (role.role === "nearFace" ? "上装" : role.role === "main" ? "下装" : "点缀"))}</small>
           <strong>${escapeHtml(role.colorName || "基础色")} ${role.ratio || 0}%</strong>

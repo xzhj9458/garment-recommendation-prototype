@@ -1161,8 +1161,8 @@
         return {
           ...item,
           color,
-          colorName: color?.name || "基础色",
-          hex: color?.hex || "#c7c7c7"
+          colorName: color?.name || "待确认",
+          hex: color?.hex || null
         };
       })
     };
@@ -1185,8 +1185,8 @@
       ]
       : [
         { id: "top", layerKind: "top", role: nearFace?.role || null, color: nearFace },
-        ...(visibleOuter ? [{ id: "outer", layerKind: "outer", role: main?.role || null, color: main }] : []),
-        { id: "bottom", layerKind: "bottom", role: (visibleOuter ? secondary : main)?.role || null, color: visibleOuter ? secondary : main },
+        ...(visibleOuter ? [{ id: "outer", layerKind: "outer", role: secondary?.role || null, color: secondary }] : []),
+        { id: "bottom", layerKind: "bottom", role: main?.role || null, color: main },
         { id: "accent", layerKind: "accessory", role: accent?.role || null, color: accent }
       ];
     const regions = assignments.map((assignment) => ({
@@ -1207,8 +1207,8 @@
     const boundRoles = roles.map((item) => ({
       ...item,
       garment: onePiece
-        ? item.role === "main" && visibleOuter ? "外层" : item.role === "main" || item.role === "nearFace" ? "连身裙" : "点缀"
-        : item.role === "nearFace" ? "上装" : item.role === "main" && visibleOuter ? "外层" : item.role === "main" ? "下装" : item.role === "secondary" ? "下装" : "点缀"
+        ? item.role === "main" ? "连身裙" : item.role === "secondary" && visibleOuter ? "外层" : item.role === "nearFace" ? "近脸区域" : "点缀"
+        : item.role === "nearFace" ? "上装" : item.role === "main" ? "下装" : item.role === "secondary" && visibleOuter ? "外层" : "点缀"
     }));
     return {
       ...palette,
@@ -1227,18 +1227,18 @@
     const outerKind = outer?.attributes?.outerKind || "none";
     const bottomType = dress ? "dress" : bottom?.attributes?.bottomType || "trouser";
     const regions = palette?.regions || [];
-    const regionFor = (id, fallback) => {
+    const regionFor = (id) => {
       const region = regions.find((item) => item.id === id);
       return {
-        hex: region?.hex || fallback,
+        hex: region?.hex || null,
         colorName: region?.colorName || "待确认",
         ratio: region?.ratio || 0,
         source: region?.source || "unresolved"
       };
     };
-    const topColor = dress ? regionFor("dress", "#dedbd1") : regionFor("top", "#dedbd1");
-    const outerColor = regionFor("outer", "#a8b1af");
-    const bottomColor = dress ? topColor : regionFor("bottom", "#4c5961");
+    const topColor = dress ? regionFor("dress") : regionFor("top");
+    const outerColor = regionFor("outer");
+    const bottomColor = dress ? topColor : regionFor("bottom");
     const bodyComponent = dress || bottom;
     const requestedPatternTarget = options.patternDetail?.placement === "外层" ? "outer" : options.patternDetail?.placement === "下装" ? "bottom" : options.patternDetail?.placement === "连身裙" ? "dress" : "top";
     const patternTarget = requestedPatternTarget === "outer" && outerKind === "none"
