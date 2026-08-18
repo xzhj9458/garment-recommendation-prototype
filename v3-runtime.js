@@ -1552,7 +1552,7 @@ function actualColorPalette(candidate, runtime) {
       patterns: entry.item.values["appearance.patterns"] || []
     }))
     .filter((entry) => entry.colorId || entry.colorName);
-  const first = (...roles) => entries.find((entry) => roles.includes(entry.role));
+  const first = (...roles) => roles.map((roleId) => entries.find((entry) => entry.role === roleId)).find(Boolean);
   const nearFace = first("base", "onePiece", "mid", "outer", "accessory");
   const main = first("bottom", "onePiece", "base", "outer");
   const secondary = first("outer", "mid", "base");
