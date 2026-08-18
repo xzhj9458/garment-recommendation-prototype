@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "provisional-calibration",
+  "purpose": "客观输入驱动的组合效果估算基准。这里描述的是候选组合需要落入的估算范围，不是固定层数、固定单品或用户可见等级。",
+  "calibrationPolicy": {
+    "unit": "relative-index",
+    "globalShiftBounds": [-0.75, 0.75],
+    "userShiftBounds": [-0.5, 0.5],
+    "defaultUserBias": "standard",
+    "rangeWidthPolicy": "preserve-baseline-width",
+    "uncertaintyPolicy": "confidence-and-composition",
+    "note": "基准值是可校准的估算中心与范围；组合结果必须通过实际单品属性计算产生。"
+  },
+  "temperatureProfiles": {
+    "05_12": {
+      "label": "5-12°C",
+      "maxRepresentativeLayers": 5,
+      "source": "legacy-calibrated",
+      "status": "provisional",
+      "targets": {
+        "effect.thermal.warmth": { "min": 3.3, "max": 4.4, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.breathability": { "min": 1.5, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.coverage": { "requiredAreas": ["torso", "armsUpper", "armsLower", "hips", "legsUpper", "legsLower", "feet"], "hardGate": true },
+        "capability.geometry.sleeve": { "preferred": ["long"] }
+      }
+    },
+    "10_18": {
+      "label": "10-18°C",
+      "maxRepresentativeLayers": 5,
+      "source": "legacy-calibrated",
+      "status": "provisional",
+      "targets": {
+        "effect.thermal.warmth": { "min": 2.2, "max": 3.5, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.breathability": { "min": 2, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.coverage": { "requiredAreas": ["torso", "armsUpper", "armsLower", "hips", "legsUpper", "legsLower", "feet"], "hardGate": true },
+        "capability.geometry.sleeve": { "preferred": ["long"] }
+      }
+    },
+    "15_25": {
+      "label": "15-25°C",
+      "maxRepresentativeLayers": 4,
+      "source": "legacy-calibrated",
+      "status": "provisional",
+      "targets": {
+        "effect.thermal.warmth": { "min": 1, "max": 2.4, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.breathability": { "min": 2.5, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.coverage": { "requiredAreas": ["torso", "armsUpper", "hips", "legsUpper", "feet"], "hardGate": true },
+        "capability.geometry.sleeve": { "preferred": ["long"] }
+      }
+    },
+    "18_24": {
+      "label": "18-24°C",
+      "maxRepresentativeLayers": 3,
+      "source": "legacy-calibrated",
+      "status": "provisional",
+      "targets": {
+        "effect.thermal.warmth": { "min": 0.8, "max": 2, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.breathability": { "min": 3, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.coverage": { "requiredAreas": ["torso", "hips", "legsUpper", "feet"], "hardGate": true },
+        "capability.geometry.sleeve": { "preferred": ["long", "threeQuarter"] }
+      }
+    },
+    "24_30": {
+      "label": "24-30°C",
+      "maxRepresentativeLayers": 3,
+      "source": "legacy-calibrated",
+      "status": "provisional",
+      "targets": {
+        "effect.thermal.warmth": { "min": 0.4, "max": 1.4, "tolerance": 0.4, "hardGate": true },
+        "effect.thermal.breathability": { "min": 3.25, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.coverage": { "requiredAreas": ["torso", "hips", "legsUpper", "feet"], "hardGate": true },
+        "capability.geometry.sleeve": { "preferred": ["short"] }
+      }
+    },
+    "28_35": {
+      "label": "28-35°C",
+      "maxRepresentativeLayers": 2,
+      "source": "legacy-calibrated",
+      "status": "provisional",
+      "targets": {
+        "effect.thermal.warmth": { "min": 0.2, "max": 1, "tolerance": 0.3, "hardGate": true },
+        "effect.thermal.breathability": { "min": 3.5, "tolerance": 0.5, "hardGate": true },
+        "effect.thermal.coverage": { "requiredAreas": ["torso", "hips", "legsUpper", "feet"], "hardGate": true },
+        "capability.geometry.sleeve": { "preferred": ["short"] }
+      }
+    }
+  },
+  "environmentModifiers": {
+    "acTransit": {
+      "label": "强空调/温差",
+      "source": "legacy-soft-modifier",
+      "targetShifts": { "effect.thermal.warmth": 0.15 },
+      "targets": { "effect.thermal.windProtection": { "preferred": 2.5, "tolerance": 1, "hardGate": false } }
+    },
+    "wetWeather": {
+      "label": "雨雪防溅",
+      "source": "legacy-hard-modifier",
+      "targets": { "effect.occasion.weatherReadiness": { "min": 3.5, "tolerance": 0, "hardGate": true } },
+      "preferences": { "output.accessories.footwear": { "preferred": ["boots"], "weight": 1 } }
+    }
+  }
+}

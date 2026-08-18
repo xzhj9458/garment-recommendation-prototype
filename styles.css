@@ -548,6 +548,96 @@ button {
   font-size: 10px;
 }
 
+.v3-objective-when,
+.v3-objective-calibration,
+.v3-objective-why {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.v3-objective-when {
+  margin-bottom: 8px;
+}
+
+.v3-objective-calibration {
+  border-color: #cfe4d8;
+  background: #f7fbf8;
+}
+
+.v3-objective-calibration-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+
+.v3-objective-calibration-head strong {
+  color: var(--green-dark);
+  font-size: 12px;
+}
+
+.v3-objective-calibration-head span,
+.v3-objective-calibration-note,
+.v3-objective-calibration-grid small,
+.v3-objective-why p {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.v3-objective-calibration-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v3-objective-calibration-grid > div,
+.v3-objective-calibration-grid > label {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.v3-objective-calibration-grid span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.v3-objective-calibration-grid strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.v3-objective-calibration-grid input {
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.v3-objective-calibration-note {
+  margin: 8px 0 0;
+}
+
+.v3-objective-why {
+  margin-top: 8px;
+}
+
+.v3-objective-why p {
+  margin: 0;
+}
+
 .v3-natural-rule-card {
   display: grid;
   grid-template-columns: minmax(220px, 0.7fr) minmax(480px, 1.7fr) minmax(240px, 0.8fr);
@@ -588,6 +678,9 @@ button {
 }
 
 @media (max-width: 720px) {
+  .v3-objective-calibration-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .v3-workbench-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -2220,6 +2313,13 @@ button {
   display: block;
   margin-bottom: 2px;
   color: var(--green-dark);
+  font-size: 9px;
+}
+
+.candidate-effect-estimate {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
   font-size: 9px;
 }
 

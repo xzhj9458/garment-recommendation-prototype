@@ -78,7 +78,7 @@
     };
   }
 
-  function displayCandidate(record, index, ruleSet) {
+  function displayCandidate(record, index, ruleSet, objectiveProfile) {
     const output = record.output;
     const raw = record.candidate;
     const roleIds = raw.roles || {};
@@ -127,6 +127,15 @@
       validation: output.illustration.validation
     };
     const names = [dress?.name || [base?.name, ...mids.map((item) => item.name)].filter(Boolean).join(" + "), actualOuter?.name, bottom?.name].filter(Boolean);
+    const effectLabels = {
+      "effect.thermal.warmth": "组合保暖效果",
+      "effect.thermal.breathability": "组合透气效果",
+      "effect.thermal.windProtection": "防风效果",
+      "effect.occasion.weatherReadiness": "防雨雪效果"
+    };
+    const estimatedEffects = Object.entries(output.assessment.assessments || {})
+      .filter(([effect, assessment]) => effectLabels[effect] && assessment.estimateRange)
+      .map(([effect, assessment]) => ({ effect, name: effectLabels[effect], actual: assessment.actual, range: assessment.estimateRange }));
     return {
       id: record.id,
       title: names.join(" + "),
@@ -163,6 +172,9 @@
       neckline: output.garment.neckline,
       focus: output.explanation.summary,
       expectedEffect: output.explanation.summary,
+      estimatedEffects,
+      objectiveProfile: objectiveProfile || null,
+      inputSnapshot: objectiveProfile?.snapshot || null,
       hardRequirements: Object.entries(output.assessment.assessments || {}).filter(([, assessment]) => assessment.target && assessment.status === "pass").map(([effect]) => ({ name: effect, text: "达到共同效果范围" })),
       softReasons: output.trace.matchedRules.slice(0, 4).map((ruleId) => ({ name: "规则依据", text: ruleId })),
       implementations: output.trace.matchedRules.slice(0, 4).map((ruleId) => ({ relationName: "规则依据", actionSummary: ruleId })),
@@ -185,10 +197,12 @@
     const result = runtime.recommendV3({ inputFacts: flattenInput(input) });
     return {
       ...result,
-      candidates: result.candidates.map((candidate, index) => displayCandidate(candidate, index, ruleSet)),
+      candidates: result.candidates.map((candidate, index) => displayCandidate(candidate, index, ruleSet, result.effectProfile?.objective)),
       conflicts: result.trace?.conflicts || [],
       blocked: result.trace?.blocked || [],
-      engineMode: "v3"
+      engineMode: "v3",
+      effectProfile: result.effectProfile,
+      inputSnapshot: result.inputSnapshot
     };
   }
 

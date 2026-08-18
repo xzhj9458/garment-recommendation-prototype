@@ -262,6 +262,7 @@
     const styleLabel = canonicalValueLabel("preference.style", p.style, "未限定");
     const formalityLabel = canonicalValueLabel("preference.formality", p.formality, "未限定");
     const paletteLabel = canonicalValueLabel("preference.palette", p.palette, "不限定");
+    const thermalBiasLabel = canonicalValueLabel("preference.thermalBias", p.thermalBias, "标准体感");
     const trendLabel = p.trendDirection && p.trendDirection !== "none" ? trendDirectionName(p.trendDirection) : "经典稳妥";
     const layeringLabel = canonicalValueLabel("goal.layeringPreference", g.layeringPreference, "不限定");
     const goalLabel = g.endpoint ? `${canonicalValueLabel("goal.endpoint", g.endpoint)}·${canonicalValueLabel("goal.direction", g.direction, "保持")} · ${layeringLabel}` : `暂不调整 · ${layeringLabel}`;
@@ -280,7 +281,7 @@
       `色彩：${skinToneLabel} · ${canonicalValueLabel("appearance.skinValue", a.skinValue, "明度未确认")} · ${canonicalValueLabel("appearance.hairTone", a.hairTone, "发色色调未确认")} · ${canonicalValueLabel("appearance.hairDepth", a.hairDepth, "发色深浅未确认")}`,
       `身材：${bodyPropLabel} · ${canonicalValueLabel("body.waistDefinition", body.waistDefinition, "腰线未确认")} · ${canonicalValueLabel("body.shoulderHipBalance", body.shoulderHipBalance, "横向轮廓未确认")} · ${canonicalValueLabel("body.boneFrame", body.boneFrame, "骨架量感未确认")}`,
       `脸型：${faceLabel}`,
-      `偏好：${styleLabel} · ${formalityLabel} · ${paletteLabel} · ${trendLabel}`,
+      `偏好：${styleLabel} · ${formalityLabel} · ${paletteLabel} · ${thermalBiasLabel} · ${trendLabel}`,
       `目标：${goalLabel}`,
       `边界：${boundaryList.length ? boundaryList.join("、") : "无"}`
     ].join("；");
@@ -291,7 +292,7 @@
         <div class="snapshot-badges">
           <button type="button" class="snapshot-chip" data-jump-group="context" title="场景条件：气温、场合与环境">场景: ${escapeHtml([tempLabel, occasionLabel, environmentLabel].filter(Boolean).join(" · "))}</button>
           <button type="button" class="snapshot-chip" data-jump-group="personal" title="${escapeHtml(fullSummary)}">特征: ${escapeHtml(skinToneLabel)} · ${escapeHtml(bodyPropLabel)} · ${escapeHtml(faceLabel)}</button>
-          <button type="button" class="snapshot-chip" data-jump-group="preference" title="${escapeHtml(fullSummary)}">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(paletteLabel)} · ${escapeHtml(trendLabel)}</button>
+          <button type="button" class="snapshot-chip" data-jump-group="preference" title="${escapeHtml(fullSummary)}">偏好: ${escapeHtml(styleLabel)} · ${escapeHtml(paletteLabel)} · ${escapeHtml(thermalBiasLabel)} · ${escapeHtml(trendLabel)}</button>
           <button type="button" class="snapshot-chip" data-jump-group="goal-boundaries" title="${escapeHtml(fullSummary)}">目标: ${escapeHtml(goalLabel)}</button>
           <button type="button" class="snapshot-chip ${boundaryList.length ? "is-active" : ""}" data-jump-group="goal-boundaries" title="${escapeHtml(fullSummary)}">边界: ${escapeHtml(boundaryLabel)}</button>
         </div>
@@ -352,6 +353,7 @@
       const styleOptions = canonicalParameter("preference.style", { allowUnset: true });
       const formalityOptions = canonicalParameter("preference.formality", { allowUnset: true });
       const paletteOptions = canonicalParameter("preference.palette");
+      const thermalBiasOptions = canonicalParameter("preference.thermalBias");
       const trendOptions = canonicalParameter("preference.trendDirection");
       trendOptions.options = trendOptions.options.map((option) => ({
         ...option,
@@ -361,6 +363,7 @@
         ${renderParameterScale("preference.style", "风格方向", styleOptions, "choice-flow")}
         ${renderParameterScale("preference.formality", "正式程度偏好", formalityOptions)}
         ${renderParameterScale("preference.palette", "色系偏好", paletteOptions)}
+        ${renderParameterScale("preference.thermalBias", "体感偏差校准", thermalBiasOptions)}
         ${renderParameterScale("preference.trendDirection", "潮流方向", trendOptions)}
         ${state.input.preference.trendDirection !== "none" ? renderParameterScale("preference.trendIntensity", "潮流表达强度", canonicalParameter("preference.trendIntensity")) : ""}
       </div>`;

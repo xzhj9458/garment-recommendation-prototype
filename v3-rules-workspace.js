@@ -58,7 +58,7 @@
     long: "长袖", threeQuarter: "七分袖", short: "短袖", none: "无", light: "轻量", warm: "保暖",
     straight: "直筒", wide: "阔腿", tapered: "锥形", aLine: "A型", column: "直筒裙", raised: "偏高腰位", natural: "自然腰位",
     fitted: "修身", regular: "合体", oversized: "宽松", onePieceDress: "一件式", separatesTrouser: "分体裤装", separatesSkirt: "分体裙装",
-    cool: "冷调", neutral: "中性", warmLean: "偏暖", coolLean: "偏冷", high: "高", medium: "中", low: "低",
+    cool: "冷调", neutral: "中性", warmLean: "偏暖", coolLean: "偏冷", coldSensitive: "容易觉得冷", standard: "标准体感", heatSensitive: "容易觉得热", high: "高", medium: "中", low: "低",
     skirt: "裙装", tight: "紧绷贴身", definedWaist: "明显收腰", deepNeck: "低领开阔",
     torso: "躯干", armsUpper: "上臂", armsLower: "前臂", hips: "臀胯", legsUpper: "大腿", legsLower: "小腿", feet: "足部",
     relaxedTailoring: "松弛剪裁", utilityLayering: "轻机能层次", sheerLayering: "轻透叠穿"
@@ -256,29 +256,67 @@
     </div>`;
   }
 
+  function objectiveTemperatureId(rule) {
+    const parts = conditionParts(rule?.when);
+    return parts.length === 1 && parts[0].field === "context.temperatureRange" ? parts[0].value : null;
+  }
+
+  function isObjectiveTemperatureRule(rule) {
+    return Boolean(objectiveTemperatureId(rule));
+  }
+
+  function objectiveTargetRows(rule) {
+    return (rule.actions || []).filter((action) => ["RANGE", "REQUIRE", "PREFER"].includes(action.operation)).map((action) => {
+      const value = displayValue(action.value, action.target);
+      return `<div class="v3-action-row"><span>${action.operation === "PREFER" ? "偏好" : "共同效果"}</span><strong>${escapeHtml(targetLabel(action.target))}</strong><em title="${escapeHtml(value)}">${escapeHtml(value)}</em></div>`;
+    }).join("");
+  }
+
+  function renderObjectiveCalibration(rule) {
+    const profileId = objectiveTemperatureId(rule);
+    const profile = global.GarmentObjectiveProfileRegistry?.temperatureProfiles?.[profileId];
+    const calibration = rule.metadata?.objectiveCalibration || {};
+    const shift = typeof calibration.globalShift === "number" ? calibration.globalShift : 0;
+    const warmth = profile?.targets?.["effect.thermal.warmth"] || {};
+    const breathability = profile?.targets?.["effect.thermal.breathability"] || {};
+    return `<div class="v3-objective-calibration">
+      <div class="v3-objective-calibration-head"><strong>客观组合基准</strong><span>系统根据单品属性自动生成多种合格组合，不固定层数或具体单品。</span></div>
+      <div class="v3-objective-calibration-grid">
+        <div><span>当前温度</span><strong>${escapeHtml(profile?.label || profileId)}</strong></div>
+        <div><span>保暖估算范围</span><strong>${warmth.min ?? "—"} 至 ${warmth.max ?? "—"}</strong></div>
+        <div><span>透气最低约束</span><strong>${breathability.min ?? "—"}</strong></div>
+        <label><span>全局基准偏移</span><input type="number" min="-0.75" max="0.75" step="0.05" value="${shift}" data-v3-objective-shift><small>范围 -0.75 至 0.75</small></label>
+      </div>
+      <p class="v3-objective-calibration-note">这里调整的是组合效果估算基准；保存后，案例运行会重新计算候选组合，不会直接把结果写成固定层数或指定单品。</p>
+    </div>`;
+  }
+
   function renderEditor() {
     const rule = state.draft.rules.find((item) => item.id === state.ruleId);
     if (!rule) {
       $("#v3EditorContent").innerHTML = `<div class="editor-empty"><strong>当前分类暂无${state.ruleMode === "atomic" ? "单项" : "协同"}规则</strong></div>`;
       return;
     }
+    const objectiveRule = isObjectiveTemperatureRule(rule);
     const targets = [...new Map(rule.actions.map((action) => [action.target, targetLabel(action.target)])).values()];
-    const actionRows = rule.actions.map((action) => {
+    const actionRows = (objectiveRule ? objectiveTargetRows(rule) : rule.actions.map((action) => {
       const value = displayValue(action.value, action.target);
       return `<div class="v3-action-row"><span>${operationLabels[action.operation]}</span><strong>${escapeHtml(targetLabel(action.target))}</strong><em title="${escapeHtml(value)}">${escapeHtml(value)}</em></div>`;
-    }).join("");
-    $("#v3EditorContent").innerHTML = `
-      <section class="v3-rule-summary">
-        <div class="v3-rule-summary-submodule v3-relation-impact"><div class="v3-rule-summary-heading"><span class="module-index">01</span><div><strong>${rule.kind === "joint" ? "协同关系影响输出" : "输入项影响输出"}</strong></div></div><div class="scope-pill-list">${targets.map((label) => `<span class="scope-pill">${escapeHtml(label)}</span>`).join("")}</div></div>
-        <div class="v3-rule-summary-submodule v3-branch-output"><div class="v3-rule-summary-heading"><span class="module-index">02</span><div><strong>当前取值动作</strong><small>${escapeHtml(conditionLabel(rule))}</small></div></div><div class="v3-action-list">${actionRows}</div></div>
-      </section>
-      <section class="v3-rule-config">
-        <div class="v3-rule-config-heading"><span>03</span><strong>规则配置</strong><small>条件 / 结果 / 依据</small><label class="v3-rule-enabled"><input type="checkbox" data-v3-rule-enabled ${rule.enabled !== false ? "checked" : ""}><span>启用分支</span></label></div>
-        <article class="v3-natural-rule-card">
+    }).join(""));
+    const regularConfig = `<article class="v3-natural-rule-card">
           <section class="v3-rule-clause v3-rule-clause--when"><div class="v3-rule-clause-label">当</div><p class="v3-when-statement">${escapeHtml(conditionLabel(rule))}时</p></section>
           <section class="v3-rule-clause v3-rule-clause--then"><div class="v3-rule-clause-label">则</div><div class="v3-action-editor-list">${rule.actions.map(renderActionEditor).join("")}</div><button class="text-button v3-add-action" type="button" data-v3-add-action>＋ 添加影响内容</button></section>
           <section class="v3-rule-clause v3-rule-clause--why"><div class="v3-rule-clause-label">依据</div><textarea rows="5" data-v3-rule-reason>${escapeHtml(rule.actions.map((action) => action.reason).filter((reason, index, all) => all.indexOf(reason) === index).join("；"))}</textarea></section>
-        </article>
+        </article>`;
+    const objectiveConfig = `<div class="v3-objective-when"><div class="v3-rule-clause-label">当</div><p class="v3-when-statement">${escapeHtml(conditionLabel(rule))}时，系统自动计算候选组合。</p></div>${renderObjectiveCalibration(rule)}<div class="v3-objective-why"><div class="v3-rule-clause-label">依据</div><p>${escapeHtml(rule.actions.map((action) => action.reason).filter((reason, index, all) => all.indexOf(reason) === index).join("；"))}</p></div>`;
+    $("#v3EditorContent").innerHTML = `
+      <section class="v3-rule-summary">
+        <div class="v3-rule-summary-submodule v3-relation-impact"><div class="v3-rule-summary-heading"><span class="module-index">01</span><div><strong>关系影响输出</strong></div></div><div class="scope-pill-list">${targets.map((label) => `<span class="scope-pill">${escapeHtml(label)}</span>`).join("")}</div></div>
+        <div class="v3-rule-summary-submodule v3-branch-output"><div class="v3-rule-summary-heading"><span class="module-index">02</span><div><strong>当前分支输出结果</strong><small>${escapeHtml(conditionLabel(rule))}</small></div></div><div class="v3-action-list">${actionRows}</div></div>
+      </section>
+      <section class="v3-rule-config">
+        <div class="v3-rule-config-heading"><span>03</span><strong>规则配置</strong><small>${objectiveRule ? "客观组合基准 / 依据" : "条件 / 结果 / 依据"}</small><label class="v3-rule-enabled"><input type="checkbox" data-v3-rule-enabled ${rule.enabled !== false ? "checked" : ""}><span>启用分支</span></label></div>
+        ${objectiveRule ? objectiveConfig : regularConfig}
       </section>`;
   }
 
@@ -456,6 +494,7 @@
       const deleteAction = event.target.closest("button[data-v3-delete-action]");
       if (addAction) {
         const rule = currentRule();
+        if (isObjectiveTemperatureRule(rule)) { showToast("客观温度分支由组合引擎计算，不能直接添加固定结果"); return; }
         const target = rule.actions[0]?.target || "effect.style.styleCoherence";
         const operations = allowedOperations(target);
         const operation = operations.includes("PREFER") ? "PREFER" : operations[0];
@@ -476,6 +515,7 @@
       }
       if (deleteAction) {
         const rule = currentRule();
+        if (isObjectiveTemperatureRule(rule)) { showToast("客观温度分支不能删除计算约束"); return; }
         if (rule.actions.length <= 1) { showToast("每个分支至少保留一个结果动作"); return; }
         rule.actions.splice(Number(deleteAction.dataset.v3DeleteAction), 1);
         markDirty();
@@ -496,6 +536,15 @@
     $("#v3RulesView").addEventListener("change", (event) => {
       const rule = currentRule();
       if (!rule) return;
+      if (event.target.matches("[data-v3-objective-shift]")) {
+        rule.metadata ||= {};
+        rule.metadata.objectiveCalibration ||= {};
+        const value = event.target.value === "" ? 0 : Number(event.target.value);
+        rule.metadata.objectiveCalibration.globalShift = Math.max(-0.75, Math.min(0.75, Number.isFinite(value) ? value : 0));
+        markDirty();
+        render();
+        return;
+      }
       const index = Number(event.target.dataset.v3ActionIndex);
       const action = Number.isInteger(index) ? rule.actions[index] : null;
       if (event.target.matches("[data-v3-rule-enabled]")) rule.enabled = event.target.checked;
