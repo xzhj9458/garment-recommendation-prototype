@@ -5,14 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>穿搭推荐规则管理</title>
-  <link rel="stylesheet" href="styles.css?v=logic-2.5">
-  <script defer src="rules-data.js?v=logic-2.5"></script>
-  <script defer src="canonical-data.js?v=logic-2.5"></script>
-  <script defer src="canonical-input-adapter.js?v=logic-2.5"></script>
-  <script defer src="canonical-rule-engine.js?v=logic-2.5"></script>
-  <script defer src="canonical-output-adapter.js?v=logic-2.5"></script>
-  <script defer src="rule-engine.js?v=logic-2.5"></script>
-  <script defer src="rules-app.js?v=logic-2.5"></script>
+  <link rel="stylesheet" href="styles.css?v=logic-3.0-p8">
+  <script defer src="rules-data.js?v=logic-3.0-p8"></script>
+  <script defer src="canonical-data.js?v=logic-3.0-p8"></script>
+  <script defer src="canonical-input-adapter.js?v=logic-3.0-p8"></script>
+  <script defer src="canonical-rule-engine.js?v=logic-3.0-p8"></script>
+  <script defer src="canonical-output-adapter.js?v=logic-3.0-p8"></script>
+  <script defer src="v3-runtime.js?v=logic-3.0-p8"></script>
+  <script defer src="rule-engine.js?v=logic-3.0-p8"></script>
+  <script defer src="rules-app.js?v=logic-3.0-p8"></script>
+  <script defer src="v3-rules-workspace.js?v=logic-3.0-p8"></script>
 </head>
 <body class="rules-page">
   <header class="app-header">
@@ -25,9 +27,15 @@
       <a class="is-active" href="rules.html">规则管理</a>
     </nav>
     <div class="header-actions rules-header-actions">
+      <div class="engine-mode-bar" id="engineModeBar" role="radiogroup" aria-label="规则版本">
+        <button class="engine-mode-button" type="button" role="radio" aria-checked="false" data-engine-mode="v2">旧版回退</button>
+        <button class="engine-mode-button is-active" type="button" role="radio" aria-checked="true" data-engine-mode="v3">效果等价规则</button>
+      </div>
       <span class="save-state" id="saveState">草稿已保存</span>
       <button class="secondary-button" id="saveButton" type="button">保存草稿</button>
       <button class="primary-button" id="publishButton" type="button">发布规则</button>
+      <button class="secondary-button" id="v3SaveButton" type="button" hidden>保存草稿</button>
+      <button class="primary-button" id="v3PublishButton" type="button" hidden>发布规则</button>
     </div>
   </header>
 
@@ -96,6 +104,24 @@
           <div class="editor-content" id="editorContent"><div class="editor-empty"><strong>选择一条关系开始配置</strong></div></div>
         </section>
       </div>
+    </section>
+
+    <section class="v3-rules-view" id="v3RulesView" hidden>
+      <div class="v3-workbench-heading">
+        <div><h1>效果等价规则</h1></div>
+        <div class="v3-workbench-meta" id="v3WorkbenchMeta"></div>
+      </div>
+      <div class="config-rule-mode" id="v3RuleMode" role="tablist" aria-label="效果等价规则类型">
+        <button class="is-active" type="button" role="tab" aria-selected="true" data-v3-rule-mode="atomic">单项规则</button>
+        <button type="button" role="tab" aria-selected="false" data-v3-rule-mode="joint">协同规则</button>
+      </div>
+      <div class="config-tier-bar v3-tier-bar">
+        <div class="config-tier-row"><span class="config-tier-label">一级分类</span><nav class="config-tier1-tabs" id="v3Tier1" role="tablist"></nav></div>
+        <div class="config-tier-row"><span class="config-tier-label">二级关系</span><nav class="config-tier2-chips" id="v3Tier2" role="tablist"></nav></div>
+        <div class="config-tier-row"><span class="config-tier-label">输入项</span><nav class="config-tier3-chips" id="v3Tier3" role="tablist"></nav></div>
+        <div class="config-tier-row"><span class="config-tier-label">输入取值</span><nav class="config-tier3-chips config-tier4-chips" id="v3Tier4" role="tablist"></nav></div>
+      </div>
+      <div class="v3-relationship-workspace"><section class="relationship-editor"><div class="editor-content" id="v3EditorContent"></div></section></div>
     </section>
   </main>
 

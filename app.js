@@ -3,8 +3,11 @@
 
   const DATA = window.GarmentPrototypeData;
   const Engine = window.GarmentRuleEngine;
+  const V3Adapter = window.GarmentV3PrototypeAdapter;
   const CANONICAL_INPUTS = window.GarmentCanonicalData?.fieldRegistry?.inputs || [];
   const PREVIEW_HAIR_STYLE_KEY = "garment-preview-hair-style";
+  const ENGINE_MODE_KEY = "garment-engine-mode";
+  const ENGINE_MODES = new Set(["v2", "v3"]);
   const PREVIEW_HAIR_STYLES = new Set(["short", "medium", "long"]);
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -18,6 +21,7 @@
     hoveredField: null,
     viewMode: "cards", // 'cards' | 'table'
     previewHairStyle: PREVIEW_HAIR_STYLES.has(localStorage.getItem(PREVIEW_HAIR_STYLE_KEY)) ? localStorage.getItem(PREVIEW_HAIR_STYLE_KEY) : "short",
+    engineMode: ENGINE_MODES.has(localStorage.getItem(ENGINE_MODE_KEY)) ? localStorage.getItem(ENGINE_MODE_KEY) : "v3",
     ruleSet: Engine.Store.loadPublished()
   };
 
@@ -87,6 +91,10 @@
     return field?.options?.find(([optionValue]) => String(optionValue) === String(value))?.[1] || fallback;
   }
 
+  function candidateResult(candidate) {
+    return candidate?.output || candidate?.canonicalOutput || {};
+  }
+
   queueMicrotask(init);
 
   function init() {
@@ -130,6 +138,16 @@
       renderHairStyleBar();
       renderCandidates(state.lastResult);
       triggerRefreshTransition();
+    });
+
+    $("#engineModeBar").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-engine-mode]");
+      if (!button || !ENGINE_MODES.has(button.dataset.engineMode)) return;
+      state.engineMode = button.dataset.engineMode;
+      localStorage.setItem(ENGINE_MODE_KEY, state.engineMode);
+      state.selectedCandidateIndex = null;
+      renderAll();
+      toast(state.engineMode === "v3" ? "已切换至效果等价方案" : "已切换至旧版回退方案");
     });
 
     const resetBtn = $("#resetInputButton") || $("#resetButton");
@@ -181,10 +199,13 @@
 
   function renderAll(animate = true) {
     state.ruleSet = Engine.Store.loadPublished();
-    const result = Engine.run(state.input, state.ruleSet);
+    const result = state.engineMode === "v3"
+      ? V3Adapter?.run(state.input, state.ruleSet) || { candidates: [], conflicts: [{ reason: "效果等价运行包未加载" }], blocked: [] }
+      : Engine.run(state.input, state.ruleSet);
     state.lastResult = result;
 
     renderVersionChip();
+    renderEngineModeBar();
     renderConditionSnapshot();
     renderInputTabs();
     renderInputs();
@@ -212,7 +233,15 @@
   }
 
   function renderVersionChip() {
-    $("#ruleVersion").textContent = `规则 ${state.ruleSet.meta?.version || "1.2.0"}`;
+    $("#ruleVersion").textContent = state.engineMode === "v3" ? "规则 3.0 试算" : `规则 ${state.ruleSet.meta?.version || "1.2.0"}`;
+  }
+
+  function renderEngineModeBar() {
+    $("#engineModeBar").querySelectorAll("button[data-engine-mode]").forEach((button) => {
+      const active = button.dataset.engineMode === state.engineMode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-checked", String(active));
+    });
   }
 
   function renderConditionSnapshot() {
@@ -665,7 +694,7 @@
   }
 
   function renderColorSpectrum(candidate) {
-    const spectrum = candidate.canonicalOutput?.color?.nearFacePalette;
+    const spectrum = candidateResult(candidate).color?.nearFacePalette;
     if (!spectrum || ![...(spectrum.preferred || []), ...(spectrum.compatible || [])].length) return "";
     const rows = [
       ["首选", spectrum.preferred || []],
@@ -683,8 +712,8 @@
   }
 
   function onePieceDetails(candidate) {
-    const garment = candidate.canonicalOutput?.garment || {};
-    const framework = candidate.canonicalOutput?.framework || {};
+    const garment = candidateResult(candidate).garment || {};
+    const framework = candidateResult(candidate).framework || {};
     const hemByCut = { aLineMidi: "中长裙摆", shirtDress: "中长裙摆", wrapDress: "中长裙摆", columnDress: "中长裙摆" };
     return [
       ["裙型", canonicalGarmentLabels.dressCut[garment.dressCut || candidate.dressCut] || "连衣裙"],
@@ -705,7 +734,7 @@
   }
 
   function candidateAccessoryLayers(candidate) {
-    const accessories = candidate.canonicalOutput?.accessories || {};
+    const accessories = candidateResult(candidate).accessories || {};
     const footwear = accessories.footwear ? canonicalAccessoryName("footwear", accessories.footwear) : "";
     const conditional = accessories.leatherGoods === "slimBelt" && ["defined", "raised"].includes(candidate.waist)
       ? [canonicalAccessoryName("leatherGoods", accessories.leatherGoods)] : [];
@@ -1045,8 +1074,8 @@
     const outerVisible = outerLayer.visible !== false && outerLayer.type !== "none" && Boolean(candidate.garments?.outer && candidate.garments.outer !== "无外层");
 
     const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
-    const bottomCut = candidate.canonicalOutput?.garment?.bottomCut || candidate.bottomCut || "straightLeg";
-    const dressCut = candidate.canonicalOutput?.garment?.dressCut || candidate.dressCut || dressLayer.dressCut || "aLineMidi";
+    const bottomCut = candidateResult(candidate).garment?.bottomCut || candidate.bottomCut || "straightLeg";
+    const dressCut = candidateResult(candidate).garment?.dressCut || candidate.dressCut || dressLayer.dressCut || "aLineMidi";
     const sleeve = (isDress ? dressLayer.sleeve : topLayer.sleeve) || candidate.sleeve || "long";
     const neckline = model.neckline || candidate.neckline || "regular";
     const waist = model.waist || candidate.waist || "natural";
@@ -1054,8 +1083,8 @@
     const pattern = candidate.patternDetail;
     const patternTarget = pattern?.placement === "上装" ? "top" : pattern?.placement === "外层" ? "outer" : pattern?.placement === "下装" ? "bottom" : pattern?.placement === "连衣裙" ? "dress" : null;
 
-    const footwearKey = candidate.canonicalOutput?.accessories?.footwear || "loafersOxfords";
-    const bagKey = candidate.canonicalOutput?.accessories?.leatherGoods || "structuredTote";
+    const footwearKey = candidateResult(candidate).accessories?.footwear || "loafersOxfords";
+    const bagKey = candidateResult(candidate).accessories?.leatherGoods || "structuredTote";
 
     const svgId = `ens-${Math.random().toString(36).slice(2, 7)}`;
     const patternInk = pattern?.contrast === "低" ? "#243746" : "#ffffff";
@@ -1282,8 +1311,8 @@
       && outerLayer.type !== "none"
       && Boolean(candidate.garments?.outer && candidate.garments.outer !== "无外层");
     const bottomType = isDress ? "dress" : bottomLayer.type || bottomLayer.bottomType || candidate.bottomType || "trouser";
-    const bottomCut = candidate.canonicalOutput?.garment?.bottomCut || candidate.bottomCut || bottomLayer.attributes?.bottomCut || "straightLeg";
-    const dressCut = candidate.canonicalOutput?.garment?.dressCut || candidate.dressCut || dressLayer.dressCut || "aLineMidi";
+    const bottomCut = candidateResult(candidate).garment?.bottomCut || candidate.bottomCut || bottomLayer.attributes?.bottomCut || "straightLeg";
+    const dressCut = candidateResult(candidate).garment?.dressCut || candidate.dressCut || dressLayer.dressCut || "aLineMidi";
     const sleeve = (isDress ? dressLayer.sleeve : topLayer.sleeve) || candidate.sleeve || "long";
     const neckline = model.neckline || candidate.neckline || "regular";
     const waist = model.waist || candidate.waist || "natural";
@@ -1336,7 +1365,7 @@
 
     const accessoryKey = (kind, canonicalKey, fallback = null) => {
       const modeled = (model.accessories || []).find((item) => item.kind === kind && item.visible !== false)?.key;
-      return modeled || candidate.canonicalOutput?.accessories?.[canonicalKey] || fallback;
+      return modeled || candidateResult(candidate).accessories?.[canonicalKey] || fallback;
     };
     const footwearKey = accessoryKey("footwear", "footwear", "loafersOxfords");
     const bagKey = accessoryKey("bag", "leatherGoods", null);
@@ -1724,13 +1753,13 @@
       `;
     }).join("");
 
-    const canonicalAccessories = cand.canonicalOutput?.accessories || {};
+    const canonicalAccessories = candidateResult(cand).accessories || {};
     const accessoryLayers = candidateAccessoryLayers(cand);
     const footwearHtml = canonicalAccessories.footwear ? `<span><small>鞋履</small><strong>${escapeHtml(canonicalAccessoryName("footwear", canonicalAccessories.footwear))}</strong></span>` : "";
     const conditionalAccessoriesHtml = accessoryLayers.conditional.map((value) => `<span><small>条件必需</small><strong>${escapeHtml(value)}</strong></span>`).join("");
     const optionalAccessoriesHtml = accessoryLayers.optional.map((value) => `<span><strong>${escapeHtml(value)}</strong></span>`).join("") || `<span><strong>无需额外配饰</strong></span>`;
-    const canonicalFramework = cand.canonicalOutput?.framework || {};
-    const canonicalGarment = cand.canonicalOutput?.garment || {};
+    const canonicalFramework = candidateResult(cand).framework || {};
+    const canonicalGarment = candidateResult(cand).garment || {};
     const canonicalGarmentHtml = [
       ["方案形态", canonicalGarmentLabels.form[canonicalFramework.form]],
       ["上装松紧", isOnePieceCandidate(cand) ? null : canonicalGarmentLabels.topFit[canonicalGarment.topFit]],
