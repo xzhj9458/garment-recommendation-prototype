@@ -1261,8 +1261,9 @@
     $("#rulesModeTabs").querySelectorAll("button[data-rules-mode]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.rulesMode === state.mode);
     });
-    $("#overviewView").hidden = state.mode !== "overview";
-    $("#configureView").hidden = state.mode !== "configure";
+    const isV3 = document.body?.dataset.engineMode === "v3";
+    $("#overviewView").hidden = isV3 || state.mode !== "overview";
+    $("#configureView").hidden = isV3 || state.mode !== "configure";
   }
 
   function overviewImpact(row, domainId, fieldId) {

@@ -391,6 +391,8 @@
 
   function render() {
     const isV3 = state.engineMode === "v3";
+    document.body.dataset.engineMode = state.engineMode;
+    $(".rules-main")?.classList.toggle("is-v3-mode", isV3);
     $("#v3RulesView").hidden = !isV3;
     $(".rules-mode-bar").hidden = isV3;
     $("#overviewView").hidden = isV3 ? true : $("#rulesModeTabs button.is-active")?.dataset.rulesMode !== "overview";
@@ -420,6 +422,10 @@
     });
     renderNavigation();
     renderEditor();
+    requestAnimationFrame(() => {
+      const activeNavigation = [...document.querySelectorAll("#v3RulesView .v3-tier-bar button.is-active")].at(-1);
+      activeNavigation?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
   }
 
   function bind() {
