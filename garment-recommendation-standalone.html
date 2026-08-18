@@ -8642,7 +8642,9 @@ function buildCandidateFixture(constraintSet, partial, runtime) {
       undertone: entry.item.values?.["appearance.undertone"],
       value: entry.item.values?.["appearance.value"],
       chroma: entry.item.values?.["appearance.chroma"],
-      patterns: entry.item.values?.["appearance.patterns"] || []
+      patterns: entry.item.values?.["appearance.patterns"] || [],
+      sourceType: entry.item.values?.["quality.sourceType"],
+      confidence: entry.item.values?.["quality.confidence"]
     }))
     .filter((entry) => entry.colorId || entry.colorName || typeof entry.value === "number");
   const nearFaceEntry = colorEntries.find((entry) => ["base", "onePiece", "mid"].includes(entry.role))
@@ -9064,7 +9066,9 @@ function actualColorPalette(candidate, runtime) {
       undertone: entry.item.values["appearance.undertone"],
       value: entry.item.values["appearance.value"],
       chroma: entry.item.values["appearance.chroma"],
-      patterns: entry.item.values["appearance.patterns"] || []
+      patterns: entry.item.values["appearance.patterns"] || [],
+      sourceType: entry.item.values["quality.sourceType"],
+      confidence: entry.item.values["quality.confidence"]
     }))
     .filter((entry) => entry.colorId || entry.colorName);
   const first = (...roles) => roles.map((roleId) => entries.find((entry) => entry.role === roleId)).find(Boolean);
@@ -9082,6 +9086,8 @@ function actualColorPalette(candidate, runtime) {
     value: entry.value,
     chroma: entry.chroma,
     patterns: clone(entry.patterns),
+    sourceType: entry.sourceType,
+    confidence: entry.confidence,
     ratio
   } : null;
   const roles = [role(nearFace, 30), role(main, 60), role(secondary, 30), role(accent, 10)].filter(Boolean);
@@ -9094,7 +9100,7 @@ function actualColorPalette(candidate, runtime) {
   return roles.length ? { roles, distribution, source: "candidate.item.values" } : null;
 }
 
-function projectCandidate({ candidate, inputFacts = {}, constraintSet = {}, matchedRuleIds = [], runtime }) {
+function projectCandidate({ candidate, inputFacts = {}, constraintSet = {}, matchedRuleIds = [], boundaryTrace = null, versions = null, runtime }) {
   const all = allEntries(candidate, runtime);
   const torso = ["base", "mid", "outer", "onePiece"].flatMap((role) => entriesFor(candidate, runtime, role));
   const primary = preferredEntry(candidate, runtime);
@@ -9192,13 +9198,14 @@ function projectCandidate({ candidate, inputFacts = {}, constraintSet = {}, matc
       matchedRules: clone(matchedRuleIds),
       candidateId: candidate.id,
       componentIds: all.map((entry) => entry.id),
+      versions: clone(versions),
       pending
     },
     decisionRecord: {
       baseline: clone(matchedRuleIds),
       goalPreferences: clone(constraintSet.soft || {}),
       goalAssessment: passedEffects,
-      boundaryActions: clone(candidate.evaluation?.blockers || []),
+      boundaryActions: clone(boundaryTrace?.actions || []),
       finalOutput: clone(output),
       candidateRanking: candidate.totalScore
     }
@@ -9289,6 +9296,7 @@ function buildObjectiveProfile(inputFacts = {}, options = {}) {
   if (!base) {
     return {
       status: "unknown-temperature-profile",
+      modelVersion: registry.schemaVersion,
       profileId: null,
       targets: {},
       snapshot,
@@ -9324,6 +9332,7 @@ function buildObjectiveProfile(inputFacts = {}, options = {}) {
   }
   return {
     status: "ready",
+    modelVersion: registry.schemaVersion,
     profileId,
     label: base.label,
     maxRepresentativeLayers: base.maxRepresentativeLayers,
@@ -9355,6 +9364,56 @@ const { evaluateV3Rules, replaceV3RuleRegistry, registry: ruleRegistry } = requi
 const { generateCandidates } = require("./garment-v3-candidate-generator");
 const { projectCandidate } = require("./garment-v3-output-projector");
 const { buildObjectiveProfile } = require("./garment-objective-profile");
+
+function inputValue(inputFacts, field) {
+  if (Object.prototype.hasOwnProperty.call(inputFacts || {}, field)) return inputFacts[field];
+  return field.split(".").reduce((current, part) => current?.[part], inputFacts);
+}
+
+function buildBoundaryTrace(inputFacts, blocked = []) {
+  const definitions = {
+    "boundaries.rejectSkirt": { label: "拒绝裙装", blockerIds: ["skirt"] },
+    "boundaries.rejectTight": { label: "拒绝紧绷贴身", blockerIds: ["tight"] },
+    "boundaries.rejectDefinedWaist": { label: "拒绝明显收腰", blockerIds: ["definedWaist"] },
+    "boundaries.rejectDeepNeck": { label: "拒绝低领", blockerIds: ["deepNeck"] },
+    "boundaries.rejectHighContrast": { label: "拒绝高对比", blockerIds: ["highContrast", "effect.color.contrastHarmony"] },
+    "boundaries.strictCoverage": { label: "要求完整覆盖", blockerIds: ["incompleteCoverage", "effect.thermal.coverage"] },
+    "boundaries.movementFriendly": { label: "要求行动便利", blockerIds: ["movementRestricted", "effect.comfort.mobility"] },
+    "boundaries.sensitiveTexture": { label: "避免粗糙触感", blockerIds: ["coarseContact", "effect.comfort.contactSoftness"] }
+  };
+  const actions = [];
+  for (const [field, definition] of Object.entries(definitions)) {
+    if (inputValue(inputFacts, field) !== true) continue;
+    const droppedCandidates = blocked
+      .filter((candidate) => (candidate.blockers || []).some((blocker) => blocker.input === field || definition.blockerIds.includes(blocker.id)))
+      .map((candidate) => candidate.candidateId);
+    actions.push({
+      input: field,
+      label: definition.label,
+      operation: "hard-filter",
+      status: droppedCandidates.length ? "filtered" : "filtered-before-evaluation",
+      droppedCandidateCount: droppedCandidates.length,
+      droppedCandidates
+    });
+  }
+  return {
+    activeCount: actions.length,
+    droppedCandidateCount: new Set(actions.flatMap((action) => action.droppedCandidates)).size,
+    actions
+  };
+}
+
+function versionBundle(runtime, objectiveProfile) {
+  return {
+    capabilityData: runtime.capabilityData?.schemaVersion || null,
+    capabilityContract: runtime.capabilityRegistry?.schemaVersion || null,
+    effectContract: runtime.effectRegistry?.schemaVersion || null,
+    compositionContract: runtime.compositionRegistry?.schemaVersion || null,
+    objectiveModel: objectiveProfile?.modelVersion || null,
+    subjectiveRules: ruleRegistry.schemaVersion || ruleRegistry.version || null,
+    ruleStatus: ruleRegistry.status || null
+  };
+}
 
 function mergeTargets(ruleTargets = {}, objectiveTargets = {}) {
   const merged = { ...ruleTargets };
@@ -9389,9 +9448,11 @@ function recommendV3({ inputFacts = {}, options = {} } = {}) {
     options: options.candidateOptions || {},
     runtime
   });
+  const boundaryTrace = buildBoundaryTrace(inputFacts, generated.blocked);
+  const versions = versionBundle(runtime, objectiveProfile);
   const candidates = generated.candidates.map((candidate) => ({
     id: candidate.id,
-    output: projectCandidate({ candidate, inputFacts, constraintSet: ruleRun.constraintSet, matchedRuleIds: ruleRun.matchedRuleIds, runtime }),
+    output: projectCandidate({ candidate, inputFacts, constraintSet: ruleRun.constraintSet, matchedRuleIds: ruleRun.matchedRuleIds, boundaryTrace, versions, runtime }),
     candidate
   }));
   return {
@@ -9406,13 +9467,17 @@ function recommendV3({ inputFacts = {}, options = {} } = {}) {
       generated: generated.trace,
       blocked: generated.blocked,
       conflicts: generated.conflicts,
+      boundary: boundaryTrace,
+      versions,
       poolErrors: generated.poolErrors,
       insufficientReason: generated.insufficientReason
     },
     decisionRecord: {
       derived: ruleRun.derived,
       annotations: ruleRun.annotations,
-      objectiveProfile: objectiveProfile
+      objectiveProfile: objectiveProfile,
+      boundaryTrace,
+      versions
     }
   };
 }
