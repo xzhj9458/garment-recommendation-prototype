@@ -28,7 +28,7 @@
   }
 
   function palette(output, ruleSet) {
-    const distribution = output.color?.distribution || {};
+    const distribution = output.color?.actual?.distribution || output.color?.distribution || {};
     const nearFace = output.color?.nearFacePalette || {};
     const colors = {
       nearFace: nearFace.preferred?.[0] || distribution.nearFace?.[0] || null,

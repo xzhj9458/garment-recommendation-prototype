@@ -97,6 +97,30 @@
       "source": "legacy-hard-modifier",
       "targets": { "effect.occasion.weatherReadiness": { "min": 3.5, "tolerance": 0, "hardGate": true } },
       "preferences": { "output.accessories.footwear": { "preferred": ["boots"], "weight": 1 } }
+    },
+    "strongWind": {
+      "label": "风力明显",
+      "source": "environment-snapshot",
+      "targetShifts": { "effect.thermal.warmth": 0.2 },
+      "targets": { "effect.thermal.windProtection": { "min": 2.8, "tolerance": 0.5, "hardGate": true } }
+    },
+    "activeOutdoor": {
+      "label": "持续户外活动",
+      "source": "environment-snapshot",
+      "targetShifts": { "effect.thermal.breathability": 0.35 },
+      "targets": { "effect.comfort.mobility": { "min": 3.5, "tolerance": 0.5, "hardGate": true } }
+    },
+    "indoorOutdoorSwitch": {
+      "label": "室内外频繁切换",
+      "source": "environment-snapshot",
+      "targetShifts": { "effect.thermal.warmth": 0.15 },
+      "targets": { "effect.thermal.windProtection": { "min": 2, "tolerance": 1, "hardGate": false } }
+    },
+    "highHumidity": {
+      "label": "湿度偏高",
+      "source": "environment-snapshot",
+      "targetShifts": { "effect.thermal.breathability": 0.25 },
+      "targets": { "effect.comfort.moistureManagement": { "min": 2.5, "tolerance": 0.5, "hardGate": false } }
     }
   }
 }
