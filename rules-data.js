@@ -3,11 +3,11 @@
 
   const temperatureOptions = [
     { value: "05_12", label: "5-12°C" },
-    { value: "10_18", label: "10-18°C" },
-    { value: "15_25", label: "15-25°C" },
-    { value: "18_24", label: "18-24°C" },
-    { value: "24_30", label: "24-30°C" },
-    { value: "28_35", label: "28-35°C" }
+    { value: "13_17", label: "13-17°C" },
+    { value: "18_23", label: "18-23°C" },
+    { value: "24_27", label: "24-27°C" },
+    { value: "28_31", label: "28-31°C" },
+    { value: "32_35", label: "32-35°C" }
   ];
 
   const fiveBands = [
@@ -957,11 +957,11 @@
   const decisionRules = [
     ...[
       ["05_12", 3, "long", "warm", "full", "保暖中等厚度", "5-12°C 需要三层、长袖和保暖外层。"],
-      ["10_18", 2, "long", "light", "full", "轻至中等厚度", "10-18°C 需要两层和可脱轻外层。"],
-      ["15_25", 2, "long", "light", "full", "轻薄可叠穿", "15-25°C 温差较大，保留可脱轻外层。"],
-      ["18_24", 1, "threeQuarter", "none", "regular", "轻薄", "18-24°C 优先轻薄单层和适中覆盖。"],
-      ["24_30", 1, "short", "none", "regular", "轻薄透气", "24-30°C 使用短袖单层和轻薄材质。"],
-      ["28_35", 1, "short", "none", "light", "极轻薄透气", "28-35°C 使用极轻薄单层并减少覆盖。"]
+      ["13_17", 2, "long", "light", "full", "轻至中等厚度", "13-17°C 允许单品厚薄与层次互换，轻外层作为常用结构。"],
+      ["18_23", 1, "threeQuarter", "none", "regular", "轻薄", "18-23°C 以轻薄单层或轻度叠穿为主要结构。"],
+      ["24_27", 1, "short", "none", "regular", "轻薄透气", "24-27°C 优先轻薄透气的单层结构。"],
+      ["28_31", 1, "short", "none", "light", "极轻薄透气", "28-31°C 以高透气单层为主，必要时只允许轻薄结构。"],
+      ["32_35", 1, "short", "none", "light", "极轻薄透气", "32-35°C 仅保留高透气单层主体结构。"]
     ].map(([range, layers, sleeve, outer, coverage, material, reason], index) => ({
       id: `TEMP-${range}`,
       name: `${temperatureOptions.find((item) => item.value === range).label} 穿着要求`,
@@ -1479,7 +1479,7 @@
   components.push(...bottomWaistVariants);
 
   const defaultInput = {
-    context: { temperatureRange: "10_18", occasion: "commute", environment: ["none"] },
+    context: { temperatureRange: "13_17", occasion: "commute", environment: ["none"] },
     preference: { style: "urban", formality: "commute", palette: "any", trendDirection: "relaxedTailoring", trendIntensity: "light" },
     face: { shape: "standard" },
     appearance: {
@@ -1524,16 +1524,16 @@
     },
     {
       id: "TEST-WARM-DAILY",
-      name: "24-30°C 日常",
+      name: "24-27°C 日常",
       enabled: true,
-      input: { ...defaultInput, context: { temperatureRange: "24_30", occasion: "daily" } },
+      input: { ...defaultInput, context: { temperatureRange: "24_27", occasion: "daily" } },
       expected: { layerCount: 1, sleeve: "short", outer: "none", minCandidates: 2 }
     },
     {
       id: "TEST-FORMAL",
       name: "正式场合",
       enabled: true,
-      input: { ...defaultInput, context: { temperatureRange: "18_24", occasion: "formal" } },
+      input: { ...defaultInput, context: { temperatureRange: "18_23", occasion: "formal" } },
       expected: { formalityMin: 3, minCandidates: 2 }
     },
     {
@@ -1572,7 +1572,7 @@
       enabled: true,
       input: {
         ...defaultInput,
-        context: { temperatureRange: "18_24", occasion: "travel" },
+        context: { temperatureRange: "18_23", occasion: "travel" },
         boundaries: { ...defaultInput.boundaries, movementFriendly: true }
       },
       expected: { movement: true, minCandidates: 2 }

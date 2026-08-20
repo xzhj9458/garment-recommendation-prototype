@@ -2133,7 +2133,7 @@
       editable.conditions ||= [];
       const allowed = scopedFields(state.ruleSet.conditionFields, business.scope?.condition);
       const first = allowed[0];
-      editable.conditions.push({ field: first?.id || "input.context.temperatureRange", operator: "eq", value: first?.options?.[0]?.[0] ?? "18_24" });
+      editable.conditions.push({ field: first?.id || "input.context.temperatureRange", operator: "eq", value: first?.options?.[0]?.[0] ?? "18_23" });
       markDirty();
       renderEditor();
       return;

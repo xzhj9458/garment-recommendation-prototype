@@ -23,7 +23,13 @@
   function loadRegistry(key, fallback) {
     try {
       const value = JSON.parse(localStorage.getItem(key) || "null");
-      return value?.rules ? value : clone(fallback);
+      if (!value?.rules) return clone(fallback);
+      if (fallback?.schemaVersion && value.schemaVersion !== fallback.schemaVersion) {
+        const legacyKey = `${key}-legacy-${value.schemaVersion || "unknown"}`;
+        if (!localStorage.getItem(legacyKey)) localStorage.setItem(legacyKey, JSON.stringify(value));
+        return clone(fallback);
+      }
+      return value;
     } catch (error) {
       return clone(fallback);
     }
@@ -109,7 +115,7 @@
   }
 
   function rulesForState() {
-    return (state.draft?.rules || []).filter((rule) => rule.kind === state.ruleMode && categoryFor(rule) === state.tier1);
+    return (state.draft?.rules || []).filter((rule) => rule.metadata?.publishable !== false && rule.kind === state.ruleMode && categoryFor(rule) === state.tier1);
   }
 
   function fieldLabel(id) {

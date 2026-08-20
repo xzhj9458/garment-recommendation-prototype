@@ -39,7 +39,7 @@
   };
 
   const zhDict = {
-    "05_12": "5-12°C", "10_18": "10-18°C", "15_25": "15-25°C", "18_24": "18-24°C", "24_30": "24-30°C", "28_35": "28-35°C",
+    "05_12": "5-12°C", "13_17": "13-17°C", "18_23": "18-23°C", "24_27": "24-27°C", "28_31": "28-31°C", "32_35": "32-35°C",
     "commute": "通勤", "daily": "日常", "formal": "正式", "social": "聚会", "travel": "出游",
     "minimal": "极简", "urban": "都市", "elegant": "优雅", "casual": "休闲", "street": "街头", "retro": "复古", "cityboy": "Cityboy", "unknown": "未限定",
     "utilityLayering": "轻机能层次", "relaxedTailoring": "松弛剪裁", "sheerLayering": "轻透叠穿", "none": "不限定", "light": "少量借鉴", "clear": "明确体现",
@@ -1567,8 +1567,12 @@
     const familyLabel = familyMap[cand.family] || cand.family || "利落结构";
 
     // Badge and rationale come from the candidate contract instead of card position.
-    const featureBadge = index === 0 ? "基准推荐" : "差异方案";
-    const featureClass = index === 0 ? "is-primary" : "is-alt";
+    const featureBadge = cand.presentationTier === "production"
+      ? "当前推荐"
+      : cand.presentationTier === "classicFallback"
+        ? "经典备选"
+        : index === 0 ? "基准推荐" : "差异方案";
+    const featureClass = cand.presentationTier === "production" || (!cand.presentationTier && index === 0) ? "is-primary" : "is-alt";
 
     const diffRationale = cand.expectedEffect || "按当前输入生成候选组合。";
 

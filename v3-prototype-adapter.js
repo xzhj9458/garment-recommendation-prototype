@@ -78,7 +78,7 @@
     };
   }
 
-  function displayCandidate(record, index, ruleSet, objectiveProfile) {
+  function displayCandidate(record, index, ruleSet, objectiveProfile, presentationTier) {
     const output = record.output;
     const raw = record.candidate;
     const roleIds = raw.roles || {};
@@ -182,6 +182,7 @@
       traceRuleIds: output.trace.matchedRules,
       goalAssessment: { status: "按候选评估", items: [] },
       decisionRecord: output.decisionRecord,
+      presentationTier,
       output
     };
   }
@@ -194,10 +195,40 @@
     } catch (error) {
       return { candidates: [], conflicts: [{ reason: "效果等价规则资料无法读取" }], blocked: [{ reason: error.message }] };
     }
-    const result = runtime.recommendV3({ inputFacts: flattenInput(input) });
+    const inputFacts = flattenInput(input);
+    const productionResult = runtime.recommendV3({ inputFacts, options: { qualityMode: "production" } });
+    const referenceResult = runtime.recommendV3({ inputFacts, options: { qualityMode: "reference" } });
+    // 前台需要完整的主方案与结构备选，但参考候选不能被冒充为生产主方案。
+    // 因此生产结果少于三套时，用参考运行时补足展示位，并在结果元数据中保留降级状态。
+    const productionCandidates = productionResult.candidates || [];
+    const referenceCandidates = referenceResult.candidates || [];
+    const visibleCandidates = productionCandidates.length >= 3
+      ? productionCandidates.slice(0, 3)
+      : [...productionCandidates, ...referenceCandidates.filter((reference) => {
+          const productionIds = new Set(productionCandidates.flatMap((candidate) => candidate.candidate?.evaluation?.componentIds || []));
+          const referenceIds = reference.candidate?.evaluation?.componentIds || [];
+          return !referenceIds.every((id) => productionIds.has(id));
+        })].slice(0, 3);
+    const needsFallback = productionCandidates.length < 3;
+    const result = {
+      ...(productionCandidates.length ? productionResult : referenceResult),
+      candidates: visibleCandidates,
+      productionStatus: productionResult.status,
+      productionCandidateCount: productionCandidates.length,
+      classicFallback: needsFallback,
+      classicFallbackReason: needsFallback
+        ? productionResult.trace?.generated?.insufficientReason || "当前生产主方案不足三套，已补充经典保底备选"
+        : null
+    };
     return {
       ...result,
-      candidates: result.candidates.map((candidate, index) => displayCandidate(candidate, index, ruleSet, result.effectProfile?.objective)),
+      candidates: result.candidates.map((candidate, index) => displayCandidate(
+        candidate,
+        index,
+        ruleSet,
+        result.effectProfile?.objective,
+        productionCandidates.some((production) => production.id === candidate.id) ? "production" : "classicFallback"
+      )),
       conflicts: result.trace?.conflicts || [],
       blocked: result.trace?.blocked || [],
       engineMode: "v3",

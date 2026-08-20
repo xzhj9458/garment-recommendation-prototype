@@ -3,9 +3,9 @@
 
   const DATA = window.GarmentPrototypeData;
   const STORAGE_KEYS = {
-    published: "garment-prototype-v120-published",
-    draft: "garment-prototype-v120-draft",
-    input: "garment-prototype-v120-input"
+    published: "garment-prototype-v121-published",
+    draft: "garment-prototype-v121-draft",
+    input: "garment-prototype-v121-input"
   };
 
   function clone(value) {

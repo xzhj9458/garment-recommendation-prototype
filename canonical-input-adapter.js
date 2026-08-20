@@ -4,6 +4,11 @@
   const DATA = window.GarmentCanonicalData || {};
   const inputIds = new Set((DATA.fieldRegistry?.inputs || []).map((field) => field.id));
   const mappings = DATA.migrationMap?.inputMappings || [];
+  const contractMigration = DATA.contractMigration || {};
+  const canonicalTemperatures = new Set(contractMigration.temperatureRange?.canonicalValues || []);
+  const legacyTemperatures = new Set(contractMigration.temperatureRange?.legacyReplayValues || []);
+  const canonicalEnvironments = new Set(contractMigration.environment?.canonicalValues || []);
+  const legacyEnvironments = new Set(contractMigration.environment?.legacyReplayValues || []);
 
   function flatten(value, prefix = "", output = {}) {
     Object.entries(value || {}).forEach(([key, item]) => {
@@ -120,7 +125,27 @@
       }
     });
 
-    return { input, warnings: [...new Set(warnings)], defaultsApplied };
+    const temperature = input["context.temperatureRange"];
+    const environments = Array.isArray(input["context.environment"])
+      ? input["context.environment"]
+      : input["context.environment"] ? [input["context.environment"]] : ["none"];
+    const historicalTemperature = temperature && !canonicalTemperatures.has(temperature) && legacyTemperatures.has(temperature)
+      ? temperature
+      : null;
+    const historicalEnvironments = environments.filter((value) => !canonicalEnvironments.has(value) && legacyEnvironments.has(value));
+    if (historicalTemperature) warnings.push(`context.temperatureRange=${historicalTemperature}: historical replay only`);
+    historicalEnvironments.forEach((value) => warnings.push(`context.environment=${value}: historical replay only`));
+
+    return {
+      input,
+      warnings: [...new Set(warnings)],
+      defaultsApplied,
+      migration: {
+        contract: historicalTemperature || historicalEnvironments.length ? "historical-replay" : "canonical",
+        legacyTemperature: historicalTemperature,
+        legacyEnvironments: historicalEnvironments
+      }
+    };
   }
 
   window.GarmentCanonicalInputAdapter = { normalizeLegacyInput };
